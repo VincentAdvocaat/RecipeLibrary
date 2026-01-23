@@ -1,5 +1,3 @@
-using RecipeLibrary.Domain.Entities;
-
 namespace RecipeLibrary.Application.Contracts;
 
 /// <summary>
@@ -8,6 +6,6 @@ namespace RecipeLibrary.Application.Contracts;
 /// </summary>
 public interface IRecipeService
 {
-    // Methods such as CreateRecipeAsync, UpdateRecipeAsync, etc. will be defined later.
+    Task<Guid> CreateAsync(CreateRecipeRequest request, CancellationToken ct = default);
 }
 

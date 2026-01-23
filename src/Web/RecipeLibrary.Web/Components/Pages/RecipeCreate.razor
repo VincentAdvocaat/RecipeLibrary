@@ -1,0 +1,223 @@
+@page "/recipes/create"
+
+@using System.ComponentModel.DataAnnotations
+@using RecipeLibrary.Application.Contracts
+@using RecipeLibrary.Domain.ValueObjects
+@inject IRecipeService RecipeService
+@inject NavigationManager Navigation
+
+<PageTitle>Recipe - Create</PageTitle>
+
+<h1>Create recipe</h1>
+
+<EditForm Model="_vm" FormName="create-recipe" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div style="display: grid; gap: 12px; max-width: 760px;">
+        <div style="display: grid; gap: 6px;">
+            <label>Title</label>
+            <InputText class="form-control" @bind-Value="_vm.Title" />
+        </div>
+
+        <div style="display: grid; gap: 6px;">
+            <label>Preparation time (minutes)</label>
+            <InputNumber class="form-control" @bind-Value="_vm.PreparationTimeMinutes" />
+        </div>
+
+        <hr />
+
+        <div style="display: grid; gap: 8px;">
+            <h2>Ingredients</h2>
+
+            @for (var i = 0; i < _vm.Ingredients.Count; i++)
+            {
+                var item = _vm.Ingredients[i];
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: end;">
+                    <div style="display: grid; gap: 6px;">
+                        <label>Name</label>
+                        <InputText class="form-control" @bind-Value="item.Name" />
+                    </div>
+
+                    <div style="display: grid; gap: 6px;">
+                        <label>Quantity</label>
+                        <InputNumber class="form-control" @bind-Value="item.Quantity" />
+                    </div>
+
+                    <div style="display: grid; gap: 6px;">
+                        <label>Unit</label>
+                        <InputSelect class="form-control" @bind-Value="item.UnitName">
+                            @foreach (var unit in _unitOptions)
+                            {
+                                <option value="@unit">@unit</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <button type="button" class="btn btn-secondary" @onclick="() => RemoveIngredient(i)" disabled="@(_vm.Ingredients.Count <= 1)">
+                        Remove
+                    </button>
+                </div>
+            }
+
+            <button type="button" class="btn btn-primary" @onclick="AddIngredient">+ Add ingredient</button>
+        </div>
+
+        <hr />
+
+        <div style="display: grid; gap: 8px;">
+            <h2>Instruction steps</h2>
+
+            @for (var i = 0; i < _vm.Steps.Count; i++)
+            {
+                var step = _vm.Steps[i];
+                <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start;">
+                    <div style="display: grid; gap: 6px; min-width: 80px;">
+                        <label>Step</label>
+                        <InputNumber class="form-control" @bind-Value="step.StepNumber" disabled />
+                    </div>
+
+                    <div style="display: grid; gap: 6px;">
+                        <label>Text</label>
+                        <InputTextArea class="form-control" @bind-Value="step.Text" rows="3" />
+                    </div>
+
+                    <button type="button" class="btn btn-secondary" @onclick="() => RemoveStep(i)" disabled="@(_vm.Steps.Count <= 1)">
+                        Remove
+                    </button>
+                </div>
+            }
+
+            <button type="button" class="btn btn-primary" @onclick="AddStep">+ Add step</button>
+        </div>
+
+        <hr />
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <button type="submit" class="btn btn-success" disabled="@_isSaving">Save</button>
+            @if (!string.IsNullOrWhiteSpace(_statusMessage))
+            {
+                <span>@_statusMessage</span>
+            }
+        </div>
+    </div>
+</EditForm>
+
+@code
+{
+    private sealed class CreateRecipeVm
+    {
+        [Required]
+        public string Title { get; set; } = string.Empty;
+
+        [Range(1, 24 * 60)]
+        public int PreparationTimeMinutes { get; set; } = 30;
+
+        public List<IngredientVm> Ingredients { get; set; } = [new IngredientVm()];
+
+        public List<StepVm> Steps { get; set; } = [new StepVm { StepNumber = 1 }];
+    }
+
+    private sealed class IngredientVm
+    {
+        [Required]
+        public string Name { get; set; } = string.Empty;
+
+        [Range(typeof(decimal), "0.0001", "1000000")]
+        public decimal Quantity { get; set; } = 1;
+
+        [Required]
+        public string UnitName { get; set; } = nameof(Unit.Gram);
+    }
+
+    private sealed class StepVm
+    {
+        public int StepNumber { get; set; }
+
+        [Required]
+        public string Text { get; set; } = string.Empty;
+    }
+
+    private readonly string[] _unitOptions = Enum.GetNames<Unit>()
+        .Where(n => n != nameof(Unit.Unknown))
+        .ToArray();
+
+    private readonly CreateRecipeVm _vm = new();
+    private bool _isSaving;
+    private string? _statusMessage;
+
+    private void AddIngredient()
+    {
+        _vm.Ingredients.Add(new IngredientVm());
+    }
+
+    private void RemoveIngredient(int index)
+    {
+        if (_vm.Ingredients.Count <= 1)
+        {
+            return;
+        }
+
+        _vm.Ingredients.RemoveAt(index);
+    }
+
+    private void AddStep()
+    {
+        _vm.Steps.Add(new StepVm { StepNumber = _vm.Steps.Count + 1 });
+    }
+
+    private void RemoveStep(int index)
+    {
+        if (_vm.Steps.Count <= 1)
+        {
+            return;
+        }
+
+        _vm.Steps.RemoveAt(index);
+
+        // Re-number steps to keep them contiguous.
+        for (var i = 0; i < _vm.Steps.Count; i++)
+        {
+            _vm.Steps[i].StepNumber = i + 1;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        _statusMessage = null;
+        _isSaving = true;
+
+        try
+        {
+            var request = new CreateRecipeRequest
+            {
+                Title = _vm.Title,
+                PreparationTimeMinutes = _vm.PreparationTimeMinutes,
+                Ingredients = _vm.Ingredients.Select(x => new IngredientDto
+                {
+                    Name = x.Name,
+                    Quantity = x.Quantity,
+                    Unit = x.UnitName,
+                }).ToList(),
+                InstructionSteps = _vm.Steps.Select(x => new InstructionStepDto
+                {
+                    StepNumber = x.StepNumber,
+                    Text = x.Text,
+                }).ToList(),
+            };
+
+            var id = await RecipeService.CreateAsync(request);
+            _statusMessage = "Saved.";
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = ex.Message;
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}
+

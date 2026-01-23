@@ -1,4 +1,7 @@
+using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Application.UseCases.Recipes;
 using RecipeLibrary.Components;
+using RecipeLibrary.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,7 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddPersistence("Data Source=recipelibrary-dev.db");
+builder.Services.AddScoped<IRecipeService, CreateRecipeService>();
+
 var app = builder.Build();
+
+app.Services.EnsurePersistenceCreated();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
