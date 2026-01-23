@@ -15,17 +15,21 @@ public static class PersistenceServiceRegistration
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
         services.AddDbContext<RecipeDbContext>(options =>
-            options.UseSqlite(connectionString));
+            options.UseSqlServer(connectionString, sql =>
+            {
+                // Helpful defaults for transient Azure SQL failures.
+                sql.EnableRetryOnFailure();
+            }));
 
         services.AddScoped<IRecipeRepository, EfRecipeRepository>();
         return services;
     }
 
-    public static void EnsurePersistenceCreated(this IServiceProvider services)
+    public static void EnsurePersistenceMigrated(this IServiceProvider services)
     {
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<RecipeDbContext>();
-        db.Database.EnsureCreated();
+        db.Database.Migrate();
     }
 }
 
