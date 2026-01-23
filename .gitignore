@@ -57,6 +57,9 @@ nunit-*.xml
 .vs/
 .vscode/
 
+# Git worktrees (local checkouts)
+.worktrees/
+
 # User-specific project files
 *.user
 *.suo
