@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Application.Abstractions;
 
 namespace RecipeLibrary.Infrastructure.Persistence;
 

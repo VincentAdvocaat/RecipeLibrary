@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Domain.Entities;
 
 namespace RecipeLibrary.Infrastructure.Persistence;

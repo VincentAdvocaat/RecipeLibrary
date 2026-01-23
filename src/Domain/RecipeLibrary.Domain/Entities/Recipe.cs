@@ -1,6 +1,6 @@
-namespace RecipeLibrary.Domain.Entities;
-
 using RecipeLibrary.Domain.ValueObjects;
+
+namespace RecipeLibrary.Domain.Entities;
 
 /// <summary>
 /// Aggregate root representing a recipe with its ingredients and instruction steps.
@@ -30,35 +30,4 @@ public sealed class Recipe
 
     public ICollection<InstructionStep> InstructionSteps { get; set; } = new List<InstructionStep>();
 }
-
-/// <summary>
-/// Ingredient belonging to a recipe.
-/// </summary>
-public sealed class Ingredient
-{
-    public Guid Id { get; set; }
-
-    public Guid RecipeId { get; set; }
-
-    public string Name { get; set; } = string.Empty;
-
-    public Quantity Quantity { get; set; }
-
-    public Unit Unit { get; set; }
-}
-
-/// <summary>
-/// One step in the preparation of a recipe.
-/// </summary>
-public sealed class InstructionStep
-{
-    public Guid Id { get; set; }
-
-    public Guid RecipeId { get; set; }
-
-    public int StepNumber { get; set; }
-
-    public string Text { get; set; } = string.Empty;
-}
-
 
