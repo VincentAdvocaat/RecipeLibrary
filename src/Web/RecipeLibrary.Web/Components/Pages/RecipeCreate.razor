@@ -33,6 +33,7 @@
             @for (var i = 0; i < _vm.Ingredients.Count; i++)
             {
                 var item = _vm.Ingredients[i];
+                var index = i;
                 <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: end;">
                     <div style="display: grid; gap: 6px;">
                         <label>Name</label>
@@ -54,7 +55,7 @@
                         </InputSelect>
                     </div>
 
-                    <button type="button" class="btn btn-secondary" @onclick="() => RemoveIngredient(i)" disabled="@(_vm.Ingredients.Count <= 1)">
+                    <button type="button" class="btn btn-secondary" @onclick="() => RemoveIngredient(index)" disabled="@(_vm.Ingredients.Count <= 1)">
                         Remove
                     </button>
                 </div>
@@ -71,6 +72,7 @@
             @for (var i = 0; i < _vm.Steps.Count; i++)
             {
                 var step = _vm.Steps[i];
+                var index = i;
                 <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start;">
                     <div style="display: grid; gap: 6px; min-width: 80px;">
                         <label>Step</label>
@@ -82,7 +84,7 @@
                         <InputTextArea class="form-control" @bind-Value="step.Text" rows="3" />
                     </div>
 
-                    <button type="button" class="btn btn-secondary" @onclick="() => RemoveStep(i)" disabled="@(_vm.Steps.Count <= 1)">
+                    <button type="button" class="btn btn-secondary" @onclick="() => RemoveStep(index)" disabled="@(_vm.Steps.Count <= 1)">
                         Remove
                     </button>
                 </div>

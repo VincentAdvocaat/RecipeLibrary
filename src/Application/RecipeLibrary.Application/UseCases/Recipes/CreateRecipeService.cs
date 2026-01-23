@@ -72,12 +72,14 @@ public sealed class CreateRecipeService(IRecipeRepository recipeRepository) : IR
             });
         }
 
-        foreach (var stepDto in request.InstructionSteps.OrderBy(s => s.StepNumber))
+        if (request.InstructionSteps.Any(s => s is null))
         {
-            if (stepDto is null)
-            {
-                continue;
-            }
+            throw new ArgumentException("InstructionSteps cannot contain null items.", nameof(request));
+        }
+
+        foreach (var stepDto in request.InstructionSteps.OrderBy(s => s!.StepNumber))
+        {
+            ArgumentNullException.ThrowIfNull(stepDto);
 
             if (stepDto.StepNumber <= 0)
             {
@@ -97,6 +99,11 @@ public sealed class CreateRecipeService(IRecipeRepository recipeRepository) : IR
                 StepNumber = stepDto.StepNumber,
                 Text = text,
             });
+        }
+
+        if (recipe.InstructionSteps.Count == 0)
+        {
+            throw new ArgumentException("At least one instruction step is required.", nameof(request));
         }
 
         await recipeRepository.AddAsync(recipe, ct);
