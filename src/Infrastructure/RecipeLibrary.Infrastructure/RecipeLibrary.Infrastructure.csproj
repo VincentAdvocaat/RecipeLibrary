@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Domain\RecipeLibrary.Domain\RecipeLibrary.Domain.csproj" />
-    <ProjectReference Include="..\RecipeLibrary.Infrastructure.Contracts\RecipeLibrary.Infrastructure.Contracts.csproj" />
+    <ProjectReference Include="..\..\Application\RecipeLibrary.Application.Contracts\RecipeLibrary.Application.Contracts.csproj" />
     <ProjectReference Include="..\..\Application\RecipeLibrary.Application\RecipeLibrary.Application.csproj" />
   </ItemGroup>
 

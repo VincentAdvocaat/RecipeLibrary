@@ -1,6 +1,6 @@
 using RecipeLibrary.Domain.Entities;
 
-namespace RecipeLibrary.Infrastructure.Contracts;
+namespace RecipeLibrary.Application.Contracts;
 
 /// <summary>
 /// Abstraction for persisting and retrieving recipes.

@@ -9,7 +9,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Domain\RecipeLibrary.Domain\RecipeLibrary.Domain.csproj" />
     <ProjectReference Include="..\RecipeLibrary.Application.Contracts\RecipeLibrary.Application.Contracts.csproj" />
-    <ProjectReference Include="..\..\Infrastructure\RecipeLibrary.Infrastructure.Contracts\RecipeLibrary.Infrastructure.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

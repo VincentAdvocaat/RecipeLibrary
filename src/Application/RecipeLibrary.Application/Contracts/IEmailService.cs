@@ -1,4 +1,4 @@
-namespace RecipeLibrary.Infrastructure.Contracts;
+namespace RecipeLibrary.Application.Contracts;
 
 /// <summary>
 /// Abstraction for sending e-mails from the application.
