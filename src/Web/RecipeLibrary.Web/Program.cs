@@ -9,12 +9,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddPersistence("Data Source=recipelibrary-dev.db");
+var recipeDbConnectionString =
+    builder.Configuration.GetConnectionString("RecipeDb")
+    ?? throw new InvalidOperationException("Missing connection string 'RecipeDb'. Set ConnectionStrings__RecipeDb (local) or configure it in App Service connection strings.");
+
+builder.Services.AddPersistence(recipeDbConnectionString);
 builder.Services.AddScoped<IRecipeService, CreateRecipeService>();
 
 var app = builder.Build();
 
-app.Services.EnsurePersistenceCreated();
+app.Services.EnsurePersistenceMigrated();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
