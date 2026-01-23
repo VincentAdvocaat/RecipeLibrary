@@ -66,3 +66,7 @@ nunit-*.xml
 # Additional build outputs
 **/bin/
 **/obj/
+
+# Local dev SQLite database (temporary)
+recipelibrary-dev.db
+recipelibrary-dev.db-*
