@@ -101,6 +101,7 @@ git worktree prune
 if ($DeleteBranch) {
   Write-Host "Deleting local branch: $Branch"
   git branch -D $Branch
+  if ($LASTEXITCODE -ne 0) { throw "git branch delete failed for '$Branch'." }
 }
 
 Write-Host "Done."

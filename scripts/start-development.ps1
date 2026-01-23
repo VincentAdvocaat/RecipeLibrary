@@ -130,6 +130,7 @@ if (Test-Path -LiteralPath $worktreePath) {
 
   if (Test-LocalBranchExists -name $Branch) {
     git worktree add $worktreePath $Branch
+    if ($LASTEXITCODE -ne 0) { throw "git worktree add failed for branch '$Branch'." }
   }
   elseif (Test-RemoteBranchExists -remoteName $Remote -name $Branch) {
     # Create a local branch so the worktree is NOT detached HEAD.
@@ -141,10 +142,7 @@ if (Test-Path -LiteralPath $worktreePath) {
   }
   else {
     git worktree add -b $Branch $worktreePath $startPoint
-  }
-
-  if ($LASTEXITCODE -ne 0) {
-    throw "git worktree add failed for branch '$Branch'."
+    if ($LASTEXITCODE -ne 0) { throw "git worktree add failed for branch '$Branch'." }
   }
 }
 

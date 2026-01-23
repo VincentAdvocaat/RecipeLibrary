@@ -71,8 +71,8 @@ $ErrorActionPreference = "Stop"
 $ghExe = "gh"
 
 function Assert-CommandExists([string] $cmd) {
-  $null = Get-Command $cmd -ErrorAction SilentlyContinue
-  if (-not $?) {
+  $cmdInfo = Get-Command $cmd -ErrorAction SilentlyContinue
+  if (-not $cmdInfo) {
     throw "Required command '$cmd' not found. Install it and ensure it's on PATH."
   }
 }
