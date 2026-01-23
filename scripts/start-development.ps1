@@ -7,7 +7,7 @@
   It:
     - Validates branch naming policy (feature/<topic> or bugfix/<topic>)
     - Runs `git fetch` (optional, default on)
-    - Creates the worktree at `.worktrees/<branch>` by calling `scripts/new-worktree.ps1`
+    - Creates the worktree at `.worktrees/<branch>`
     - Prints the worktree path (and optionally changes directory to it)
 
 .PARAMETER Branch
@@ -68,6 +68,24 @@ function Assert-BranchNamingPolicy([string] $name) {
   }
 }
 
+function Test-LocalBranchExists([string] $name) {
+  git show-ref --verify --quiet ("refs/heads/{0}" -f $name)
+  return ($LASTEXITCODE -eq 0)
+}
+
+function Test-RemoteBranchExists([string] $remoteName, [string] $name) {
+  git show-ref --verify --quiet ("refs/remotes/{0}/{1}" -f $remoteName, $name)
+  return ($LASTEXITCODE -eq 0)
+}
+
+function Resolve-StartPoint([string] $remoteName, [string] $baseName) {
+  if (Test-RemoteBranchExists $remoteName $baseName) {
+    return "{0}/{1}" -f $remoteName, $baseName
+  }
+  # Fallback for repos without a configured remote.
+  return $baseName
+}
+
 function Get-WorktreePath([string] $repoRoot, [string] $name) {
   $segments = $name -split '/'
   $path = Join-Path $repoRoot ".worktrees"
@@ -75,8 +93,16 @@ function Get-WorktreePath([string] $repoRoot, [string] $name) {
   return $path
 }
 
+function Ensure-ParentDirectory([string] $path) {
+  $parent = Split-Path -Parent $path
+  if (-not (Test-Path -LiteralPath $parent)) {
+    New-Item -ItemType Directory -Path $parent -Force | Out-Null
+  }
+}
+
 Assert-GitRepo
 $repoRoot = Get-RepoRoot
+$startPoint = Resolve-StartPoint -remoteName $Remote -baseName $Base
 
 $Branch = $Branch.Trim()
 Assert-BranchNamingPolicy -name $Branch
@@ -91,13 +117,22 @@ $worktreePath = Get-WorktreePath -repoRoot $repoRoot -name $Branch
 if (Test-Path -LiteralPath $worktreePath) {
   Write-Host "Worktree already exists: $worktreePath"
 } else {
-  $scriptPath = Join-Path $repoRoot "scripts/new-worktree.ps1"
-  if (-not (Test-Path -LiteralPath $scriptPath)) {
-    throw "Missing script: $scriptPath"
+  Write-Host "Creating worktree for '$Branch'..."
+  Ensure-ParentDirectory -path $worktreePath
+
+  if (Test-LocalBranchExists -name $Branch) {
+    git worktree add $worktreePath $Branch
+  }
+  elseif (Test-RemoteBranchExists -remoteName $Remote -name $Branch) {
+    git worktree add $worktreePath "$Remote/$Branch"
+  }
+  else {
+    git worktree add -b $Branch $worktreePath $startPoint
   }
 
-  Write-Host "Creating worktree for '$Branch'..."
-  & $scriptPath -Branch $Branch -Base $Base -Remote $Remote
+  if ($LASTEXITCODE -ne 0) {
+    throw "git worktree add failed for branch '$Branch'."
+  }
 }
 
 Write-Host "Worktree path: $worktreePath"

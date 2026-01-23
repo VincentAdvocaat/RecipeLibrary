@@ -35,5 +35,5 @@ Als je een nieuwe workstream start:
 
 - Start workstream / worktree aanmaken: gebruik `scripts/start-development.ps1` (geen handmatige `git worktree add`).
 - Stop workstream / worktree opruimen: gebruik `scripts/stop-development.ps1`.
-- Pull requests aanmaken: gebruik `scripts/new-pr.ps1` (geen handmatige PR aanmaak in de UI).
+- Commit + Pull Request aanmaken: gebruik `scripts/new-pr.ps1` (geen handmatige PR aanmaak in de UI).
 

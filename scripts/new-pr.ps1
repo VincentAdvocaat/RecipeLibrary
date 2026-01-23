@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Creates a GitHub Pull Request in a consistent way.
+  Commits current branch changes and creates a GitHub Pull Request.
 
 .DESCRIPTION
   Uses GitHub CLI (gh) to create a PR for the current branch.
@@ -9,12 +9,18 @@
     - Never create PRs from main
 
   Behavior:
-    - Fails if working tree is dirty (uncommitted changes)
+    - Stages and commits changes if working tree is dirty
     - Pushes the current branch (sets upstream) when needed
     - Creates the PR with a standard body (Summary + Test plan)
 
 .PARAMETER Base
   Base branch for the PR (default: main).
+
+.PARAMETER Message
+  Commit message. Required if there are uncommitted changes.
+
+.PARAMETER NoCommit
+  Skip committing and only create a PR (requires clean working tree).
 
 .PARAMETER Title
   PR title. If omitted, derives a title from the branch name.
@@ -39,6 +45,12 @@
 param(
   [Parameter()]
   [string] $Base = "main",
+
+  [Parameter()]
+  [string] $Message,
+
+  [Parameter()]
+  [switch] $NoCommit,
 
   [Parameter()]
   [string] $Title,
@@ -106,6 +118,34 @@ function Assert-CleanWorkingTree {
   }
 }
 
+function Get-WorkingTreeStatus {
+  return (git status --porcelain).Trim()
+}
+
+function Ensure-CommitIfNeeded([string] $msg, [switch] $skipCommit) {
+  $status = Get-WorkingTreeStatus
+
+  if (-not $status) {
+    return
+  }
+
+  if ($skipCommit) {
+    throw "Working tree has uncommitted changes, but -NoCommit was set."
+  }
+
+  if (-not $msg) {
+    throw 'Commit message is required when there are uncommitted changes. Provide -Message "...".'
+  }
+
+  Write-Host "Staging changes..."
+  git add -A
+  if ($LASTEXITCODE -ne 0) { throw "git add failed." }
+
+  Write-Host "Committing..."
+  git commit -m $msg
+  if ($LASTEXITCODE -ne 0) { throw "git commit failed." }
+}
+
 function Ensure-Upstream([string] $remoteName, [string] $branch) {
   git rev-parse --abbrev-ref --symbolic-full-name "@{u}" *> $null
   if ($LASTEXITCODE -eq 0) { return }
@@ -140,7 +180,9 @@ Assert-GitRepo
 $branch = Get-CurrentBranch
 Assert-NotMain -branch $branch
 Assert-BranchNamingPolicy -name $branch
-Assert-CleanWorkingTree
+
+Ensure-CommitIfNeeded -msg $Message -skipCommit:$NoCommit
+if ($NoCommit) { Assert-CleanWorkingTree }
 Ensure-Upstream -remoteName $Remote -branch $branch
 
 if (-not $Title) { $Title = Get-DefaultTitle -branch $branch }
