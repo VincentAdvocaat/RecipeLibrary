@@ -117,6 +117,7 @@ Assert-BranchNamingPolicy -name $Branch
 if (-not $NoFetch) {
   Write-Host "Fetching '$Remote'..."
   git fetch $Remote
+  if ($LASTEXITCODE -ne 0) { throw "git fetch failed for remote '$Remote'." }
 }
 
 $worktreePath = Get-WorktreePath -repoRoot $repoRoot -name $Branch
@@ -131,7 +132,12 @@ if (Test-Path -LiteralPath $worktreePath) {
     git worktree add $worktreePath $Branch
   }
   elseif (Test-RemoteBranchExists -remoteName $Remote -name $Branch) {
-    git worktree add $worktreePath "$Remote/$Branch"
+    # Create a local branch so the worktree is NOT detached HEAD.
+    git worktree add -b $Branch $worktreePath "$Remote/$Branch"
+    if ($LASTEXITCODE -ne 0) { throw "git worktree add failed for remote branch '$Remote/$Branch'." }
+
+    # Best effort: set upstream so future pulls/pushes behave as expected.
+    git branch --set-upstream-to="$Remote/$Branch" $Branch *> $null
   }
   else {
     git worktree add -b $Branch $worktreePath $startPoint

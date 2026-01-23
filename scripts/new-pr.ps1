@@ -112,14 +112,16 @@ function Assert-BranchNamingPolicy([string] $name) {
 }
 
 function Assert-CleanWorkingTree {
-  $status = (git status --porcelain).Trim()
+  $status = Get-WorkingTreeStatus
   if ($status) {
     throw "Working tree is not clean. Commit or stash changes before creating a PR."
   }
 }
 
 function Get-WorkingTreeStatus {
-  return (git status --porcelain).Trim()
+  # Ensure null-safe behavior under StrictMode: a clean tree may produce no output ($null).
+  $lines = @(git status --porcelain)
+  return ($lines -join "`n").Trim()
 }
 
 function Ensure-CommitIfNeeded([string] $msg, [switch] $skipCommit) {
