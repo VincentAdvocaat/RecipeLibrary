@@ -48,9 +48,16 @@ function Assert-GitRepo {
 }
 
 function Get-RepoRoot {
-  $root = (git rev-parse --show-toplevel).Trim()
-  if (-not $root) { throw "Unable to determine git repository root." }
-  return $root
+  # Important: in git worktrees, --show-toplevel returns the *worktree* root.
+  # We want the shared repo root (parent of the common .git directory) so that
+  # `.worktrees/<branch>` resolves consistently no matter where the script runs.
+  $common = (git rev-parse --git-common-dir).Trim()
+  if (-not $common) { throw "Unable to determine git common directory." }
+
+  $commonPath = (Resolve-Path -LiteralPath $common).Path
+  if (-not $commonPath) { throw "Unable to resolve git common directory path." }
+
+  return (Split-Path -Parent $commonPath)
 }
 
 function Get-WorktreePath([string] $repoRoot, [string] $name) {
