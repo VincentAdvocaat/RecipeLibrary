@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "RecipeLibrary.Web": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:49696;http://localhost:49697"
+    }
+  }
+}

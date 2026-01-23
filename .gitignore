@@ -52,3 +52,17 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# IDE and tooling folders
+.vs/
+.vscode/
+
+# User-specific project files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Additional build outputs
+**/bin/
+**/obj/

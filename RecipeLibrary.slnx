@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="src/Domain/RecipeLibrary.Domain/RecipeLibrary.Domain.csproj" />
+  <Project Path="src/Application/RecipeLibrary.Application/RecipeLibrary.Application.csproj" />
+  <Project Path="src/Infrastructure/RecipeLibrary.Infrastructure/RecipeLibrary.Infrastructure.csproj" />
+  <Project Path="src/Application/RecipeLibrary.Application.Contracts/RecipeLibrary.Application.Contracts.csproj" />
+  <Project Path="src/Infrastructure/RecipeLibrary.Infrastructure.Contracts/RecipeLibrary.Infrastructure.Contracts.csproj" />
+  <Project Path="src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj" />
+</Solution>
