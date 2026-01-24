@@ -1,6 +1,6 @@
 using RecipeLibrary.Domain.Entities;
 
-namespace RecipeLibrary.Application.Contracts;
+namespace RecipeLibrary.Application.Abstractions;
 
 public interface IRecipeRepository
 {

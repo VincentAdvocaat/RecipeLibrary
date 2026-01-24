@@ -1,5 +1,4 @@
-using RecipeLibrary.Application.Contracts;
-using RecipeLibrary.Application.UseCases.Recipes;
+using RecipeLibrary.Application;
 using RecipeLibrary.Components;
 using RecipeLibrary.Infrastructure.Persistence;
 
@@ -14,7 +13,7 @@ var recipeDbConnectionString =
     ?? throw new InvalidOperationException("Missing connection string 'RecipeDb'. Set ConnectionStrings__RecipeDb (local) or configure it in App Service connection strings.");
 
 builder.Services.AddPersistence(recipeDbConnectionString);
-builder.Services.AddScoped<IRecipeService, CreateRecipeService>();
+builder.Services.AddApplication();
 
 var app = builder.Build();
 

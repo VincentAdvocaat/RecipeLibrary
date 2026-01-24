@@ -14,7 +14,7 @@ flowchart TD
   DevLaptop -->|EntraID_SQLClient| AzureSQL
 ```
 
-### Application architecture (target: UseCases + Commands)
+### Application architecture (Clean + CQRS/UseCases)
 
 ```mermaid
 flowchart LR
@@ -22,19 +22,24 @@ flowchart LR
     BlazorUI[Blazor_Pages_Components]
   end
 
-  subgraph AppLayer[Application_Layer]
+  subgraph Contracts[Application_Contracts]
     CreateRecipeCmd[CreateRecipeCommand]
+    CreateRecipeResult[CreateRecipeResult]
+    CommandBus[ICommandBus]
+  end
+
+  subgraph AppLayer[Application_Layer]
     CreateRecipeHandler[CreateRecipeCommandHandler]
     Validators[Command_Validators]
+    InProcBus[InProcessBus]
   end
 
   subgraph DomainLayer[Domain_Layer]
     DomainModel[Entities_ValueObjects]
   end
 
-  subgraph Contracts[Application_Contracts]
+  subgraph Abstractions[Application_Abstractions]
     IRecipeRepository[IRecipeRepository]
-    Dtos[CreateRecipeRequest_DTOs]
   end
 
   subgraph InfraLayer[Infrastructure_Layer]
@@ -47,8 +52,9 @@ flowchart LR
   end
 
   BlazorUI -->|creates| CreateRecipeCmd
-  CreateRecipeCmd -->|uses| Dtos
-  BlazorUI -->|dispatches| CreateRecipeHandler
+  BlazorUI -->|calls| CommandBus
+  CommandBus -->|dispatches| InProcBus
+  InProcBus -->|resolves| CreateRecipeHandler
   Validators -->|validates| CreateRecipeCmd
   CreateRecipeHandler -->|maps_to| DomainModel
   CreateRecipeHandler -->|depends_on| IRecipeRepository
@@ -57,12 +63,15 @@ flowchart LR
   DbCtx -->|connects| AzureSQL
 ```
 
-Note: some parts are still being aligned to this target shape. The repo uses a layered structure (`Domain`/`Application`/`Infrastructure`/`Web`) and is moving toward explicit UseCases and Commands.
+This repo uses a layered structure (`Domain`/`Application`/`Infrastructure`/`Web`) and exposes use cases via Commands/Handlers dispatched through an in-process command bus.
 
 ## Repository structure
 
 - **`src/Domain`**: domain model (entities, value objects, domain events).
-- **`src/Application`**: use cases (commands/handlers), validators, and orchestration.
+- **`src/Application`**:
+  - **`RecipeLibrary.Application.Contracts`**: commands/results + bus interfaces (UI-facing, no infrastructure).
+  - **`RecipeLibrary.Application.Abstractions`**: ports (e.g. repositories) implemented by Infrastructure.
+  - **`RecipeLibrary.Application`**: handlers, validators, in-process bus implementation, and DI registration.
 - **`src/Infrastructure`**: EF Core persistence, repository implementations, external services.
 - **`src/Web`**: Blazor Server UI and dependency injection wiring.
 

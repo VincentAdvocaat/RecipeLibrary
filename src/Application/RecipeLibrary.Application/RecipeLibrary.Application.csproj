@@ -8,7 +8,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Domain\RecipeLibrary.Domain\RecipeLibrary.Domain.csproj" />
+    <ProjectReference Include="..\RecipeLibrary.Application.Abstractions\RecipeLibrary.Application.Abstractions.csproj" />
     <ProjectReference Include="..\RecipeLibrary.Application.Contracts\RecipeLibrary.Application.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.2" />
   </ItemGroup>
 
 </Project>

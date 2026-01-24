@@ -3,7 +3,7 @@
 @using System.ComponentModel.DataAnnotations
 @using RecipeLibrary.Application.Contracts
 @using RecipeLibrary.Domain.ValueObjects
-@inject IRecipeService RecipeService
+@inject ICommandBus CommandBus
 @inject NavigationManager Navigation
 
 <PageTitle>Recipe - Create</PageTitle>
@@ -191,24 +191,24 @@
 
         try
         {
-            var request = new CreateRecipeRequest
+            var command = new CreateRecipeCommand
             {
                 Title = _vm.Title,
                 PreparationTimeMinutes = _vm.PreparationTimeMinutes,
-                Ingredients = _vm.Ingredients.Select(x => new IngredientDto
+                Ingredients = _vm.Ingredients.Select(x => new CreateRecipeIngredientDto
                 {
                     Name = x.Name,
                     Quantity = x.Quantity,
                     Unit = x.UnitName,
                 }).ToList(),
-                InstructionSteps = _vm.Steps.Select(x => new InstructionStepDto
+                InstructionSteps = _vm.Steps.Select(x => new CreateRecipeInstructionStepDto
                 {
                     StepNumber = x.StepNumber,
                     Text = x.Text,
                 }).ToList(),
             };
 
-            var id = await RecipeService.CreateAsync(request);
+            _ = await CommandBus.SendAsync<CreateRecipeCommand, CreateRecipeResult>(command);
             _statusMessage = "Saved.";
             Navigation.NavigateTo("/");
         }
