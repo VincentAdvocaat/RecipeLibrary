@@ -80,3 +80,6 @@ nunit-*.xml
 # Local dev SQLite database (temporary)
 recipelibrary-dev.db
 recipelibrary-dev.db-*
+
+# Node (Tailwind CSS build in Web project)
+node_modules/

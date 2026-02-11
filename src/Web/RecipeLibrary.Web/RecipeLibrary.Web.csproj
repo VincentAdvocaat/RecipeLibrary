@@ -5,6 +5,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>RecipeLibrary</RootNamespace>
+    <!-- Tailwind CSS: standalone CLI runs on build (no Node/npm). -->
+    <TailwindVersion>v3.4.17</TailwindVersion>
+    <TailwindInputStyleSheetPath>wwwroot/css/source.css</TailwindInputStyleSheetPath>
+    <TailwindOutputStyleSheetPath>wwwroot/app.css</TailwindOutputStyleSheetPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +19,7 @@
 
   <ItemGroup>
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
+    <PackageReference Include="MarshalHayes.Tailwind.Standalone" Version="1.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
