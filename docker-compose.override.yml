@@ -1,0 +1,5 @@
+services:
+  web:
+    # Helpful for local dev: hot-reload is still host-driven, but keep container config dev-friendly.
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development

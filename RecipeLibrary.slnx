@@ -1,5 +1,8 @@
 <Solution>
   <Folder Name="/src/" />
+  <Folder Name="/docker/">
+    <Project Path="docker-compose.dcproj" />
+  </Folder>
   <Folder Name="/src/Application/">
     <Project Path="src/Application/RecipeLibrary.Application.Contracts/RecipeLibrary.Application.Contracts.csproj" />
     <Project Path="src/Application/RecipeLibrary.Application.Abstractions/RecipeLibrary.Application.Abstractions.csproj" />

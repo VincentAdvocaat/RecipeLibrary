@@ -60,6 +60,11 @@ nunit-*.xml
 # Git worktrees (local checkouts)
 .worktrees/
 
+# Local dev environment files (secrets)
+.env
+.env.*
+!.env.example
+
 # User-specific project files
 *.user
 *.suo

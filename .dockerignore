@@ -1,0 +1,17 @@
+.git
+.vs
+.vscode
+
+**/bin/
+**/obj/
+**/*.user
+**/*.suo
+
+artifacts/
+
+# Local environment files (never bake into image)
+.env
+.env.*
+
+# Local publish outputs
+.publish/

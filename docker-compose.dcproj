@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.Docker.Sdk">
+  <PropertyGroup Label="Globals">
+    <ProjectVersion>2.1</ProjectVersion>
+    <DockerTargetOS>Linux</DockerTargetOS>
+    <DockerServiceName>web</DockerServiceName>
+    <DockerPublishLocalPorts>True</DockerPublishLocalPorts>
+    <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
+    <DockerServiceUrl>http://localhost:{ServicePort}/</DockerServiceUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="docker-compose.yml" />
+    <None Include="docker-compose.override.yml" />
+    <None Include=".dockerignore" />
+    <None Include=".env.example" />
+  </ItemGroup>
+</Project>
+
