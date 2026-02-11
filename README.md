@@ -93,6 +93,21 @@ See: `infra/README.md`
 
 See: `docs/azure/test-runbook.md`
 
+## Tailwind CSS (Web project)
+
+The Blazor Web app uses **Tailwind CSS** for styling. Building CSS requires **Node.js** and **npm**.
+
+- **Config**: `src/Web/RecipeLibrary.Web/tailwind.config.js` (content: `.razor`, `wwwroot`).
+- **Source CSS**: `src/Web/RecipeLibrary.Web/wwwroot/css/source.css` (Tailwind directives + app custom styles). Custom Blazor styles are also kept in `wwwroot/app.custom.css` for reference; the build inlines them into the generated `app.css`.
+
+**Commands** (run from `src/Web/RecipeLibrary.Web`):
+
+- First time: `npm install`
+- Development (watch): `npm run watch:css`
+- One-off build: `npm run build:css`
+
+Run `npm run build:css` before `dotnet build`/publish if you changed Tailwind source or content.
+
 ## Local development
 
 **Local debug with Docker SQL** (app and DB on your machine):
