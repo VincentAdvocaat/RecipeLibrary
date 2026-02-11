@@ -55,7 +55,9 @@ nunit-*.xml
 
 # IDE and tooling folders
 .vs/
-.vscode/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
 
 # Git worktrees (local checkouts)
 .worktrees/

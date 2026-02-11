@@ -93,9 +93,17 @@ See: `infra/README.md`
 
 See: `docs/azure/test-runbook.md`
 
-## Local development (against Azure SQL, password-less)
+## Local development
 
-High level:
+**Local debug with Docker SQL** (app and DB on your machine):
+
+- Start the SQL container: `docker compose up -d sql --wait`
+- Copy `.env.example` to `.env` and set `MSSQL_SA_PASSWORD`
+- Run or debug the web project; the app uses a local connection string fallback in Development
+
+See: `docs/local-debug.md`
+
+**Against Azure SQL (password-less)**:
 
 - `az login`
 - Set `ConnectionStrings__RecipeDb` to a password-less Azure SQL connection string (Entra auth)
@@ -121,6 +129,7 @@ Policy reference: `.cursor/rules/worktrees-and-branches.mdc`
 
 ## Docs index
 
+- `docs/local-debug.md` — local debug with Docker SQL
 - `infra/README.md`
 - `docs/azure/test-runbook.md`
 - `docs/azure/sql-grants.sql`

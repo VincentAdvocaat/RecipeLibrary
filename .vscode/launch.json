@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug (local)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "start-sql",
+      "program": "${workspaceFolder}/src/Web/RecipeLibrary.Web/bin/Debug/net10.0/RecipeLibrary.Web.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/Web/RecipeLibrary.Web",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}

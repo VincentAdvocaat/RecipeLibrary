@@ -1,16 +1,33 @@
 using RecipeLibrary.Application;
 using RecipeLibrary.Components;
 using RecipeLibrary.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// In Development, load .env from repo root so MSSQL_SA_PASSWORD is available for local connection string fallback.
+if (builder.Environment.IsDevelopment())
+{
+    DotNetEnv.Env.TraversePath().Load();
+}
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-var recipeDbConnectionString =
-    builder.Configuration.GetConnectionString("RecipeDb")
-    ?? throw new InvalidOperationException("Missing connection string 'RecipeDb'. Set ConnectionStrings__RecipeDb (local) or configure it in App Service connection strings.");
+var recipeDbConnectionString = builder.Configuration.GetConnectionString("RecipeDb");
+if (string.IsNullOrWhiteSpace(recipeDbConnectionString) && builder.Environment.IsDevelopment())
+{
+    var saPassword = Environment.GetEnvironmentVariable("MSSQL_SA_PASSWORD");
+    if (!string.IsNullOrWhiteSpace(saPassword))
+    {
+        recipeDbConnectionString = $"Server=localhost,1433;Database=RecipeLibrary;User Id=sa;Password={saPassword};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True";
+    }
+}
+if (string.IsNullOrWhiteSpace(recipeDbConnectionString))
+{
+    throw new InvalidOperationException("Missing connection string 'RecipeDb'. Set ConnectionStrings__RecipeDb (local) or configure it in App Service connection strings.");
+}
 
 builder.Services.AddPersistence(recipeDbConnectionString);
 builder.Services.AddApplication();
@@ -18,6 +35,19 @@ builder.Services.AddApplication();
 var app = builder.Build();
 
 app.Services.EnsurePersistenceMigrated();
+
+// Developer feedback: log only when DB is unreachable in Development (e.g. SQL container not running).
+if (app.Environment.IsDevelopment())
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<RecipeDbContext>();
+        if (!db.Database.CanConnect())
+        {
+            app.Logger.LogWarning("Cannot connect to RecipeDb. Is the SQL container running?");
+        }
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
