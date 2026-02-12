@@ -21,7 +21,7 @@
                 @* Foto *@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Receptfoto</label>
-                    <PhotoUploadZone ImageUrl="_imageUrl" ImageUrlChanged="@(url => { _imageUrl = url; StateHasChanged(); })" />
+                    <PhotoUploadZone ImageUrl="_imageUrl" ImageUrlChanged="@(url => { _imageUrl = url ?? string.Empty; StateHasChanged(); })" />
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -293,10 +293,12 @@
         catch (Exception ex)
         {
             _statusMessage = ex.Message;
+            StateHasChanged();
         }
         finally
         {
             _isSaving = false;
+            StateHasChanged();
         }
     }
 }

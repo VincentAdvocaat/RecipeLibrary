@@ -3,7 +3,7 @@
 
 <div class="@CssClass">
     <Heading Level="3" CssClass="text-sm font-medium text-gray-900 mb-1">Ingrediënten</Heading>
-    <ul class="list-disc list-inside text-sm text-gray-700 space-y-0.5">
+    <ul class="list-disc list-inside text-sm text-gray-700 space-y-0.5 columns-1 sm:columns-3 gap-x-4">
         @foreach (var name in IngredientNames)
         {
             <li>@name</li>

@@ -5,7 +5,7 @@
     @foreach (var cat in VisibleCategories)
     {
         <button type="button"
-                class="px-3 py-1.5 rounded text-sm font-medium @(SelectedCategory == cat.Value ? "bg-gray-800 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50")"
+                class="px-3 py-1.5 rounded text-sm font-medium @((SelectedCategory ?? 0) == (cat.Value ?? 0) ? "bg-gray-800 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50")"
                 @onclick="() => SelectCategory(cat.Value)">
             @cat.Label
         </button>
