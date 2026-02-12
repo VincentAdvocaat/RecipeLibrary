@@ -25,7 +25,7 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
         {
             var term = search.Trim();
             query = query.Where(r =>
-                r.Title.Value.Contains(term) ||
+                EF.Property<string>(r, "Title").Contains(term) ||
                 (r.Description != null && r.Description.Contains(term)));
         }
 
@@ -34,7 +34,7 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
             query = query.Where(r => r.Category == cat);
         }
 
-        return await query.OrderBy(r => r.Title.Value).ToListAsync(ct);
+        return await query.OrderBy(r => r.Title).ToListAsync(ct);
     }
 }
 
