@@ -31,6 +31,11 @@ if (string.IsNullOrWhiteSpace(recipeDbConnectionString))
 
 builder.Services.AddPersistence(recipeDbConnectionString);
 builder.Services.AddApplication();
+builder.Services.AddScoped(sp =>
+{
+    var nav = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+    return new HttpClient { BaseAddress = new Uri(nav.BaseUri) };
+});
 
 var app = builder.Build();
 
@@ -64,6 +69,28 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Local recipe image upload: save to wwwroot/uploads/recipe-images/ and return URL.
+app.MapPost("/api/upload-recipe-image", async (IFormFile file, IWebHostEnvironment env) =>
+{
+    if (file == null || file.Length == 0)
+        return Results.BadRequest("No file uploaded.");
+
+    var allowed = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+    var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+    if (string.IsNullOrEmpty(ext) || !allowed.Contains(ext))
+        return Results.BadRequest("Invalid image type. Use jpg, png, gif or webp.");
+
+    var uploadDir = Path.Combine(env.WebRootPath ?? "wwwroot", "uploads", "recipe-images");
+    Directory.CreateDirectory(uploadDir);
+    var fileName = $"{Guid.NewGuid()}{ext}";
+    var filePath = Path.Combine(uploadDir, fileName);
+    await using (var stream = File.Create(filePath))
+        await file.CopyToAsync(stream);
+
+    var url = $"/uploads/recipe-images/{fileName}";
+    return Results.Ok(new { url });
+}).DisableAntiforgery();
 
 app.Run();
 

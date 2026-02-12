@@ -1,0 +1,127 @@
+@* Molecule: click or drag-and-drop photo upload; uploads to API and returns URL. *@
+@namespace RecipeLibrary.Components.Molecules
+@inject HttpClient Http
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div @ref="_zoneRef" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center @(string.IsNullOrEmpty(ImageUrl) ? "" : "relative") @CssClass relative min-h-[12rem] flex items-center justify-center">
+    @if (string.IsNullOrEmpty(ImageUrl))
+    {
+        <label class="cursor-pointer block absolute inset-0 flex flex-col items-center justify-center rounded-lg">
+            <InputFile accept="image/jpeg,image/png,image/gif,image/webp" OnChange="HandleFileChange"
+                       AdditionalAttributes="@(new Dictionary<string, object> { { "class", "absolute inset-0 w-full h-full opacity-0 cursor-pointer" } })" />
+            <span class="pointer-events-none">
+                <Icon Name="Icon.IconName.Camera" CssClass="mx-auto w-12 h-12 text-gray-400" />
+                <p class="mt-2 text-sm text-gray-600">Klik om een foto te uploaden of sleep een afbeelding hierheen</p>
+            </span>
+        </label>
+    }
+    else
+    {
+        <div class="relative inline-block">
+            <img src="@ImageUrl" alt="Recept foto" class="max-h-48 rounded object-cover" />
+            <button type="button"
+                    class="absolute top-2 right-2 p-1.5 rounded bg-gray-800 text-white hover:bg-gray-700"
+                    aria-label="Foto verwijderen"
+                    @onclick="RemovePhoto">
+                <Icon Name="Icon.IconName.Trash" CssClass="w-4 h-4" />
+            </button>
+        </div>
+    }
+    @if (_uploadError != null)
+    {
+        <p class="mt-2 text-sm text-red-600">@_uploadError</p>
+    }
+</div>
+
+@code {
+    [Parameter] public string? ImageUrl { get; set; }
+    [Parameter] public EventCallback<string?> ImageUrlChanged { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+
+    private ElementReference _zoneRef;
+    private DotNetObjectReference<PhotoUploadZone>? _dotNetRef;
+    private string? _uploadError;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("RecipeLibrary.photoUploadZone.init", _zoneRef, _dotNetRef);
+            }
+            catch
+            {
+                _dotNetRef?.Dispose();
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task SetImageUrlFromDrop(string url)
+    {
+        _uploadError = null;
+        await ImageUrlChanged.InvokeAsync(url);
+    }
+
+    [JSInvokable]
+    public void SetUploadError(string message)
+    {
+        _uploadError = message;
+        StateHasChanged();
+    }
+
+    private async Task HandleFileChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+        await UploadFileAsync(file);
+    }
+
+    private async Task UploadFileAsync(IBrowserFile file)
+    {
+        _uploadError = null;
+        try
+        {
+            const int maxSize = 4 * 1024 * 1024; // 4 MB
+            var stream = file.OpenReadStream(maxSize);
+            var content = new MultipartFormDataContent();
+            var streamContent = new StreamContent(stream);
+            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            content.Add(streamContent, "file", file.Name);
+
+            var response = await Http.PostAsync("/api/upload-recipe-image", content);
+            if (!response.IsSuccessStatusCode)
+            {
+                _uploadError = "Upload mislukt. Gebruik jpg, png, gif of webp.";
+                return;
+            }
+
+            var json = await response.Content.ReadFromJsonAsync<UploadResponse>();
+            if (!string.IsNullOrEmpty(json?.Url))
+                await ImageUrlChanged.InvokeAsync(json.Url);
+        }
+        catch (Exception)
+        {
+            _uploadError = "Upload mislukt.";
+        }
+    }
+
+    private async Task RemovePhoto()
+    {
+        _uploadError = null;
+        await ImageUrlChanged.InvokeAsync(null);
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+    }
+
+    private sealed class UploadResponse
+    {
+        public string? Url { get; set; }
+    }
+}

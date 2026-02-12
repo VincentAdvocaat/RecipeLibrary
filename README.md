@@ -111,7 +111,7 @@ When you build or run the web project (e.g. F5 in Visual Studio), Tailwind runs 
 - Copy `.env.example` to `.env` and set `MSSQL_SA_PASSWORD`
 - Run or debug the web project; the app uses a local connection string fallback in Development
 
-See: `docs/local-debug.md`
+See: `docs/local-debug.md`. Voor verbinden met een SQL-client (SSMS, Azure Data Studio, enz.) en tooling: `docs/database-connection.md`.
 
 **Against Azure SQL (password-less)**:
 
@@ -140,6 +140,7 @@ Policy reference: `.cursor/rules/worktrees-and-branches.mdc`
 ## Docs index
 
 - `docs/local-debug.md` — local debug with Docker SQL
+- `docs/database-connection.md` — verbinden met de lokale Docker-database en tooling (SSMS, Azure Data Studio, VS Code)
 - `infra/README.md`
 - `docs/azure/test-runbook.md`
 - `docs/azure/sql-grants.sql`

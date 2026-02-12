@@ -10,6 +10,10 @@ public sealed class CreateRecipeCommand : ICommand<CreateRecipeResult>
 
     public int Category { get; init; } // RecipeCategory value
 
+    public string? Description { get; init; }
+
+    public string? ImageUrl { get; init; }
+
     public List<CreateRecipeIngredientDto> Ingredients { get; init; } = [];
 
     public List<CreateRecipeInstructionStepDto> InstructionSteps { get; init; } = [];

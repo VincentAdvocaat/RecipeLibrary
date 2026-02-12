@@ -21,10 +21,15 @@ public sealed class CreateRecipeCommandHandler(IRecipeRepository recipeRepositor
             ? (RecipeCategory)command.Category
             : RecipeCategory.Unknown;
 
+        var description = (command.Description ?? string.Empty).Trim();
+        var imageUrl = (command.ImageUrl ?? string.Empty).Trim();
+
         var recipe = new Recipe
         {
             Id = recipeId,
             Title = new RecipeTitle(title),
+            Description = string.IsNullOrEmpty(description) ? null : description,
+            ImageUrl = string.IsNullOrEmpty(imageUrl) ? null : imageUrl,
             PreparationMinutes = command.PreparationTimeMinutes,
             CookingMinutes = command.CookingTimeMinutes,
             Category = category,

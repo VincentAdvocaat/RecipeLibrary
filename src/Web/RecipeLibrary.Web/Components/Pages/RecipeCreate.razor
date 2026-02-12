@@ -7,126 +7,166 @@
 @inject ICommandBus CommandBus
 @inject NavigationManager Navigation
 
-<PageTitle>Recipe - Create</PageTitle>
+<PageTitle>Nieuw Recept Toevoegen</PageTitle>
 
-<h1>Create recipe</h1>
+<div class="min-h-screen bg-gray-100">
+    <div class="container mx-auto p-4 max-w-4xl">
+        <RecipeOverviewHeader Title="Nieuw Recept Toevoegen" IsCreatePage="true" />
 
-<EditForm Model="_vm" FormName="create-recipe" OnValidSubmit="HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+        <EditForm Model="_vm" FormName="create-recipe" AdditionalAttributes="@(new Dictionary<string, object> { { "formname", "create-recipe" } })" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-red-600 text-sm mb-4" />
 
-    <div style="display: grid; gap: 12px; max-width: 760px;">
-        <div style="display: grid; gap: 6px;">
-            <label>Title</label>
-            <InputText class="form-control" @bind-Value="_vm.Title" />
-        </div>
+            <div class="bg-white rounded-lg shadow p-6 space-y-6">
+                @* Foto *@
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Receptfoto</label>
+                    <PhotoUploadZone ImageUrl="_imageUrl" ImageUrlChanged="@(url => { _imageUrl = url; StateHasChanged(); })" />
+                </div>
 
-        <div style="display: grid; gap: 6px;">
-            <label>Preparation time (minutes)</label>
-            <InputNumber class="form-control" @bind-Value="_vm.PreparationTimeMinutes" />
-        </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    @* Links *@
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Titel van Recept</label>
+                            <InputText class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" placeholder="Bijvoorbeeld: Kip Curry" @bind-Value="_vm.Title" />
+                        </div>
 
-        <div style="display: grid; gap: 6px;">
-            <label>Cooking time (minutes)</label>
-            <InputNumber class="form-control" @bind-Value="_vm.CookingTimeMinutes" />
-        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Korte Beschrijving</label>
+                            <InputTextArea class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" rows="3" placeholder="Geef een korte omschrijving van het recept" @bind-Value="_vm.Description" />
+                        </div>
 
-        <div style="display: grid; gap: 6px;">
-            <label>Category</label>
-            <InputSelect class="form-control" @bind-Value="_vm.Category">
-                <option value="@((int)RecipeCategory.Unknown)">—</option>
-                <option value="@((int)RecipeCategory.Vegetarian)">Vegetarisch</option>
-                <option value="@((int)RecipeCategory.Meat)">Vlees</option>
-                <option value="@((int)RecipeCategory.Vegan)">Vegan</option>
-            </InputSelect>
-        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tags / Categorie</label>
+                            <CategoryFilter SelectedCategory="_vm.Category" SelectedCategoryChanged="OnCategoryChanged" ShowAllOption="false" />
+                        </div>
 
-        <hr />
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Voorbereidingstijd (min)</label>
+                                <InputNumber class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" @bind-Value="_vm.PreparationTimeMinutes" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Bereidingstijd (min)</label>
+                                <InputNumber class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" @bind-Value="_vm.CookingTimeMinutes" />
+                            </div>
+                        </div>
 
-        <div style="display: grid; gap: 8px;">
-            <h2>Ingredients</h2>
-
-            @for (var i = 0; i < _vm.Ingredients.Count; i++)
-            {
-                var item = _vm.Ingredients[i];
-                var index = i;
-                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: end;">
-                    <div style="display: grid; gap: 6px;">
-                        <label>Name</label>
-                        <InputText class="form-control" @bind-Value="item.Name" />
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Equipment</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button"
+                                        class="px-3 py-1.5 rounded text-sm font-medium @(_equipmentOven ? "bg-gray-800 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50")"
+                                        @onclick="() => _equipmentOven = !_equipmentOven">
+                                    Oven Nodig
+                                </button>
+                                <button type="button"
+                                        class="px-3 py-1.5 rounded text-sm font-medium @(_equipmentBakken ? "bg-gray-800 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50")"
+                                        @onclick="() => _equipmentBakken = !_equipmentBakken">
+                                    Bakken Nodig
+                                </button>
+                                <button type="button"
+                                        class="px-3 py-1.5 rounded text-sm font-medium @(_equipmentKoelen ? "bg-gray-800 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50")"
+                                        @onclick="() => _equipmentKoelen = !_equipmentKoelen">
+                                    Koelen Nodig
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div style="display: grid; gap: 6px;">
-                        <label>Quantity</label>
-                        <InputNumber class="form-control" @bind-Value="item.Quantity" />
+                    @* Rechts: Categorie nogmaals (design) *@
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Categorie</label>
+                            <CategoryFilter SelectedCategory="_vm.Category" SelectedCategoryChanged="OnCategoryChanged" ShowAllOption="false" />
+                        </div>
                     </div>
+                </div>
 
-                    <div style="display: grid; gap: 6px;">
-                        <label>Unit</label>
-                        <InputSelect class="form-control" @bind-Value="item.UnitName">
-                            @foreach (var unit in _unitOptions)
-                            {
-                                <option value="@unit">@unit</option>
-                            }
-                        </InputSelect>
-                    </div>
-
-                    <button type="button" class="btn btn-secondary" @onclick="() => RemoveIngredient(index)" disabled="@(_vm.Ingredients.Count <= 1)">
-                        Remove
+                @* Ingrediënten *@
+                <div class="space-y-3">
+                    <Heading Level="3" CssClass="text-sm font-medium text-gray-900">Ingrediënten</Heading>
+                    @for (var i = 0; i < _vm.Ingredients.Count; i++)
+                    {
+                        var item = _vm.Ingredients[i];
+                        var index = i;
+                        <div class="flex flex-wrap items-end gap-3">
+                            <div class="flex-1 min-w-[120px]">
+                                <label class="block text-xs text-gray-500 mb-0.5">Naam</label>
+                                <InputText class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" placeholder="bijv. kipfilet" @bind-Value="item.Name" />
+                            </div>
+                            <div class="w-24">
+                                <label class="block text-xs text-gray-500 mb-0.5">Hoeveelheid</label>
+                                <InputNumber class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" @bind-Value="item.Quantity" />
+                            </div>
+                            <div class="w-32">
+                                <label class="block text-xs text-gray-500 mb-0.5">Eenheid</label>
+                                <InputSelect class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" @bind-Value="item.UnitName">
+                                    @foreach (var unit in _unitOptions)
+                                    {
+                                        <option value="@unit">@unit</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <button type="button" class="p-2 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded" aria-label="Verwijderen" @onclick="() => RemoveIngredient(index)" disabled="@(_vm.Ingredients.Count <= 1)">
+                                <Icon Name="Icon.IconName.Trash" CssClass="w-5 h-5" />
+                            </button>
+                        </div>
+                    }
+                    <button type="button" class="inline-flex items-center px-3 py-1.5 rounded border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50" @onclick="AddIngredient">
+                        + Ingrediënt toevoegen
                     </button>
                 </div>
-            }
 
-            <button type="button" class="btn btn-primary" @onclick="AddIngredient">+ Add ingredient</button>
-        </div>
-
-        <hr />
-
-        <div style="display: grid; gap: 8px;">
-            <h2>Instruction steps</h2>
-
-            @for (var i = 0; i < _vm.Steps.Count; i++)
-            {
-                var step = _vm.Steps[i];
-                var index = i;
-                <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start;">
-                    <div style="display: grid; gap: 6px; min-width: 80px;">
-                        <label>Step</label>
-                        <InputNumber class="form-control" @bind-Value="step.StepNumber" disabled />
-                    </div>
-
-                    <div style="display: grid; gap: 6px;">
-                        <label>Text</label>
-                        <InputTextArea class="form-control" @bind-Value="step.Text" rows="3" />
-                    </div>
-
-                    <button type="button" class="btn btn-secondary" @onclick="() => RemoveStep(index)" disabled="@(_vm.Steps.Count <= 1)">
-                        Remove
+                @* Instructies / Stappen *@
+                <div class="space-y-3">
+                    <Heading Level="3" CssClass="text-sm font-medium text-gray-900">Instructies</Heading>
+                    <p class="text-xs text-gray-500">Stappen</p>
+                    @for (var i = 0; i < _vm.Steps.Count; i++)
+                    {
+                        var step = _vm.Steps[i];
+                        var index = i;
+                        <div class="flex gap-3 items-start">
+                            <div class="flex-1">
+                                <InputTextArea class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" rows="2" placeholder="Bijvoorbeeld: Snijd de ui. Verhit olie in een pan..." @bind-Value="step.Text" />
+                            </div>
+                            <button type="button" class="p-2 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded mt-6" aria-label="Verwijderen" @onclick="() => RemoveStep(index)" disabled="@(_vm.Steps.Count <= 1)">
+                                <Icon Name="Icon.IconName.Trash" CssClass="w-5 h-5" />
+                            </button>
+                        </div>
+                    }
+                    <button type="button" class="inline-flex items-center px-3 py-1.5 rounded border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50" @onclick="AddStep">
+                        + Stap toevoegen
                     </button>
                 </div>
-            }
 
-            <button type="button" class="btn btn-primary" @onclick="AddStep">+ Add step</button>
-        </div>
-
-        <hr />
-
-        <div style="display: flex; gap: 12px; align-items: center;">
-            <button type="submit" class="btn btn-success" disabled="@_isSaving">Save</button>
-            @if (!string.IsNullOrWhiteSpace(_statusMessage))
-            {
-                <span>@_statusMessage</span>
-            }
-        </div>
+                @* Footer knoppen *@
+                <div class="flex flex-wrap justify-between items-center gap-4 pt-4 border-t border-gray-200">
+                    <Button Variant="secondary" Text="Annuleren" OnClick="OnCancel" />
+                    <div class="flex items-center gap-3">
+                        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+                        {
+                            <span class="text-sm @(_statusMessage.StartsWith("Opgeslagen", StringComparison.Ordinal) ? "text-green-600" : "text-red-600")">@_statusMessage</span>
+                        }
+                        <button type="submit" class="inline-flex items-center px-4 py-2 rounded bg-gray-800 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:pointer-events-none" disabled="@_isSaving">
+                            Opslaan Recept
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
     </div>
-</EditForm>
+</div>
 
 @code
 {
     private sealed class CreateRecipeVm
     {
-        [Required]
+        [Required(ErrorMessage = "Titel is verplicht.")]
         public string Title { get; set; } = string.Empty;
+
+        public string? Description { get; set; }
 
         [Range(0, 24 * 60)]
         public int PreparationTimeMinutes { get; set; } = 30;
@@ -134,7 +174,7 @@
         [Range(0, 24 * 60)]
         public int CookingTimeMinutes { get; set; } = 0;
 
-        public int Category { get; set; } = (int)RecipeCategory.Unknown;
+        public int Category { get; set; } = (int)RecipeCategory.Vegetarian;
 
         public List<IngredientVm> Ingredients { get; set; } = [new IngredientVm()];
 
@@ -143,13 +183,13 @@
 
     private sealed class IngredientVm
     {
-        [Required]
+        [Required(ErrorMessage = "Naam is verplicht.")]
         public string Name { get; set; } = string.Empty;
 
-        [Range(typeof(decimal), "0.0001", "1000000")]
+        [Range(typeof(decimal), "0.0001", "1000000", ErrorMessage = "Hoeveelheid moet groter dan 0 zijn.")]
         public decimal Quantity { get; set; } = 1;
 
-        [Required]
+        [Required(ErrorMessage = "Eenheid is verplicht.")]
         public string UnitName { get; set; } = nameof(Unit.Gram);
     }
 
@@ -157,7 +197,7 @@
     {
         public int StepNumber { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Stap tekst is verplicht.")]
         public string Text { get; set; } = string.Empty;
     }
 
@@ -166,43 +206,56 @@
         .ToArray();
 
     private readonly CreateRecipeVm _vm = new();
+    private string? _imageUrl;
     private bool _isSaving;
     private string? _statusMessage;
+    private bool _equipmentOven;
+    private bool _equipmentBakken;
+    private bool _equipmentKoelen;
+
+    private void OnImageUrlChanged(string? url)
+    {
+        _imageUrl = url;
+        StateHasChanged();
+    }
+
+    private void OnCategoryChanged(int? value)
+    {
+        _vm.Category = value ?? (int)RecipeCategory.Vegetarian;
+        StateHasChanged();
+    }
+
+    private void OnCancel()
+    {
+        Navigation.NavigateTo("/recipes");
+    }
 
     private void AddIngredient()
     {
         _vm.Ingredients.Add(new IngredientVm());
+        StateHasChanged();
     }
 
     private void RemoveIngredient(int index)
     {
-        if (_vm.Ingredients.Count <= 1)
-        {
-            return;
-        }
-
+        if (_vm.Ingredients.Count <= 1) return;
         _vm.Ingredients.RemoveAt(index);
+        StateHasChanged();
     }
 
     private void AddStep()
     {
         _vm.Steps.Add(new StepVm { StepNumber = _vm.Steps.Count + 1 });
+        StateHasChanged();
     }
 
     private void RemoveStep(int index)
     {
-        if (_vm.Steps.Count <= 1)
-        {
-            return;
-        }
-
+        if (_vm.Steps.Count <= 1) return;
         _vm.Steps.RemoveAt(index);
-
-        // Re-number steps to keep them contiguous.
         for (var i = 0; i < _vm.Steps.Count; i++)
-        {
             _vm.Steps[i].StepNumber = i + 1;
-        }
+        StateHasChanged();
     }
 
     private async Task HandleValidSubmit()
@@ -215,6 +268,8 @@
             var command = new CreateRecipeCommand
             {
                 Title = _vm.Title,
+                Description = string.IsNullOrWhiteSpace(_vm.Description) ? null : _vm.Description.Trim(),
+                ImageUrl = string.IsNullOrWhiteSpace(_imageUrl) ? null : _imageUrl.Trim(),
                 PreparationTimeMinutes = _vm.PreparationTimeMinutes,
                 CookingTimeMinutes = _vm.CookingTimeMinutes,
                 Category = _vm.Category,
@@ -232,8 +287,8 @@
             };
 
             _ = await CommandBus.SendAsync<CreateRecipeCommand, CreateRecipeResult>(command);
-            _statusMessage = "Saved.";
-            Navigation.NavigateTo("/");
+            _statusMessage = "Opgeslagen.";
+            Navigation.NavigateTo("/recipes");
         }
         catch (Exception ex)
         {
@@ -245,4 +300,3 @@
         }
     }
 }
-

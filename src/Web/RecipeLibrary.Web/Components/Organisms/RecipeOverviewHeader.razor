@@ -3,10 +3,18 @@
 
 <header class="flex flex-wrap items-center justify-between gap-4 mb-6 @CssClass">
     <div class="flex items-center gap-4">
-        <Heading Level="1" CssClass="m-0">Recepten Overzicht</Heading>
+        <Heading Level="1" CssClass="m-0">@Title</Heading>
         <nav class="flex items-center gap-4">
-            <AppNavLink Href="/recipes/create">Recept Toevoegen</AppNavLink>
-            <AppNavLink Href="/recipes">Mijn Recepten</AppNavLink>
+            @if (IsCreatePage)
+            {
+                <AppNavLink Href="/recipes">Mijn Recepten</AppNavLink>
+                <AppNavLink Href="/">Overzicht</AppNavLink>
+            }
+            else
+            {
+                <AppNavLink Href="/recipes/create">Recept Toevoegen</AppNavLink>
+                <AppNavLink Href="/recipes">Mijn Recepten</AppNavLink>
+            }
         </nav>
     </div>
     <div class="flex items-center gap-4">
@@ -21,6 +29,8 @@
 </header>
 
 @code {
+    [Parameter] public string Title { get; set; } = "Recepten Overzicht";
+    [Parameter] public bool IsCreatePage { get; set; }
     [Parameter] public bool ShowViewToggleInHeader { get; set; }
     [Parameter] public ViewToggle.ViewModeKind ViewMode { get; set; }
     [Parameter] public EventCallback<ViewToggle.ViewModeKind> ViewModeChanged { get; set; }
