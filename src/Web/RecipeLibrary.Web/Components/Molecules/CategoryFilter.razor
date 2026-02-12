@@ -1,0 +1,33 @@
+@* Molecule: category filter buttons (Alle, Vegetarisch, Vlees, Vegan). *@
+@namespace RecipeLibrary.Components.Molecules
+
+<div class="flex flex-wrap gap-2 @CssClass">
+    @foreach (var cat in Categories)
+    {
+        <button type="button"
+                class="px-3 py-1.5 rounded text-sm font-medium @(SelectedCategory == cat.Value ? "bg-gray-800 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50")"
+                @onclick="() => SelectCategory(cat.Value)">
+            @cat.Label
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public int? SelectedCategory { get; set; } // null = Alle
+    [Parameter] public EventCallback<int?> SelectedCategoryChanged { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+
+    private static readonly (int? Value, string Label)[] Categories =
+    [
+        (null, "Alle"),
+        (1, "Vegetarisch"),   // RecipeCategory.Vegetarian
+        (2, "Vlees"),         // RecipeCategory.Meat
+        (3, "Vegan"),         // RecipeCategory.Vegan
+    ];
+
+    private async Task SelectCategory(int? value)
+    {
+        SelectedCategory = value;
+        await SelectedCategoryChanged.InvokeAsync(value);
+    }
+}

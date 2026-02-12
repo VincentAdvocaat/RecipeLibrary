@@ -1,0 +1,28 @@
+@* Organism: page header with title, nav links, optional view toggle in header. *@
+@namespace RecipeLibrary.Components.Organisms
+
+<header class="flex flex-wrap items-center justify-between gap-4 mb-6 @CssClass">
+    <div class="flex items-center gap-4">
+        <Heading Level="1" CssClass="m-0">Recepten Overzicht</Heading>
+        <nav class="flex items-center gap-4">
+            <AppNavLink Href="/recipes/create">Recept Toevoegen</AppNavLink>
+            <AppNavLink Href="/recipes">Mijn Recepten</AppNavLink>
+        </nav>
+    </div>
+    <div class="flex items-center gap-4">
+        @if (ShowViewToggleInHeader)
+        {
+            <ViewToggle ViewMode="ViewMode" ViewModeChanged="ViewModeChanged" ShowKaartenLabel="false" />
+        }
+        <button type="button" class="p-2 text-gray-600 hover:bg-gray-100 rounded" aria-label="Menu">
+            <Icon Name="Icon.IconName.Menu" CssClass="w-6 h-6" />
+        </button>
+    </div>
+</header>
+
+@code {
+    [Parameter] public bool ShowViewToggleInHeader { get; set; }
+    [Parameter] public ViewToggle.ViewModeKind ViewMode { get; set; }
+    [Parameter] public EventCallback<ViewToggle.ViewModeKind> ViewModeChanged { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+}

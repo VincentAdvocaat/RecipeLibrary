@@ -1,0 +1,25 @@
+@* Atom: heading (h1, h2, ...). *@
+@namespace RecipeLibrary.Components.Atoms
+
+@if (Level == 1)
+{
+    <h1 class="text-xl font-semibold text-gray-900 @CssClass">@ChildContent</h1>
+}
+else if (Level == 2)
+{
+    <h2 class="text-lg font-medium text-gray-900 @CssClass">@ChildContent</h2>
+}
+else if (Level == 3)
+{
+    <h3 class="text-base font-medium text-gray-800 @CssClass">@ChildContent</h3>
+}
+else
+{
+    <span class="text-base text-gray-800 @CssClass">@ChildContent</span>
+}
+
+@code {
+    [Parameter] public int Level { get; set; } = 1;
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

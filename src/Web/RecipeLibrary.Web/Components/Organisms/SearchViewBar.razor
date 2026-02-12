@@ -1,0 +1,17 @@
+@* Organism: search + view toggle only (card layout). *@
+@namespace RecipeLibrary.Components.Organisms
+
+<div class="flex flex-wrap items-center gap-4 mb-6 @CssClass">
+    <div class="flex-1 min-w-[200px] max-w-md">
+        <SearchInput Value="SearchQuery" ValueChanged="SearchQueryChanged" />
+    </div>
+    <ViewToggle ViewMode="ViewMode" ViewModeChanged="ViewModeChanged" ShowKaartenLabel="true" />
+</div>
+
+@code {
+    [Parameter] public string? SearchQuery { get; set; }
+    [Parameter] public EventCallback<string?> SearchQueryChanged { get; set; }
+    [Parameter] public ViewToggle.ViewModeKind ViewMode { get; set; }
+    [Parameter] public EventCallback<ViewToggle.ViewModeKind> ViewModeChanged { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+}

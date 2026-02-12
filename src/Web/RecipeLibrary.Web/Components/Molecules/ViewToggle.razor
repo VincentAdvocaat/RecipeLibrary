@@ -1,0 +1,37 @@
+@* Molecule: Weergave label + list/cards toggle. *@
+@namespace RecipeLibrary.Components.Molecules
+
+<div class="flex items-center gap-2 @CssClass">
+    <span class="text-sm text-gray-600">Weergave:</span>
+    <div class="flex rounded border border-gray-300 overflow-hidden">
+        <button type="button"
+                class="inline-flex items-center px-3 py-1.5 text-sm @(ViewMode == ViewModeKind.List ? "bg-gray-200 text-gray-900 font-medium" : "bg-white text-gray-600 hover:bg-gray-50")"
+                @onclick="() => SetViewMode(ViewModeKind.List)">
+            <Icon Name="Icon.IconName.List" CssClass="w-4 h-4" />
+        </button>
+        <button type="button"
+                class="inline-flex items-center px-3 py-1.5 text-sm @(ViewMode == ViewModeKind.Cards ? "bg-gray-200 text-gray-900 font-medium" : "bg-white text-gray-600 hover:bg-gray-50")"
+                @onclick="() => SetViewMode(ViewModeKind.Cards)">
+            <Icon Name="Icon.IconName.Grid" CssClass="w-4 h-4" />
+        </button>
+    </div>
+    @if (ShowKaartenLabel)
+    {
+        <span class="text-sm text-gray-600">Kaarten</span>
+    }
+</div>
+
+@code {
+    [Parameter] public ViewModeKind ViewMode { get; set; }
+    [Parameter] public EventCallback<ViewModeKind> ViewModeChanged { get; set; }
+    [Parameter] public bool ShowKaartenLabel { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+
+    private async Task SetViewMode(ViewModeKind mode)
+    {
+        ViewMode = mode;
+        await ViewModeChanged.InvokeAsync(mode);
+    }
+
+    public enum ViewModeKind { List, Cards }
+}

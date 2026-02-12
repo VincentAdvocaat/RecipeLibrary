@@ -1,0 +1,85 @@
+@page "/recipes"
+
+@inject IQueryBus QueryBus
+
+<PageTitle>Recepten Overzicht</PageTitle>
+
+<div class="min-h-screen bg-gray-100">
+    <div class="container mx-auto p-4 max-w-5xl">
+        @* List layout *@
+        @if (_viewMode == ViewToggle.ViewModeKind.List)
+        {
+            <RecipeOverviewHeader ShowViewToggleInHeader="false" />
+            <SearchFilterBar SearchQuery="_searchQuery"
+                             SearchQueryChanged="OnSearchQueryChanged"
+                             ViewMode="_viewMode"
+                             ViewModeChanged="OnViewModeChanged"
+                             SelectedCategory="_selectedCategory"
+                             SelectedCategoryChanged="OnCategoryChanged" />
+            <div class="space-y-3">
+                @foreach (var item in _items)
+                {
+                    <RecipeListItem Item="item" />
+                }
+            </div>
+        }
+        else
+        {
+            @* Card layout *@
+            <RecipeOverviewHeader ShowViewToggleInHeader="true"
+                                  ViewMode="_viewMode"
+                                  ViewModeChanged="OnViewModeChanged" />
+            <SearchViewBar SearchQuery="_searchQuery"
+                           SearchQueryChanged="OnSearchQueryChanged"
+                           ViewMode="_viewMode"
+                           ViewModeChanged="OnViewModeChanged" />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                @foreach (var item in _items)
+                {
+                    <RecipeCard Item="item" />
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string? _searchQuery;
+    private int? _selectedCategory;
+    private ViewToggle.ViewModeKind _viewMode = ViewToggle.ViewModeKind.List;
+    private IReadOnlyList<RecipeOverviewItem> _items = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRecipes();
+    }
+
+    private async Task OnViewModeChanged(ViewToggle.ViewModeKind mode)
+    {
+        _viewMode = mode;
+        StateHasChanged();
+    }
+
+    private async Task OnSearchQueryChanged(string? value)
+    {
+        _searchQuery = value;
+        await LoadRecipes();
+    }
+
+    private async Task OnCategoryChanged(int? value)
+    {
+        _selectedCategory = value;
+        await LoadRecipes();
+    }
+
+    private async Task LoadRecipes()
+    {
+        var query = new GetRecipeListQuery
+        {
+            Search = string.IsNullOrWhiteSpace(_searchQuery) ? null : _searchQuery.Trim(),
+            Category = _selectedCategory
+        };
+        var result = await QueryBus.QueryAsync<GetRecipeListQuery, GetRecipeListResult>(query);
+        _items = result.Items;
+    }
+}

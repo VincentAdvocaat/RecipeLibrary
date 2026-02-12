@@ -15,6 +15,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryBus>(sp => sp.GetRequiredService<InProcessBus>());
 
         services.AddScoped<ICommandHandler<CreateRecipeCommand, CreateRecipeResult>, CreateRecipeCommandHandler>();
+        services.AddScoped<IQueryHandler<GetRecipeListQuery, GetRecipeListResult>, GetRecipeListQueryHandler>();
 
         return services;
     }

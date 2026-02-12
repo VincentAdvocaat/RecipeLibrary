@@ -1,0 +1,13 @@
+@* Molecule: preparation + cooking time for one recipe. *@
+@namespace RecipeLibrary.Components.Molecules
+
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 @CssClass">
+    <TimeInfo Label="Voorbereiden" Minutes="PreparationMinutes" UseClockIcon="true" />
+    <TimeInfo Label="Bereiden" Minutes="CookingMinutes" UseClockIcon="false" />
+</div>
+
+@code {
+    [Parameter] public int PreparationMinutes { get; set; }
+    [Parameter] public int CookingMinutes { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+}

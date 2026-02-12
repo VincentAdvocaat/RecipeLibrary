@@ -14,9 +14,18 @@ public sealed class Recipe
     public string? Description { get; set; }
 
     /// <summary>
-    /// Total preparation and cooking duration.
+    /// Preparation time in minutes (voorbereiden).
     /// </summary>
-    public Duration Duration { get; set; }
+    public int PreparationMinutes { get; set; }
+
+    /// <summary>
+    /// Cooking time in minutes (bereiden).
+    /// </summary>
+    public int CookingMinutes { get; set; }
+
+    public RecipeCategory Category { get; set; }
+
+    public string? ImageUrl { get; set; }
 
     public Difficulty Difficulty { get; set; }
 

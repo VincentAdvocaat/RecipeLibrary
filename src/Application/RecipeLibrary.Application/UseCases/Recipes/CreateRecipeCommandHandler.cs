@@ -17,11 +17,17 @@ public sealed class CreateRecipeCommandHandler(IRecipeRepository recipeRepositor
         var recipeId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
+        var category = Enum.IsDefined(typeof(RecipeCategory), command.Category)
+            ? (RecipeCategory)command.Category
+            : RecipeCategory.Unknown;
+
         var recipe = new Recipe
         {
             Id = recipeId,
             Title = new RecipeTitle(title),
-            Duration = new Duration(command.PreparationTimeMinutes),
+            PreparationMinutes = command.PreparationTimeMinutes,
+            CookingMinutes = command.CookingTimeMinutes,
+            Category = category,
             Difficulty = Difficulty.Unknown,
             Servings = 0,
             CreatedAt = now,

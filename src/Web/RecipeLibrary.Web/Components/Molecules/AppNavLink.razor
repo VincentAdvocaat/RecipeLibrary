@@ -1,0 +1,17 @@
+@* Molecule: navigation link (text + optional icon). *@
+@namespace RecipeLibrary.Components.Molecules
+
+<a href="@Href" class="text-gray-700 text-sm font-medium hover:text-gray-900 @CssClass">
+    @if (Icon.HasValue)
+    {
+        <Icon Name="Icon!.Value" CssClass="inline-block w-4 h-4 mr-1 align-middle" />
+    }
+    @ChildContent
+</a>
+
+@code {
+    [Parameter] public string Href { get; set; } = "";
+    [Parameter] public Icon.IconName? Icon { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

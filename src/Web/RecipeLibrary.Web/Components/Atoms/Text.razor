@@ -1,0 +1,9 @@
+@* Atom: plain text / label. *@
+@namespace RecipeLibrary.Components.Atoms
+
+<span class="text-gray-700 text-sm @CssClass">@ChildContent</span>
+
+@code {
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

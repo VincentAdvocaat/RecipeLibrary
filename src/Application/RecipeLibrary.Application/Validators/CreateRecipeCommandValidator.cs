@@ -14,9 +14,14 @@ public static class CreateRecipeCommandValidator
             throw new ArgumentException("Title is required.", nameof(command));
         }
 
-        if (command.PreparationTimeMinutes <= 0)
+        if (command.PreparationTimeMinutes < 0)
         {
-            throw new ArgumentException("Preparation time must be greater than 0 minutes.", nameof(command));
+            throw new ArgumentException("Preparation time cannot be negative.", nameof(command));
+        }
+
+        if (command.CookingTimeMinutes < 0)
+        {
+            throw new ArgumentException("Cooking time cannot be negative.", nameof(command));
         }
 
         if (command.Ingredients is null || command.Ingredients.Count == 0)

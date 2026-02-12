@@ -1,0 +1,20 @@
+@* Atom: image with optional aspect ratio. *@
+@namespace RecipeLibrary.Components.Atoms
+
+<div class="@DivClass">
+    <img src="@ImageSrc" alt="@Alt" class="@ImgClass" loading="lazy" />
+</div>
+
+@code {
+    [Parameter] public string? Src { get; set; }
+    [Parameter] public string Alt { get; set; } = "";
+    [Parameter] public bool Square { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public string? ImageClass { get; set; }
+
+    private string DivClass => (Square ? "aspect-square overflow-hidden " : "") + (CssClass ?? "");
+    private string ImgClass => (Square ? "h-full w-full object-cover " : "") + (ImageClass ?? "");
+    private string ImageSrc => string.IsNullOrEmpty(Src)
+        ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect fill='%23e5e7eb' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' fill='%239ca3af' text-anchor='middle' dy='.3em' font-size='14'%3ENo image%3C/text%3E%3C/svg%3E"
+        : Src;
+}

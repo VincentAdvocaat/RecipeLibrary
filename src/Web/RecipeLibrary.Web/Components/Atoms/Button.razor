@@ -1,0 +1,33 @@
+@* Atom: button with optional text and icon. *@
+@namespace RecipeLibrary.Components.Atoms
+
+<button type="button" class="@ButtonClass" disabled="@Disabled" @onclick="OnClick">
+    @if (Icon != null)
+    {
+        <Icon Name="Icon!.Value" CssClass="@IconCssClass" />
+    }
+    @if (!string.IsNullOrEmpty(Text))
+    {
+        @Text
+    }
+    @ChildContent
+</button>
+
+@code {
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public Icon.IconName? Icon { get; set; }
+    [Parameter] public string? Variant { get; set; } // "primary" | "secondary" | "ghost"
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string IconCssClass => "inline-block w-4 h-4 " + (string.IsNullOrEmpty(Text) ? "" : "mr-1.5");
+
+    private string ButtonClass => Variant switch
+    {
+        "primary" => "inline-flex items-center px-3 py-1.5 rounded bg-gray-800 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:pointer-events-none",
+        "secondary" => "inline-flex items-center px-3 py-1.5 rounded border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none",
+        "ghost" => "inline-flex items-center px-3 py-1.5 rounded text-gray-600 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none",
+        _ => "inline-flex items-center px-3 py-1.5 rounded border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+    };
+}

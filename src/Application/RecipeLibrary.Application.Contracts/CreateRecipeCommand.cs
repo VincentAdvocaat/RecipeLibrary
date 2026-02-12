@@ -6,6 +6,10 @@ public sealed class CreateRecipeCommand : ICommand<CreateRecipeResult>
 
     public int PreparationTimeMinutes { get; init; }
 
+    public int CookingTimeMinutes { get; init; }
+
+    public int Category { get; init; } // RecipeCategory value
+
     public List<CreateRecipeIngredientDto> Ingredients { get; init; } = [];
 
     public List<CreateRecipeInstructionStepDto> InstructionSteps { get; init; } = [];
@@ -33,3 +37,29 @@ public sealed class CreateRecipeInstructionStepDto
     public string Text { get; init; } = string.Empty;
 }
 
+// --- Recipe list query (overview) ---
+
+public sealed class GetRecipeListQuery : IQuery<GetRecipeListResult>
+{
+    public string? Search { get; init; }
+
+    /// <summary>
+    /// RecipeCategory enum value; null = "Alle" (no filter).
+    /// </summary>
+    public int? Category { get; init; }
+}
+
+public sealed record GetRecipeListResult(IReadOnlyList<RecipeOverviewItem> Items);
+
+public sealed class RecipeOverviewItem
+{
+    public Guid Id { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public string? ImageUrl { get; init; }
+    public int PreparationMinutes { get; init; }
+    public int CookingMinutes { get; init; }
+    /// <summary>RecipeCategory enum value.</summary>
+    public int Category { get; init; }
+    public IReadOnlyList<string> IngredientNames { get; init; } = [];
+}

@@ -1,0 +1,22 @@
+@* Organism: search + view toggle + category filters (list layout). *@
+@namespace RecipeLibrary.Components.Organisms
+
+<div class="space-y-4 mb-6 @CssClass">
+    <div class="flex flex-wrap items-center gap-4">
+        <div class="flex-1 min-w-[200px] max-w-md">
+            <SearchInput Value="SearchQuery" ValueChanged="SearchQueryChanged" />
+        </div>
+        <ViewToggle ViewMode="ViewMode" ViewModeChanged="ViewModeChanged" ShowKaartenLabel="true" />
+    </div>
+    <CategoryFilter SelectedCategory="SelectedCategory" SelectedCategoryChanged="SelectedCategoryChanged" />
+</div>
+
+@code {
+    [Parameter] public string? SearchQuery { get; set; }
+    [Parameter] public EventCallback<string?> SearchQueryChanged { get; set; }
+    [Parameter] public ViewToggle.ViewModeKind ViewMode { get; set; }
+    [Parameter] public EventCallback<ViewToggle.ViewModeKind> ViewModeChanged { get; set; }
+    [Parameter] public int? SelectedCategory { get; set; }
+    [Parameter] public EventCallback<int?> SelectedCategoryChanged { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+}

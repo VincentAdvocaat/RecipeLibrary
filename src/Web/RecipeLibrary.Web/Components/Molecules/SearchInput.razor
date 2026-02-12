@@ -1,0 +1,18 @@
+@* Molecule: search field with magnifier icon. *@
+@namespace RecipeLibrary.Components.Molecules
+
+<div class="relative flex items-center @CssClass">
+    <span class="absolute left-3 text-gray-400 pointer-events-none">
+        <Icon Name="Icon.IconName.Search" CssClass="w-5 h-5" />
+    </span>
+    <TextInput @bind-Value="Value"
+               Placeholder="@(Placeholder ?? "Zoek recepten...")"
+               CssClass="pl-10" />
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+}

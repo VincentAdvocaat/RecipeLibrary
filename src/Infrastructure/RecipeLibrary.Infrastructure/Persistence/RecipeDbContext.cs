@@ -17,10 +17,6 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
             v => v.Value,
             v => new RecipeTitle(v));
 
-        var durationConverter = new ValueConverter<Duration, int>(
-            v => v.Minutes,
-            v => new Duration(v));
-
         var quantityConverter = new ValueConverter<Quantity, decimal>(
             v => v.Value,
             v => new Quantity(v));
@@ -37,8 +33,12 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
             b.Property(x => x.Description)
                 .HasMaxLength(4000);
 
-            b.Property(x => x.Duration)
-                .HasConversion(durationConverter);
+            b.Property(x => x.PreparationMinutes);
+            b.Property(x => x.CookingMinutes);
+            b.Property(x => x.Category)
+                .HasConversion<int>();
+            b.Property(x => x.ImageUrl)
+                .HasMaxLength(2000);
 
             b.Property(x => x.Difficulty)
                 .HasConversion<int>();
