@@ -13,7 +13,7 @@
     <div class="container mx-auto p-4 max-w-4xl">
         <RecipeOverviewHeader Title="Nieuw Recept Toevoegen" IsCreatePage="true" />
 
-        <EditForm Model="_vm" FormName="create-recipe" AdditionalAttributes="@(new Dictionary<string, object> { { "formname", "create-recipe" } })" OnValidSubmit="HandleValidSubmit">
+        <EditForm Model="_vm" FormName="create-recipe" Enhance="false" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-red-600 text-sm mb-4" />
 
