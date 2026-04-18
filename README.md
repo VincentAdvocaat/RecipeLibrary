@@ -1,4 +1,5 @@
 # RecipeLibrary
+(Experiment to write an application and all the infrastructure to run it with only AI)
 
 A personal recipe library built with **.NET** and **Blazor Server**, designed to run on Azure using **free-tier friendly** services and **password-less** authentication (Microsoft Entra ID).
 
