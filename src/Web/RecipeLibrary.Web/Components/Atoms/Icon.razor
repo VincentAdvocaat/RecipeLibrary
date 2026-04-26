@@ -27,6 +27,9 @@
     case IconName.Camera:
         <svg class="@CssClass" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
         break;
+    case IconName.Plus:
+        <svg class="@CssClass" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+        break;
     default:
         break;
 }
@@ -35,5 +38,5 @@
     [Parameter] public IconName Name { get; set; }
     [Parameter] public string? CssClass { get; set; }
 
-    public enum IconName { Search, Menu, List, Grid, Clock, CookingPot, Trash, Camera }
+    public enum IconName { Search, Menu, List, Grid, Clock, CookingPot, Trash, Camera, Plus }
 }

@@ -11,10 +11,16 @@ public sealed class Ingredient
 
     public Guid RecipeId { get; set; }
 
+    public Guid? IngredientId { get; set; }
+
     public string Name { get; set; } = string.Empty;
+
+    public string? Preparation { get; set; }
 
     public Quantity Quantity { get; set; }
 
     public Unit Unit { get; set; }
+
+    public CanonicalIngredient? IngredientDefinition { get; set; }
 }
 

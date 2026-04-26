@@ -81,5 +81,8 @@ nunit-*.xml
 recipelibrary-dev.db
 recipelibrary-dev.db-*
 
+# Recipe image uploads (local file storage; default path is outside repo)
+RecipeLibraryUploads/
+
 # Node (Tailwind CSS build in Web project)
 node_modules/

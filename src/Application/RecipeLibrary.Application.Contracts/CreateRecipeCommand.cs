@@ -67,3 +67,23 @@ public sealed class RecipeOverviewItem
     public int Category { get; init; }
     public IReadOnlyList<string> IngredientNames { get; init; } = [];
 }
+
+// --- Recipe image upload (command) ---
+
+public sealed class UploadRecipeImageCommand : ICommand<UploadRecipeImageResult>
+{
+    public required Stream Content { get; init; }
+    public required string FileName { get; init; }
+    public required string ContentType { get; init; }
+}
+
+public sealed record UploadRecipeImageResult(string Url);
+
+// --- Recipe image serve (query) ---
+
+public sealed class GetRecipeImageQuery : IQuery<GetRecipeImageResult?>
+{
+    public required string StorageKey { get; init; }
+}
+
+public sealed record GetRecipeImageResult(Stream Stream, string ContentType);

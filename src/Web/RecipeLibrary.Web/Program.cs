@@ -1,5 +1,7 @@
 using RecipeLibrary.Application;
+using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Components;
+using RecipeLibrary.Infrastructure.FileStorage;
 using RecipeLibrary.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,6 +33,9 @@ if (string.IsNullOrWhiteSpace(recipeDbConnectionString))
 
 builder.Services.AddPersistence(recipeDbConnectionString);
 builder.Services.AddApplication();
+
+var recipeImagesDefaultPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "RecipeLibraryUploads"));
+builder.Services.AddRecipeFileStorage(builder.Configuration, recipeImagesDefaultPath);
 builder.Services.AddScoped(sp =>
 {
     var nav = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
@@ -70,27 +75,73 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Local recipe image upload: save to wwwroot/uploads/recipe-images/ and return URL.
-app.MapPost("/api/upload-recipe-image", async (IFormFile file, IWebHostEnvironment env) =>
+app.MapPost("/api/upload-recipe-image", async (IFormFile file, ICommandBus commandBus, CancellationToken ct) =>
 {
     if (file == null || file.Length == 0)
         return Results.BadRequest("No file uploaded.");
 
-    var allowed = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-    var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-    if (string.IsNullOrEmpty(ext) || !allowed.Contains(ext))
-        return Results.BadRequest("Invalid image type. Use jpg, png, gif or webp.");
+    await using var stream = file.OpenReadStream();
+    var command = new UploadRecipeImageCommand
+    {
+        Content = stream,
+        FileName = file.FileName,
+        ContentType = file.ContentType ?? "application/octet-stream"
+    };
+    var result = await commandBus.SendAsync<UploadRecipeImageCommand, UploadRecipeImageResult>(command, ct);
+    return Results.Ok(new { url = result.Url });
+}).DisableAntiforgery();
 
-    var uploadDir = Path.Combine(env.WebRootPath ?? "wwwroot", "uploads", "recipe-images");
-    Directory.CreateDirectory(uploadDir);
-    var fileName = $"{Guid.NewGuid()}{ext}";
-    var filePath = Path.Combine(uploadDir, fileName);
-    await using (var stream = File.Create(filePath))
-        await file.CopyToAsync(stream);
+app.MapGet("/api/recipe-images/{fileName}", async (string fileName, IQueryBus queryBus, CancellationToken ct) =>
+{
+    if (string.IsNullOrEmpty(fileName) || fileName.Contains("..", StringComparison.Ordinal) || fileName.IndexOfAny(['/', '\\']) >= 0)
+        return Results.NotFound();
 
-    var url = $"/uploads/recipe-images/{fileName}";
-    return Results.Ok(new { url });
+    var query = new GetRecipeImageQuery { StorageKey = fileName };
+    var result = await queryBus.QueryAsync<GetRecipeImageQuery, GetRecipeImageResult?>(query, ct);
+    if (result is null)
+        return Results.NotFound();
+
+    return Results.File(result.Stream, result.ContentType);
+}).DisableAntiforgery();
+
+app.MapPost("/ingredients/match", async (MatchIngredientCommand command, ICommandBus commandBus, CancellationToken ct) =>
+{
+    var result = await commandBus.SendAsync<MatchIngredientCommand, MatchIngredientResult>(command, ct);
+    return Results.Ok(result);
+}).DisableAntiforgery();
+
+app.MapGet("/ingredients/search", async (string q, IQueryBus queryBus, CancellationToken ct) =>
+{
+    var result = await queryBus.QueryAsync<SearchIngredientsQuery, IReadOnlyList<IngredientLookupItem>>(
+        new SearchIngredientsQuery { Query = q },
+        ct);
+    return Results.Ok(result);
+}).DisableAntiforgery();
+
+app.MapGet("/tags/search", async (string q, IQueryBus queryBus, CancellationToken ct) =>
+{
+    var result = await queryBus.QueryAsync<SearchTagsQuery, IReadOnlyList<TagLookupItem>>(
+        new SearchTagsQuery { Query = q },
+        ct);
+    return Results.Ok(result);
+}).DisableAntiforgery();
+
+app.MapPost("/ingredients/{id:guid}/tags", async (Guid id, AddIngredientTagsRequest request, ICommandBus commandBus, CancellationToken ct) =>
+{
+    var result = await commandBus.SendAsync<AddIngredientTagsCommand, AddIngredientTagsResult>(
+        new AddIngredientTagsCommand
+        {
+            IngredientId = id,
+            Tags = request.Tags
+        },
+        ct);
+    return Results.Ok(result);
 }).DisableAntiforgery();
 
 app.Run();
+
+public sealed class AddIngredientTagsRequest
+{
+    public IReadOnlyList<string> Tags { get; init; } = [];
+}
 

@@ -1,11 +1,13 @@
 @page "/recipes/create"
 
 @using System.ComponentModel.DataAnnotations
+@using System.Net.Http.Json
 @using RecipeLibrary.Application.Contracts
 @using RecipeLibrary.Domain.ValueObjects
 @using RecipeCategory = RecipeLibrary.Domain.ValueObjects.RecipeCategory
 @inject ICommandBus CommandBus
 @inject NavigationManager Navigation
+@inject HttpClient Http
 
 <PageTitle>Nieuw Recept Toevoegen</PageTitle>
 
@@ -94,7 +96,28 @@
                         <div class="flex flex-wrap items-end gap-3">
                             <div class="flex-1 min-w-[120px]">
                                 <label class="block text-xs text-gray-500 mb-0.5">Naam</label>
-                                <InputText class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" placeholder="bijv. kipfilet" @bind-Value="item.Name" />
+                                <input class="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                       placeholder="bijv. kipfilet"
+                                       value="@item.Name"
+                                       @oninput="e => OnIngredientInput(index, e.Value?.ToString())"
+                                       @onblur="() => OnIngredientBlur(index)" />
+                                @if (_ingredientSuggestions.TryGetValue(index, out var suggestions) && suggestions.Count > 0)
+                                {
+                                    <div class="mt-1 rounded border border-gray-200 bg-white shadow-sm">
+                                        @foreach (var suggestion in suggestions)
+                                        {
+                                            <button type="button"
+                                                    class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                                                    @onclick="() => SelectIngredientSuggestion(index, suggestion.Name)">
+                                                @HighlightMatch(suggestion.Name, item.Name)
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                                @if (_ingredientMatchMessages.TryGetValue(index, out var matchMessage) && !string.IsNullOrWhiteSpace(matchMessage))
+                                {
+                                    <p class="mt-1 text-xs text-gray-500">@matchMessage</p>
+                                }
                             </div>
                             <div class="w-24">
                                 <label class="block text-xs text-gray-500 mb-0.5">Hoeveelheid</label>
@@ -212,6 +235,8 @@
     private bool _equipmentOven;
     private bool _equipmentBakken;
     private bool _equipmentKoelen;
+    private readonly Dictionary<int, List<IngredientLookupItem>> _ingredientSuggestions = [];
+    private readonly Dictionary<int, string> _ingredientMatchMessages = [];
 
     private void OnImageUrlChanged(string? url)
     {
@@ -240,7 +265,95 @@
     {
         if (_vm.Ingredients.Count <= 1) return;
         _vm.Ingredients.RemoveAt(index);
+        _ingredientSuggestions.Remove(index);
+        _ingredientMatchMessages.Remove(index);
         StateHasChanged();
+    }
+
+    private async Task OnIngredientInput(int index, string? value)
+    {
+        if (index < 0 || index >= _vm.Ingredients.Count)
+        {
+            return;
+        }
+
+        _vm.Ingredients[index].Name = value ?? string.Empty;
+        var query = _vm.Ingredients[index].Name.Trim();
+        if (query.Length < 2)
+        {
+            _ingredientSuggestions[index] = [];
+            StateHasChanged();
+            return;
+        }
+
+        var encoded = Uri.EscapeDataString(query);
+        var suggestions = await Http.GetFromJsonAsync<List<IngredientLookupItem>>($"/ingredients/search?q={encoded}") ?? [];
+        _ingredientSuggestions[index] = suggestions;
+        StateHasChanged();
+    }
+
+    private async Task OnIngredientBlur(int index)
+    {
+        if (index < 0 || index >= _vm.Ingredients.Count)
+        {
+            return;
+        }
+
+        var input = _vm.Ingredients[index].Name.Trim();
+        if (input.Length == 0)
+        {
+            _ingredientMatchMessages[index] = string.Empty;
+            return;
+        }
+
+        var match = await Http.PostAsJsonAsync("/ingredients/match", new MatchIngredientCommand { Input = input });
+        var payload = await match.Content.ReadFromJsonAsync<MatchIngredientResult>();
+        if (payload is null)
+        {
+            _ingredientMatchMessages[index] = string.Empty;
+            return;
+        }
+
+        _ingredientMatchMessages[index] = payload.MatchType switch
+        {
+            "exact" => "Exacte ingredient-match gevonden.",
+            "alias" => "Alias-match gevonden; gekoppeld aan bestaand ingredient.",
+            "fuzzy" => $"Fuzzy match: {payload.Ingredient?.Name} ({payload.Confidence:P0}).",
+            _ => "Geen match gevonden. Je kunt doorgaan met nieuwe invoer."
+        };
+        StateHasChanged();
+    }
+
+    private void SelectIngredientSuggestion(int index, string name)
+    {
+        if (index < 0 || index >= _vm.Ingredients.Count)
+        {
+            return;
+        }
+
+        _vm.Ingredients[index].Name = name;
+        _ingredientSuggestions[index] = [];
+        StateHasChanged();
+    }
+
+    private static string HighlightMatch(string name, string query)
+    {
+        var term = (query ?? string.Empty).Trim();
+        if (term.Length == 0)
+        {
+            return name;
+        }
+
+        var matchIndex = name.IndexOf(term, StringComparison.OrdinalIgnoreCase);
+        if (matchIndex < 0)
+        {
+            return name;
+        }
+
+        var before = name[..matchIndex];
+        var match = name.Substring(matchIndex, term.Length);
+        var after = name[(matchIndex + term.Length)..];
+        return $"{before}[{match}]{after}";
     }
 
     private void AddStep()
