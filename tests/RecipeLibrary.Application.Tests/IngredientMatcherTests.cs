@@ -25,6 +25,23 @@ public sealed class IngredientMatcherTests
     }
 
     [Fact]
+    public async Task MatchAsync_ReturnsExactMatch_WhenCanonicalNameIsPopulated()
+    {
+        var repo = new FakeIngredientRepository(
+            ingredients:
+            [
+                new CanonicalIngredient { Id = Guid.NewGuid(), CanonicalName = "tomaat", NormalizedName = "tomaat", CreatedAt = DateTimeOffset.UtcNow }
+            ],
+            aliases: new Dictionary<string, string>());
+
+        var sut = new IngredientMatcher(repo, new IngredientTextNormalizer());
+        var result = await sut.MatchAsync("tomaat");
+
+        Assert.Equal("exact", result.MatchType);
+        Assert.Equal("tomaat", result.Ingredient?.CanonicalName);
+    }
+
+    [Fact]
     public async Task MatchAsync_ReturnsFuzzyMatch_WhenAboveThreshold()
     {
         var repo = new FakeIngredientRepository(

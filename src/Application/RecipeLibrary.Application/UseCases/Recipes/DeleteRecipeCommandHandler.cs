@@ -8,9 +8,13 @@ public sealed class DeleteRecipeCommandHandler(IRecipeRepository recipeRepositor
 {
     public async Task<DeleteRecipeResult> HandleAsync(DeleteRecipeCommand command, CancellationToken ct = default)
     {
-        await recipeRepository.DeleteAsync(command.RecipeId, ct);
+        var existing = await recipeRepository.GetByIdAsync(command.RecipeId, ct);
+        if (existing is null)
+        {
+            return new DeleteRecipeResult(false);
+        }
 
-        var stillExists = await recipeRepository.GetByIdAsync(command.RecipeId, ct);
-        return new DeleteRecipeResult(stillExists is null);
+        await recipeRepository.DeleteAsync(command.RecipeId, ct);
+        return new DeleteRecipeResult(true);
     }
 }
