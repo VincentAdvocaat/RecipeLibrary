@@ -27,6 +27,8 @@
   private const string EnglishCulture = "en-US";
   private const string DutchFlag = "\U0001F1F3\U0001F1F1";
   private const string EnglishFlag = "\U0001F1EC\U0001F1E7";
+  private const string DutchNativeName = "Nederlands";
+  private const string EnglishNativeName = "English";
 
   [Parameter] public string? CssClass { get; set; }
 
@@ -35,9 +37,9 @@
 
   private string CurrentFlag => CurrentCulture is EnglishCulture ? EnglishFlag : DutchFlag;
 
-  private string DutchOptionLabel => $"{DutchFlag} {L["Language.Option.Nl.Label"]}";
+  private string DutchOptionLabel => $"{DutchFlag} {DutchNativeName}";
 
-  private string EnglishOptionLabel => $"{EnglishFlag} {L["Language.Option.En.Label"]}";
+  private string EnglishOptionLabel => $"{EnglishFlag} {EnglishNativeName}";
 
   private void OnCultureChanged(ChangeEventArgs e)
   {
