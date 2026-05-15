@@ -1,4 +1,4 @@
-@* Molecule: one time row (icon + label + time, e.g. "Voorbereiden 10 min"). *@
+@* Molecule: one time row (icon + label + minutes). *@
 @namespace RecipeLibrary.Components.Molecules
 
 <div class="flex items-center gap-1.5 text-sm text-gray-600 @CssClass">
@@ -14,7 +14,7 @@
 </div>
 
 @code {
-    [Parameter] public string Label { get; set; } = ""; // "Voorbereiden" or "Bereiden"
+    [Parameter] public string Label { get; set; } = "";
     [Parameter] public int Minutes { get; set; }
     [Parameter] public bool UseClockIcon { get; set; } = true; // false = cooking pot
     [Parameter] public string? CssClass { get; set; }

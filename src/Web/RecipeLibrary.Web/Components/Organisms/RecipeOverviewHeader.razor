@@ -7,29 +7,29 @@
         <nav class="flex items-center gap-4">
             @if (IsCreatePage)
             {
-                <AppNavLink Href="/recipes">Mijn Recepten</AppNavLink>
-                <AppNavLink Href="/">Overzicht</AppNavLink>
+                <AppNavLink Href="/recipes">@L["Nav.MyRecipes"]</AppNavLink>
+                <AppNavLink Href="/">@L["Nav.Overview"]</AppNavLink>
             }
             else
             {
-                <AppNavLink Href="/recipes/create">Recept Toevoegen</AppNavLink>
-                <AppNavLink Href="/recipes">Mijn Recepten</AppNavLink>
+                <AppNavLink Href="/recipes/create">@L["Nav.AddRecipe"]</AppNavLink>
+                <AppNavLink Href="/recipes">@L["Nav.MyRecipes"]</AppNavLink>
             }
         </nav>
     </div>
     <div class="flex items-center gap-4">
         @if (ShowViewToggleInHeader)
         {
-            <ViewToggle ViewMode="ViewMode" ViewModeChanged="ViewModeChanged" ShowKaartenLabel="false" />
+            <ViewToggle ViewMode="ViewMode" ViewModeChanged="ViewModeChanged" ShowCardsLabel="false" />
         }
-        <button type="button" class="p-2 text-gray-600 hover:bg-gray-100 rounded" aria-label="Menu">
+        <button type="button" class="p-2 text-gray-600 hover:bg-gray-100 rounded" aria-label="@L["Common.Menu.AriaLabel"]">
             <Icon Name="Icon.IconName.Menu" CssClass="w-6 h-6" />
         </button>
     </div>
 </header>
 
 @code {
-    [Parameter] public string Title { get; set; } = "Recepten Overzicht";
+    [Parameter, EditorRequired] public string Title { get; set; } = null!;
     [Parameter] public bool IsCreatePage { get; set; }
     [Parameter] public bool ShowViewToggleInHeader { get; set; }
     [Parameter] public ViewToggle.ViewModeKind ViewMode { get; set; }

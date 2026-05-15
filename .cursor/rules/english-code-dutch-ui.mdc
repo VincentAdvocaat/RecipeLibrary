@@ -1,0 +1,43 @@
+---
+description: Code in English; user-facing UI via Dutch .resx resources
+alwaysApply: true
+---
+
+# Language: English code, Dutch UI (resources)
+
+## Code (English only)
+
+- **C#**: identifiers, class/method/property names, file names, namespaces, XML doc comments, inline comments, logs, and `throw` / validation messages in **English**.
+- **JavaScript** (e.g. `wwwroot/*.js`): identifiers and comments in **English**; no user-visible Dutch/English literals—surface errors via Blazor/localized strings.
+- **API** responses and problem details shown to users must come from localized resources or mapped messages, not hardcoded Dutch in handlers.
+- **Exceptions**: seed SQL and recipe content in `scripts/**/*.sql` may stay **Dutch**; `docs/` and `.cursor/rules/` are exempt.
+
+## UI (Dutch via resources)
+
+- All user-visible strings in **Blazor** use `IStringLocalizer<SharedResources>`—never hardcoded Dutch or English in `.razor` markup or `@code` string literals.
+- Store Dutch text only in `Resources/SharedResources.nl.resx`. Use **English resource keys** with pattern `[Area].[Element].[Type]` (e.g. `RecipeCreate.Title.Label`, `RecipeCreate.SaveButton`, `Nav.MyRecipes`).
+- Default request culture: `nl-NL`. Set `<html lang="nl">` in `App.razor`.
+- Add keys to `SharedResources.resx` (English fallback) and Dutch values in `SharedResources.nl.resx`.
+
+## Examples
+
+```razor
+@* BAD *@
+<label>Ingrediënten</label>
+
+@* GOOD *@
+<label>@L["RecipeCreate.Ingredients.SectionLabel"]</label>
+```
+
+```csharp
+// BAD
+throw new ArgumentException("Titel is verplicht.");
+
+// GOOD
+throw new ArgumentException("Title is required.");
+```
+
+## Refactors
+
+- Rename Dutch code artifacts to English (e.g. `RecipeOverview`, `ShowCardsLabel`).
+- Migrate existing inline UI strings to resources before adding new features.

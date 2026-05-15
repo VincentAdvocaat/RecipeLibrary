@@ -1,9 +1,9 @@
-@* Molecule: "Ingrediënten" heading + bullet list of names. *@
+@* Molecule: ingredients heading + bullet list of names. *@
 @namespace RecipeLibrary.Components.Molecules
 
 <div class="@CssClass">
-    <Heading Level="3" CssClass="text-sm font-medium text-gray-900 mb-1">Ingrediënten</Heading>
-    <ul class="list-disc list-inside text-sm text-gray-700 space-y-0.5 columns-1 sm:columns-3 gap-x-4">
+    <Heading Level="3" CssClass="text-sm font-medium text-gray-900 mb-1">@L["Recipe.Ingredients.SectionLabel"]</Heading>
+    <ul class="list-disc list-inside text-sm text-gray-600 space-y-0.5">
         @foreach (var name in IngredientNames)
         {
             <li>@name</li>

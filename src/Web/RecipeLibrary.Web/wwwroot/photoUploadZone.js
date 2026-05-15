@@ -1,27 +1,18 @@
 window.RecipeLibrary = window.RecipeLibrary || {};
 
 window.RecipeLibrary.photoUploadZone = {
-  init: function (elementRef, dotNetRef) {
+  init: function (elementRef, dotNetRef, uploadFailedMessage) {
     const el = elementRef;
     if (!el) return;
+
+    const failedMsg = uploadFailedMessage || 'Upload failed.';
 
     function prevent(e) {
       e.preventDefault();
       e.stopPropagation();
     }
 
-    el.addEventListener('dragover', function (e) {
-      prevent(e);
-      el.classList.add('border-gray-500', 'bg-gray-50');
-    });
-    el.addEventListener('dragleave', function (e) {
-      prevent(e);
-      el.classList.remove('border-gray-500', 'bg-gray-50');
-    });
-    el.addEventListener('drop', function (e) {
-      prevent(e);
-      el.classList.remove('border-gray-500', 'bg-gray-50');
-      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    function uploadFile(file) {
       if (!file || !file.type.startsWith('image/')) return;
 
       const formData = new FormData();
@@ -36,11 +27,25 @@ window.RecipeLibrary.photoUploadZone = {
           if (data && data.url) dotNetRef.invokeMethodAsync('SetImageUrlFromDrop', data.url);
         })
         .catch(function () {
-          dotNetRef.invokeMethodAsync('SetUploadError', 'Upload mislukt.');
+          dotNetRef.invokeMethodAsync('SetUploadError', failedMsg);
         });
+    }
+
+    el.addEventListener('dragover', function (e) {
+      prevent(e);
+      el.classList.add('border-gray-500', 'bg-gray-50');
+    });
+    el.addEventListener('dragleave', function (e) {
+      prevent(e);
+      el.classList.remove('border-gray-500', 'bg-gray-50');
+    });
+    el.addEventListener('drop', function (e) {
+      prevent(e);
+      el.classList.remove('border-gray-500', 'bg-gray-50');
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      uploadFile(file);
     });
 
-    // Click to open file explorer: hidden input + zone click triggers it
     const accept = 'image/jpeg,image/png,image/gif,image/webp';
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
@@ -58,22 +63,7 @@ window.RecipeLibrary.photoUploadZone = {
     input.addEventListener('change', function () {
       const file = input.files && input.files[0];
       input.value = '';
-      if (!file || !file.type.startsWith('image/')) return;
-
-      const formData = new FormData();
-      formData.append('file', file);
-
-      fetch('/api/upload-recipe-image', {
-        method: 'POST',
-        body: formData
-      })
-        .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('Upload failed')); })
-        .then(function (data) {
-          if (data && data.url) dotNetRef.invokeMethodAsync('SetImageUrlFromDrop', data.url);
-        })
-        .catch(function () {
-          dotNetRef.invokeMethodAsync('SetUploadError', 'Upload mislukt.');
-        });
+      uploadFile(file);
     });
   }
 };

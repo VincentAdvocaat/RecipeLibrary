@@ -1,3 +1,5 @@
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
 using RecipeLibrary.Application;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Components;
@@ -14,6 +16,16 @@ if (builder.Environment.IsDevelopment())
 }
 
 // Add services to the container.
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+
+var dutchCulture = new CultureInfo("nl-NL");
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    options.DefaultRequestCulture = new RequestCulture(dutchCulture);
+    options.SupportedCultures = [dutchCulture];
+    options.SupportedUICultures = [dutchCulture];
+});
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -68,6 +80,9 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+
+var localizationOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<RequestLocalizationOptions>>().Value;
+app.UseRequestLocalization(localizationOptions);
 
 app.UseAntiforgery();
 
