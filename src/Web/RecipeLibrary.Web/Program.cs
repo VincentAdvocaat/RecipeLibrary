@@ -1,5 +1,8 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.UI;
 using RecipeLibrary.Application;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Components;
@@ -30,6 +33,18 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
         new AcceptLanguageHeaderRequestCultureProvider()
     ];
 });
+
+var azureAdSection = builder.Configuration.GetSection("AzureAd");
+var authEnabled = !string.IsNullOrWhiteSpace(azureAdSection["ClientId"]);
+
+if (authEnabled)
+{
+    builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+        .AddMicrosoftIdentityWebApp(azureAdSection);
+    builder.Services.AddControllersWithViews()
+        .AddMicrosoftIdentityUI();
+    builder.Services.AddCascadingAuthenticationState();
+}
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -89,9 +104,21 @@ app.UseHttpsRedirection();
 var localizationOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<RequestLocalizationOptions>>().Value;
 app.UseRequestLocalization(localizationOptions);
 
+if (authEnabled)
+{
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
+
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+
+if (authEnabled)
+{
+    app.MapControllers();
+}
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

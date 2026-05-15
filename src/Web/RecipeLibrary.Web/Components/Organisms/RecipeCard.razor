@@ -1,7 +1,7 @@
 @* Organism: one recipe card for grid view (image + title + description + meta + ingredients). *@
 @namespace RecipeLibrary.Components.Organisms
 
-<div class="flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden hover:border-gray-300 @CssClass">
+<a href="@($"/recipes/{Item.Id}")" class="flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden hover:border-gray-300 no-underline text-inherit @CssClass">
     <div class="flex flex-col sm:flex-row">
         <div class="w-full sm:w-1/4 sm:min-w-20 flex-shrink-0 aspect-square overflow-hidden">
             <Image Src="@Item.ImageUrl" Alt="@Item.Title" Square="true" CssClass="w-full h-full" />
@@ -18,7 +18,7 @@
     <div class="px-4 pb-4">
         <IngredientList IngredientNames="@Item.IngredientNames" />
     </div>
-</div>
+</a>
 
 @code {
     [Parameter, EditorRequired] public RecipeOverviewItem Item { get; set; } = null!;

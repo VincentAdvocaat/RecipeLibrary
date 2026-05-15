@@ -1,7 +1,7 @@
 @* Organism: one recipe row for list view (image + title + description + meta). *@
 @namespace RecipeLibrary.Components.Organisms
 
-<div class="flex gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 @CssClass">
+<a href="@($"/recipes/{Item.Id}")" class="flex gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 no-underline text-inherit @CssClass">
     <div class="w-24 h-24 flex-shrink-0 rounded overflow-hidden">
         <Image Src="@Item.ImageUrl" Alt="@Item.Title" Square="true" CssClass="w-full h-full" />
     </div>
@@ -13,7 +13,7 @@
         }
         <RecipeMeta PreparationMinutes="@Item.PreparationMinutes" CookingMinutes="@Item.CookingMinutes" />
     </div>
-</div>
+</a>
 
 @code {
     [Parameter, EditorRequired] public RecipeOverviewItem Item { get; set; } = null!;

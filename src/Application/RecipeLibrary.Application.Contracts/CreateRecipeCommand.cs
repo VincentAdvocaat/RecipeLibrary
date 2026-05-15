@@ -87,3 +87,66 @@ public sealed class GetRecipeImageQuery : IQuery<GetRecipeImageResult?>
 }
 
 public sealed record GetRecipeImageResult(Stream Stream, string ContentType);
+
+// --- Recipe detail query ---
+
+public sealed class GetRecipeByIdQuery : IQuery<GetRecipeByIdResult?>
+{
+    public Guid RecipeId { get; init; }
+}
+
+public sealed class GetRecipeByIdResult
+{
+    public Guid Id { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public string? ImageUrl { get; init; }
+    public int PreparationMinutes { get; init; }
+    public int CookingMinutes { get; init; }
+    public int Category { get; init; }
+    public IReadOnlyList<RecipeDetailIngredientItem> Ingredients { get; init; } = [];
+    public IReadOnlyList<RecipeDetailStepItem> Steps { get; init; } = [];
+}
+
+public sealed class RecipeDetailIngredientItem
+{
+    public string Name { get; init; } = string.Empty;
+    public string? Preparation { get; init; }
+    public decimal Quantity { get; init; }
+    public string Unit { get; init; } = string.Empty;
+}
+
+public sealed class RecipeDetailStepItem
+{
+    public int StepNumber { get; init; }
+    public string Text { get; init; } = string.Empty;
+}
+
+// --- Recipe update / delete ---
+
+public sealed class UpdateRecipeCommand : ICommand<UpdateRecipeResult>
+{
+    public Guid RecipeId { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public int PreparationTimeMinutes { get; init; }
+    public int CookingTimeMinutes { get; init; }
+    public int Category { get; init; }
+    public string? Description { get; init; }
+    public string? ImageUrl { get; init; }
+    public List<CreateRecipeIngredientDto> Ingredients { get; init; } = [];
+    public List<CreateRecipeInstructionStepDto> InstructionSteps { get; init; } = [];
+}
+
+public sealed record UpdateRecipeResult(Guid RecipeId);
+
+public sealed class DeleteRecipeCommand : ICommand<DeleteRecipeResult>
+{
+    public Guid RecipeId { get; init; }
+}
+
+public sealed record DeleteRecipeResult(bool Deleted);
+
+public sealed class GetRecipeIngredientTagsQuery : IQuery<IReadOnlyList<string>>
+{
+    public Guid RecipeId { get; init; }
+}

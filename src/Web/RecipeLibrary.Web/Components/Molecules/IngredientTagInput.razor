@@ -1,0 +1,104 @@
+@* Molecule: optional ingredient tags with autocomplete. *@
+@namespace RecipeLibrary.Components.Molecules
+
+@inject HttpClient Http
+
+<div class="@CssClass">
+    <label class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.IngredientTags.Label"]</label>
+    <div class="flex flex-wrap gap-2 mb-2">
+        @foreach (var tag in Tags)
+        {
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                @tag
+                <button type="button" class="text-gray-500 hover:text-gray-800" aria-label="@L["Common.Remove.AriaLabel"]" @onclick="() => RemoveTag(tag)">×</button>
+            </span>
+        }
+    </div>
+    <div class="relative">
+        <input class="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+               placeholder="@L["RecipeCreate.IngredientTags.Placeholder"]"
+               value="@_input"
+               @oninput="OnInput"
+               @onkeydown="OnKeyDown" />
+        @if (_suggestions.Count > 0)
+        {
+            <div class="absolute z-10 mt-1 w-full rounded border border-gray-200 bg-white shadow-sm">
+                @foreach (var suggestion in _suggestions)
+                {
+                    <button type="button"
+                            class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                            @onclick="() => AddTag(suggestion.Name)">
+                        @suggestion.Name
+                    </button>
+                }
+            </div>
+        }
+    </div>
+    <button type="button"
+            class="mt-2 inline-flex items-center px-3 py-1.5 rounded border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50"
+            @onclick="AddFromInput">
+        @L["RecipeCreate.IngredientTags.AddButton"]
+    </button>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<string> Tags { get; set; } = [];
+    [Parameter] public EventCallback<IReadOnlyList<string>> TagsChanged { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+
+    private string _input = string.Empty;
+    private List<TagLookupItem> _suggestions = [];
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        _input = e.Value?.ToString() ?? string.Empty;
+        var query = _input.Trim();
+        if (query.Length < 2)
+        {
+            _suggestions = [];
+            return;
+        }
+
+        var encoded = Uri.EscapeDataString(query);
+        _suggestions = await Http.GetFromJsonAsync<List<TagLookupItem>>($"/tags/search?q={encoded}") ?? [];
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await AddFromInput();
+        }
+    }
+
+    private async Task AddFromInput()
+    {
+        var value = _input.Trim();
+        if (value.Length == 0)
+        {
+            return;
+        }
+
+        await AddTag(value);
+    }
+
+    private async Task AddTag(string tag)
+    {
+        var trimmed = tag.Trim();
+        if (trimmed.Length == 0 || Tags.Contains(trimmed, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var updated = Tags.Concat([trimmed]).ToList();
+        _input = string.Empty;
+        _suggestions = [];
+        await TagsChanged.InvokeAsync(updated);
+    }
+
+    private async Task RemoveTag(string tag)
+    {
+        var updated = Tags.Where(t => !string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)).ToList();
+        await TagsChanged.InvokeAsync(updated);
+    }
+}

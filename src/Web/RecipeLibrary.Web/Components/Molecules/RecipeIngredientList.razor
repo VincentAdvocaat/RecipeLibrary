@@ -1,0 +1,36 @@
+@* Molecule: ingredients with quantity and unit for recipe detail. *@
+@namespace RecipeLibrary.Components.Molecules
+
+<div class="@CssClass">
+    <Heading Level="3" CssClass="text-sm font-medium text-gray-900 mb-2">@L["Recipe.Ingredients.SectionLabel"]</Heading>
+    <ul class="space-y-1 text-sm text-gray-700">
+        @foreach (var item in Items)
+        {
+            <li class="flex flex-wrap gap-x-2">
+                <span class="font-medium tabular-nums">@FormatQuantity(item.Quantity) @GetUnitLabel(item.Unit)</span>
+                <span>
+                    @item.Name
+                    @if (!string.IsNullOrWhiteSpace(item.Preparation))
+                    {
+                        <span class="text-gray-500">(@item.Preparation)</span>
+                    }
+                </span>
+            </li>
+        }
+    </ul>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<RecipeDetailIngredientItem> Items { get; set; } = [];
+    [Parameter] public string? CssClass { get; set; }
+
+    private static string FormatQuantity(decimal quantity) =>
+        quantity % 1 == 0 ? ((int)quantity).ToString() : quantity.ToString("0.###");
+
+    private string GetUnitLabel(string unit)
+    {
+        var key = $"Recipe.Unit.{unit}";
+        var localized = L[key];
+        return localized.ResourceNotFound ? unit : localized.Value;
+    }
+}

@@ -21,6 +21,10 @@ public static class DependencyInjection
 
         services.AddScoped<ICommandHandler<CreateRecipeCommand, CreateRecipeResult>, CreateRecipeCommandHandler>();
         services.AddScoped<IQueryHandler<GetRecipeListQuery, GetRecipeListResult>, GetRecipeListQueryHandler>();
+        services.AddScoped<IQueryHandler<GetRecipeByIdQuery, GetRecipeByIdResult?>, GetRecipeByIdQueryHandler>();
+        services.AddScoped<IQueryHandler<GetRecipeIngredientTagsQuery, IReadOnlyList<string>>, GetRecipeIngredientTagsQueryHandler>();
+        services.AddScoped<ICommandHandler<UpdateRecipeCommand, UpdateRecipeResult>, UpdateRecipeCommandHandler>();
+        services.AddScoped<ICommandHandler<DeleteRecipeCommand, DeleteRecipeResult>, DeleteRecipeCommandHandler>();
         services.AddScoped<ICommandHandler<UploadRecipeImageCommand, UploadRecipeImageResult>, UploadRecipeImageCommandHandler>();
         services.AddScoped<IQueryHandler<GetRecipeImageQuery, GetRecipeImageResult?>, GetRecipeImageQueryHandler>();
         services.AddScoped<ICommandHandler<MatchIngredientCommand, MatchIngredientResult>, MatchIngredientCommandHandler>();

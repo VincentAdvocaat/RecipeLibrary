@@ -118,4 +118,29 @@
   <data name="NotFound.PageTitle" xml:space="preserve"><value>Niet gevonden</value></data>
   <data name="NotFound.Heading" xml:space="preserve"><value>Niet gevonden</value></data>
   <data name="NotFound.Message" xml:space="preserve"><value>Sorry, de inhoud die u zoekt bestaat niet.</value></data>
+  <data name="RecipeDetail.PageTitle" xml:space="preserve"><value>{0} — Recept</value></data>
+  <data name="RecipeDetail.BackToOverview" xml:space="preserve"><value>Terug naar overzicht</value></data>
+  <data name="RecipeDetail.Instructions.SectionLabel" xml:space="preserve"><value>Bereiding</value></data>
+  <data name="RecipeDetail.Category.Label" xml:space="preserve"><value>Categorie</value></data>
+  <data name="RecipeDetail.Loading" xml:space="preserve"><value>Laden...</value></data>
+  <data name="RecipeDetail.EditButton" xml:space="preserve"><value>Recept bewerken</value></data>
+  <data name="RecipeDetail.DeleteButton" xml:space="preserve"><value>Recept verwijderen</value></data>
+  <data name="RecipeDetail.DeleteConfirm.Message" xml:space="preserve"><value>Weet u zeker dat u dit recept wilt verwijderen? Dit kan niet ongedaan worden gemaakt.</value></data>
+  <data name="RecipeDetail.DeleteConfirm.ConfirmButton" xml:space="preserve"><value>Verwijderen</value></data>
+  <data name="RecipeDetail.DeleteConfirm.CancelButton" xml:space="preserve"><value>Annuleren</value></data>
+  <data name="RecipeDetail.Tags.SectionLabel" xml:space="preserve"><value>Ingrediënt-tags</value></data>
+  <data name="RecipeEdit.PageTitle" xml:space="preserve"><value>Recept bewerken</value></data>
+  <data name="RecipeEdit.SaveButton" xml:space="preserve"><value>Wijzigingen opslaan</value></data>
+  <data name="RecipeEdit.Saved.Message" xml:space="preserve"><value>Opgeslagen.</value></data>
+  <data name="RecipeCreate.IngredientTags.Label" xml:space="preserve"><value>Ingrediënt-tags (optioneel)</value></data>
+  <data name="RecipeCreate.IngredientTags.Placeholder" xml:space="preserve"><value>bijv. groente, zuivel</value></data>
+  <data name="RecipeCreate.IngredientTags.AddButton" xml:space="preserve"><value>Tag toevoegen</value></data>
+  <data name="Recipe.Unit.Gram" xml:space="preserve"><value>g</value></data>
+  <data name="Recipe.Unit.Milliliter" xml:space="preserve"><value>ml</value></data>
+  <data name="Recipe.Unit.Teaspoon" xml:space="preserve"><value>tl</value></data>
+  <data name="Recipe.Unit.Tablespoon" xml:space="preserve"><value>el</value></data>
+  <data name="Recipe.Unit.Piece" xml:space="preserve"><value>st</value></data>
+  <data name="Auth.SignIn" xml:space="preserve"><value>Inloggen</value></data>
+  <data name="Auth.SignOut" xml:space="preserve"><value>Uitloggen</value></data>
+  <data name="Auth.SignedInAs" xml:space="preserve"><value>Ingelogd als {0}</value></data>
 </root>

@@ -118,4 +118,29 @@
   <data name="NotFound.PageTitle" xml:space="preserve"><value>Not Found</value></data>
   <data name="NotFound.Heading" xml:space="preserve"><value>Not Found</value></data>
   <data name="NotFound.Message" xml:space="preserve"><value>Sorry, the content you are looking for does not exist.</value></data>
+  <data name="RecipeDetail.PageTitle" xml:space="preserve"><value>{0} — Recipe</value></data>
+  <data name="RecipeDetail.BackToOverview" xml:space="preserve"><value>Back to overview</value></data>
+  <data name="RecipeDetail.Instructions.SectionLabel" xml:space="preserve"><value>Instructions</value></data>
+  <data name="RecipeDetail.Category.Label" xml:space="preserve"><value>Category</value></data>
+  <data name="RecipeDetail.Loading" xml:space="preserve"><value>Loading...</value></data>
+  <data name="RecipeDetail.EditButton" xml:space="preserve"><value>Edit recipe</value></data>
+  <data name="RecipeDetail.DeleteButton" xml:space="preserve"><value>Delete recipe</value></data>
+  <data name="RecipeDetail.DeleteConfirm.Message" xml:space="preserve"><value>Are you sure you want to delete this recipe? This cannot be undone.</value></data>
+  <data name="RecipeDetail.DeleteConfirm.ConfirmButton" xml:space="preserve"><value>Delete</value></data>
+  <data name="RecipeDetail.DeleteConfirm.CancelButton" xml:space="preserve"><value>Cancel</value></data>
+  <data name="RecipeDetail.Tags.SectionLabel" xml:space="preserve"><value>Ingredient tags</value></data>
+  <data name="RecipeEdit.PageTitle" xml:space="preserve"><value>Edit recipe</value></data>
+  <data name="RecipeEdit.SaveButton" xml:space="preserve"><value>Save changes</value></data>
+  <data name="RecipeEdit.Saved.Message" xml:space="preserve"><value>Changes saved.</value></data>
+  <data name="RecipeCreate.IngredientTags.Label" xml:space="preserve"><value>Ingredient tags (optional)</value></data>
+  <data name="RecipeCreate.IngredientTags.Placeholder" xml:space="preserve"><value>e.g. vegetable, dairy</value></data>
+  <data name="RecipeCreate.IngredientTags.AddButton" xml:space="preserve"><value>Add tag</value></data>
+  <data name="Recipe.Unit.Gram" xml:space="preserve"><value>g</value></data>
+  <data name="Recipe.Unit.Milliliter" xml:space="preserve"><value>ml</value></data>
+  <data name="Recipe.Unit.Teaspoon" xml:space="preserve"><value>tsp</value></data>
+  <data name="Recipe.Unit.Tablespoon" xml:space="preserve"><value>tbsp</value></data>
+  <data name="Recipe.Unit.Piece" xml:space="preserve"><value>pc</value></data>
+  <data name="Auth.SignIn" xml:space="preserve"><value>Sign in</value></data>
+  <data name="Auth.SignOut" xml:space="preserve"><value>Sign out</value></data>
+  <data name="Auth.SignedInAs" xml:space="preserve"><value>Signed in as {0}</value></data>
 </root>

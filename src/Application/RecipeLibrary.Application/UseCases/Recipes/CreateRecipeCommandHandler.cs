@@ -45,68 +45,26 @@ public sealed class CreateRecipeCommandHandler(
             UpdatedAt = now,
         };
 
-        foreach (var ingredientDto in command.Ingredients)
+        var builtIngredients = await RecipeIngredientBuilder.BuildAsync(
+            recipeId,
+            command.Ingredients,
+            ingredientRepository,
+            normalizer,
+            matcher,
+            parser,
+            ct);
+        foreach (var ingredient in builtIngredients)
         {
-            var name = (ingredientDto!.Name ?? string.Empty).Trim();
-            var unit = ParseUnitOrThrow(ingredientDto.Unit);
-            var parsed = parser.ParseIngredient(name);
-            var match = await matcher.MatchAsync(parsed.Name, ct);
-            var canonicalIngredient = match.Ingredient;
-
-            if (canonicalIngredient is null)
-            {
-                var normalized = normalizer.Normalize(parsed.Name);
-                canonicalIngredient = await ingredientRepository.CreateIngredientWithAliasAsync(
-                    parsed.Name,
-                    normalized,
-                    name,
-                    normalizer.Normalize(name),
-                    ct);
-            }
-
-            recipe.Ingredients.Add(new Ingredient
-            {
-                Id = Guid.NewGuid(),
-                RecipeId = recipeId,
-                Name = name,
-                Preparation = parsed.Preparation,
-                IngredientId = canonicalIngredient.Id,
-                Quantity = new Quantity(ingredientDto.Quantity),
-                Unit = unit,
-            });
+            recipe.Ingredients.Add(ingredient);
         }
 
-        foreach (var stepDto in command.InstructionSteps.OrderBy(s => s!.StepNumber))
+        foreach (var step in RecipeIngredientBuilder.BuildSteps(recipeId, command.InstructionSteps))
         {
-            var text = (stepDto!.Text ?? string.Empty).Trim();
-
-            recipe.InstructionSteps.Add(new InstructionStep
-            {
-                Id = Guid.NewGuid(),
-                RecipeId = recipeId,
-                StepNumber = stepDto.StepNumber,
-                Text = text,
-            });
+            recipe.InstructionSteps.Add(step);
         }
 
         await recipeRepository.AddAsync(recipe, ct);
         return new CreateRecipeResult(recipeId);
-    }
-
-    private static Unit ParseUnitOrThrow(string? unit)
-    {
-        var raw = (unit ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            throw new ArgumentException("Ingredient unit is required.");
-        }
-
-        if (!Enum.TryParse<Unit>(raw, ignoreCase: true, out var parsed) || parsed == Unit.Unknown)
-        {
-            throw new ArgumentException($"Unknown unit '{raw}'. Use one of: {string.Join(", ", Enum.GetNames<Unit>().Where(n => n != nameof(Unit.Unknown)))}");
-        }
-
-        return parsed;
     }
 }
 

@@ -1,0 +1,27 @@
+@* Molecule: sign-in / sign-out when Azure AD is configured. *@
+@namespace RecipeLibrary.Components.Molecules
+
+@inject IConfiguration Configuration
+
+@if (_authEnabled)
+{
+    <AuthorizeView>
+        <Authorized>
+            <span class="text-sm text-gray-600">@L["Auth.SignedInAs", context.User.Identity?.Name ?? ""]</span>
+            <a href="MicrosoftIdentity/Account/SignOut" class="text-sm font-medium text-gray-700 hover:text-gray-900">@L["Auth.SignOut"]</a>
+        </Authorized>
+        <NotAuthorized>
+            <a href="MicrosoftIdentity/Account/SignIn" class="text-sm font-medium text-gray-700 hover:text-gray-900">@L["Auth.SignIn"]</a>
+        </NotAuthorized>
+    </AuthorizeView>
+}
+
+@code {
+    private bool _authEnabled;
+
+    protected override void OnInitialized()
+    {
+        var clientId = Configuration["AzureAd:ClientId"];
+        _authEnabled = !string.IsNullOrWhiteSpace(clientId);
+    }
+}
