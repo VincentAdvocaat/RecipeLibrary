@@ -106,6 +106,9 @@
   <data name="Photo.UploadFailed.Message" xml:space="preserve"><value>Upload failed.</value></data>
   <data name="Common.Remove.AriaLabel" xml:space="preserve"><value>Remove</value></data>
   <data name="Common.Menu.AriaLabel" xml:space="preserve"><value>Menu</value></data>
+  <data name="Language.Selector.AriaLabel" xml:space="preserve"><value>Select language</value></data>
+  <data name="Language.Option.Nl.Label" xml:space="preserve"><value>Dutch</value></data>
+  <data name="Language.Option.En.Label" xml:space="preserve"><value>English</value></data>
   <data name="Error.PageTitle" xml:space="preserve"><value>Error</value></data>
   <data name="Error.Heading" xml:space="preserve"><value>Error.</value></data>
   <data name="Error.Subheading" xml:space="preserve"><value>An error occurred while processing your request.</value></data>

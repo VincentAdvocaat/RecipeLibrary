@@ -18,12 +18,17 @@ if (builder.Environment.IsDevelopment())
 // Add services to the container.
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
-var dutchCulture = new CultureInfo("nl-NL");
+var supportedCultures = new[] { new CultureInfo("nl-NL"), new CultureInfo("en-US") };
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
-    options.DefaultRequestCulture = new RequestCulture(dutchCulture);
-    options.SupportedCultures = [dutchCulture];
-    options.SupportedUICultures = [dutchCulture];
+    options.DefaultRequestCulture = new RequestCulture("nl-NL");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+    options.RequestCultureProviders =
+    [
+        new CookieRequestCultureProvider(),
+        new AcceptLanguageHeaderRequestCultureProvider()
+    ];
 });
 
 builder.Services.AddRazorComponents()
@@ -140,6 +145,29 @@ app.MapGet("/tags/search", async (string q, IQueryBus queryBus, CancellationToke
         ct);
     return Results.Ok(result);
 }).DisableAntiforgery();
+
+app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext httpContext) =>
+{
+    if (culture is not ("nl-NL" or "en-US"))
+        return Results.BadRequest();
+
+    var returnPath = string.IsNullOrWhiteSpace(redirectUri) || !redirectUri.StartsWith('/')
+        ? "/"
+        : redirectUri;
+
+    httpContext.Response.Cookies.Append(
+        CookieRequestCultureProvider.DefaultCookieName,
+        CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+        new CookieOptions
+        {
+            Expires = DateTimeOffset.UtcNow.AddYears(1),
+            IsEssential = true,
+            SameSite = SameSiteMode.Lax,
+            HttpOnly = true
+        });
+
+    return Results.Redirect(returnPath);
+});
 
 app.MapPost("/ingredients/{id:guid}/tags", async (Guid id, AddIngredientTagsRequest request, ICommandBus commandBus, CancellationToken ct) =>
 {

@@ -1,0 +1,52 @@
+@* Molecule: language dropdown with country flags (nl-NL / en-US). *@
+@namespace RecipeLibrary.Components.Molecules
+@using System.Globalization
+@inject NavigationManager Navigation
+
+<div class="relative @CssClass">
+    <label class="sr-only" for="language-select">@L["Language.Selector.AriaLabel"]</label>
+    <div class="relative inline-flex items-center">
+        <span class="pointer-events-none absolute left-2.5 text-base leading-none" aria-hidden="true">@CurrentFlag</span>
+        <select id="language-select"
+                class="appearance-none rounded border border-gray-300 bg-white py-1.5 pl-9 pr-8 text-sm text-gray-700 hover:bg-gray-50 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500 cursor-pointer"
+                value="@CurrentCulture"
+                @onchange="OnCultureChanged">
+            <option value="nl-NL">@DutchOptionLabel</option>
+            <option value="en-US">@EnglishOptionLabel</option>
+        </select>
+        <span class="pointer-events-none absolute right-2 text-gray-400" aria-hidden="true">
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.24 4.5a.75.75 0 01-1.08 0l-4.24-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+            </svg>
+        </span>
+    </div>
+</div>
+
+@code {
+  private const string DutchCulture = "nl-NL";
+  private const string EnglishCulture = "en-US";
+  private const string DutchFlag = "\U0001F1F3\U0001F1F1";
+  private const string EnglishFlag = "\U0001F1EC\U0001F1E7";
+
+  [Parameter] public string? CssClass { get; set; }
+
+  private string CurrentCulture =>
+      CultureInfo.CurrentUICulture.Name is EnglishCulture ? EnglishCulture : DutchCulture;
+
+  private string CurrentFlag => CurrentCulture is EnglishCulture ? EnglishFlag : DutchFlag;
+
+  private string DutchOptionLabel => $"{DutchFlag} {L["Language.Option.Nl.Label"]}";
+
+  private string EnglishOptionLabel => $"{EnglishFlag} {L["Language.Option.En.Label"]}";
+
+  private void OnCultureChanged(ChangeEventArgs e)
+  {
+    var culture = e.Value?.ToString();
+    if (culture is not (DutchCulture or EnglishCulture) || culture == CurrentCulture)
+      return;
+
+    var returnPath = new Uri(Navigation.Uri).PathAndQuery;
+    var redirectUri = Uri.EscapeDataString(returnPath);
+    Navigation.NavigateTo($"/culture/set?culture={culture}&redirectUri={redirectUri}", forceLoad: true);
+  }
+}
