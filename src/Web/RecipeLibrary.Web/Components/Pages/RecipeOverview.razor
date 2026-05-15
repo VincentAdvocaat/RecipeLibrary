@@ -10,16 +10,16 @@
         @if (_viewMode == ViewToggle.ViewModeKind.List)
         {
             <RecipeOverviewHeader Title="@L["RecipeOverview.PageTitle"]" ShowViewToggleInHeader="false" />
-            <SearchFilterBar SearchQuery="_searchQuery"
-                             SearchQueryChanged="OnSearchQueryChanged"
-                             ViewMode="_viewMode"
-                             ViewModeChanged="OnViewModeChanged"
-                             SelectedCategory="_selectedCategory"
-                             SelectedCategoryChanged="OnCategoryChanged" />
+            <SearchFilterBar SearchQuery="@_searchQuery"
+                             SearchQueryChanged="@OnSearchQueryChanged"
+                             ViewMode="@_viewMode"
+                             ViewModeChanged="@OnViewModeChanged"
+                             SelectedCategory="@_selectedCategory"
+                             SelectedCategoryChanged="@OnCategoryChanged" />
             <div class="space-y-3">
                 @foreach (var item in _items)
                 {
-                    <RecipeListItem Item="item" />
+                    <RecipeListItem Item="@item" />
                 }
             </div>
         }
@@ -27,16 +27,16 @@
         {
             <RecipeOverviewHeader Title="@L["RecipeOverview.PageTitle"]"
                                   ShowViewToggleInHeader="true"
-                                  ViewMode="_viewMode"
-                                  ViewModeChanged="OnViewModeChanged" />
-            <SearchViewBar SearchQuery="_searchQuery"
-                           SearchQueryChanged="OnSearchQueryChanged"
-                           ViewMode="_viewMode"
-                           ViewModeChanged="OnViewModeChanged" />
+                                  ViewMode="@_viewMode"
+                                  ViewModeChanged="@OnViewModeChanged" />
+            <SearchViewBar SearchQuery="@_searchQuery"
+                           SearchQueryChanged="@OnSearchQueryChanged"
+                           ViewMode="@_viewMode"
+                           ViewModeChanged="@OnViewModeChanged" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 @foreach (var item in _items)
                 {
-                    <RecipeCard Item="item" />
+                    <RecipeCard Item="@item" />
                 }
             </div>
         }

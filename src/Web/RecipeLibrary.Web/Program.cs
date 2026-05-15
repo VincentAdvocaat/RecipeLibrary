@@ -16,7 +16,7 @@ if (builder.Environment.IsDevelopment())
 }
 
 // Add services to the container.
-builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.AddLocalization();
 
 var supportedCultures = new[] { new CultureInfo("nl-NL"), new CultureInfo("en-US") };
 builder.Services.Configure<RequestLocalizationOptions>(options =>

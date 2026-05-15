@@ -3,9 +3,9 @@
 
 <div class="flex flex-wrap items-center gap-4 mb-6 @CssClass">
     <div class="flex-1 min-w-[200px] max-w-md">
-        <SearchInput Value="SearchQuery" ValueChanged="SearchQueryChanged" />
+        <SearchInput Value="@SearchQuery" ValueChanged="@SearchQueryChanged" />
     </div>
-    <ViewToggle ViewMode="ViewMode" ViewModeChanged="ViewModeChanged" ShowCardsLabel="true" />
+    <ViewToggle ViewMode="@ViewMode" ViewModeChanged="@ViewModeChanged" ShowCardsLabel="true" />
 </div>
 
 @code {

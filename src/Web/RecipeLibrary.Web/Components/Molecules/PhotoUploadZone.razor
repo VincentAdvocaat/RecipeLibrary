@@ -7,7 +7,7 @@
     @if (string.IsNullOrEmpty(ImageUrl))
     {
         <span class="pointer-events-none flex flex-col items-center justify-center">
-            <Icon Name="Icon.IconName.Plus" CssClass="mx-auto w-12 h-12 text-gray-400" />
+            <Icon Name="@Icon.IconName.Plus" CssClass="mx-auto w-12 h-12 text-gray-400" />
             <p class="mt-2 text-sm text-gray-600">@L["Photo.Upload.Hint"]</p>
         </span>
     }
@@ -19,7 +19,7 @@
                     class="absolute top-2 right-2 p-1.5 rounded bg-gray-800 text-white hover:bg-gray-700"
                     aria-label="@L["Photo.Remove.AriaLabel"]"
                     @onclick="RemovePhoto">
-                <Icon Name="Icon.IconName.Trash" CssClass="w-4 h-4" />
+                <Icon Name="@Icon.IconName.Trash" CssClass="w-4 h-4" />
             </button>
         </div>
     }

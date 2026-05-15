@@ -2,8 +2,8 @@
 @namespace RecipeLibrary.Components.Molecules
 
 <div class="flex flex-wrap gap-4 text-sm text-gray-600 @CssClass">
-    <TimeInfo Label="@L["Recipe.Time.Prepare.Label"]" Minutes="PreparationMinutes" UseClockIcon="true" />
-    <TimeInfo Label="@L["Recipe.Time.Cook.Label"]" Minutes="CookingMinutes" UseClockIcon="false" />
+    <TimeInfo Label="@L["Recipe.Time.Prepare.Label"]" Minutes="@PreparationMinutes" UseClockIcon="true" />
+    <TimeInfo Label="@L["Recipe.Time.Cook.Label"]" Minutes="@CookingMinutes" UseClockIcon="false" />
 </div>
 
 @code {

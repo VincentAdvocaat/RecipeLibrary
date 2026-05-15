@@ -4,11 +4,11 @@
 <div class="flex items-center gap-1.5 text-sm text-gray-600 @CssClass">
     @if (UseClockIcon)
     {
-        <Icon Name="Icon.IconName.Clock" CssClass="w-4 h-4 flex-shrink-0" />
+        <Icon Name="@Icon.IconName.Clock" CssClass="w-4 h-4 flex-shrink-0" />
     }
     else
     {
-        <Icon Name="Icon.IconName.CookingPot" CssClass="w-4 h-4 flex-shrink-0" />
+        <Icon Name="@Icon.IconName.CookingPot" CssClass="w-4 h-4 flex-shrink-0" />
     }
     <span>@Label @Minutes min</span>
 </div>
