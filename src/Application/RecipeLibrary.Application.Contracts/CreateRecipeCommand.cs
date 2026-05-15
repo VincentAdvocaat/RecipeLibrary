@@ -48,7 +48,7 @@ public sealed class GetRecipeListQuery : IQuery<GetRecipeListResult>
     public string? Search { get; init; }
 
     /// <summary>
-    /// RecipeCategory enum value; null = "Alle" (no filter).
+    /// RecipeCategory enum value; null means no category filter.
     /// </summary>
     public int? Category { get; init; }
 }

@@ -1,0 +1,15 @@
+@* Atom: flag image from wwwroot/images/flags/{code}.svg (emoji flags do not render on Windows). *@
+@namespace RecipeLibrary.Components.Atoms
+
+<img src="@($"/images/flags/{Code}.svg")"
+     alt=""
+     width="20"
+     height="14"
+     class="h-3.5 w-5 shrink-0 rounded-sm border border-gray-200 object-cover @CssClass"
+     aria-hidden="true"
+     loading="lazy" />
+
+@code {
+    [Parameter, EditorRequired] public string Code { get; set; } = null!;
+    [Parameter] public string? CssClass { get; set; }
+}

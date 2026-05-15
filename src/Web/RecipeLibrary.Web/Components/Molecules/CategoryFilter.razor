@@ -1,4 +1,4 @@
-@* Molecule: category filter buttons (Alle, Vegetarisch, Vlees, Vegan). *@
+@* Molecule: category filter buttons. *@
 @namespace RecipeLibrary.Components.Molecules
 
 <div class="flex flex-wrap gap-2 @CssClass">
@@ -7,26 +7,26 @@
         <button type="button"
                 class="px-3 py-1.5 rounded text-sm font-medium @((SelectedCategory ?? 0) == (cat.Value ?? 0) ? "bg-gray-800 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50")"
                 @onclick="() => SelectCategory(cat.Value)">
-            @cat.Label
+            @L[cat.LabelKey]
         </button>
     }
 </div>
 
 @code {
-    [Parameter] public int? SelectedCategory { get; set; } // null = Alle (when ShowAllOption true)
+    [Parameter] public int? SelectedCategory { get; set; }
     [Parameter] public EventCallback<int?> SelectedCategoryChanged { get; set; }
     [Parameter] public bool ShowAllOption { get; set; } = true;
     [Parameter] public string? CssClass { get; set; }
 
-    private static readonly (int? Value, string Label)[] AllCategories =
+    private static readonly (int? Value, string LabelKey)[] AllCategories =
     [
-        (null, "Alle"),
-        (1, "Vegetarisch"),   // RecipeCategory.Vegetarian
-        (2, "Vlees"),         // RecipeCategory.Meat
-        (3, "Vegan"),         // RecipeCategory.Vegan
+        (null, "Category.All.Label"),
+        (1, "Category.Vegetarian.Label"),
+        (2, "Category.Meat.Label"),
+        (3, "Category.Vegan.Label"),
     ];
 
-    private IEnumerable<(int? Value, string Label)> VisibleCategories =>
+    private IEnumerable<(int? Value, string LabelKey)> VisibleCategories =>
         ShowAllOption ? AllCategories : AllCategories.Where(c => c.Value.HasValue);
 
     private async Task SelectCategory(int? value)

@@ -4,11 +4,11 @@
 <div class="space-y-4 mb-6 @CssClass">
     <div class="flex flex-wrap items-center gap-4">
         <div class="flex-1 min-w-[200px] max-w-md">
-            <SearchInput Value="SearchQuery" ValueChanged="SearchQueryChanged" />
+            <SearchInput Value="@SearchQuery" ValueChanged="@SearchQueryChanged" />
         </div>
-        <ViewToggle ViewMode="ViewMode" ViewModeChanged="ViewModeChanged" ShowKaartenLabel="true" />
+        <ViewToggle ViewMode="@ViewMode" ViewModeChanged="@ViewModeChanged" ShowCardsLabel="true" />
     </div>
-    <CategoryFilter SelectedCategory="SelectedCategory" SelectedCategoryChanged="SelectedCategoryChanged" />
+    <CategoryFilter SelectedCategory="@SelectedCategory" SelectedCategoryChanged="@SelectedCategoryChanged" />
 </div>
 
 @code {

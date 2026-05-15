@@ -7,19 +7,19 @@
     @if (string.IsNullOrEmpty(ImageUrl))
     {
         <span class="pointer-events-none flex flex-col items-center justify-center">
-            <Icon Name="Icon.IconName.Plus" CssClass="mx-auto w-12 h-12 text-gray-400" />
-            <p class="mt-2 text-sm text-gray-600">Klik om een foto toe te voegen of sleep een afbeelding hierheen</p>
+            <Icon Name="@Icon.IconName.Plus" CssClass="mx-auto w-12 h-12 text-gray-400" />
+            <p class="mt-2 text-sm text-gray-600">@L["Photo.Upload.Hint"]</p>
         </span>
     }
     else
     {
         <div class="relative inline-block">
-            <img src="@ImageUrl" alt="Recept foto" class="max-h-48 rounded object-cover" />
+            <img src="@ImageUrl" alt="@L["Photo.AltText"]" class="max-h-48 rounded object-cover" />
             <button type="button"
                     class="absolute top-2 right-2 p-1.5 rounded bg-gray-800 text-white hover:bg-gray-700"
-                    aria-label="Foto verwijderen"
+                    aria-label="@L["Photo.Remove.AriaLabel"]"
                     @onclick="RemovePhoto">
-                <Icon Name="Icon.IconName.Trash" CssClass="w-4 h-4" />
+                <Icon Name="@Icon.IconName.Trash" CssClass="w-4 h-4" />
             </button>
         </div>
     }
@@ -45,7 +45,8 @@
             _dotNetRef = DotNetObjectReference.Create(this);
             try
             {
-                await JS.InvokeVoidAsync("RecipeLibrary.photoUploadZone.init", _zoneRef, _dotNetRef);
+                var uploadFailedMessage = L["Photo.UploadFailed.Message"].Value;
+                await JS.InvokeVoidAsync("RecipeLibrary.photoUploadZone.init", _zoneRef, _dotNetRef, uploadFailedMessage);
             }
             catch
             {

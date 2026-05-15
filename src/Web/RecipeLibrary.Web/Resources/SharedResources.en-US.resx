@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Nav.MyRecipes" xml:space="preserve"><value>My Recipes</value></data>
+  <data name="Nav.AddRecipe" xml:space="preserve"><value>Add Recipe</value></data>
+  <data name="Nav.Overview" xml:space="preserve"><value>Overview</value></data>
+  <data name="RecipeOverview.PageTitle" xml:space="preserve"><value>Recipe Overview</value></data>
+  <data name="RecipeCreate.PageTitle" xml:space="preserve"><value>Add New Recipe</value></data>
+  <data name="RecipeCreate.Photo.Label" xml:space="preserve"><value>Recipe photo</value></data>
+  <data name="RecipeCreate.Title.Label" xml:space="preserve"><value>Recipe title</value></data>
+  <data name="RecipeCreate.Title.Placeholder" xml:space="preserve"><value>e.g. Chicken Curry</value></data>
+  <data name="RecipeCreate.Title.Required" xml:space="preserve"><value>Title is required.</value></data>
+  <data name="RecipeCreate.Description.Label" xml:space="preserve"><value>Short description</value></data>
+  <data name="RecipeCreate.Description.Placeholder" xml:space="preserve"><value>Enter a short description of the recipe</value></data>
+  <data name="RecipeCreate.TagsCategory.Label" xml:space="preserve"><value>Tags / Category</value></data>
+  <data name="RecipeCreate.PreparationTime.Label" xml:space="preserve"><value>Preparation time (min)</value></data>
+  <data name="RecipeCreate.CookingTime.Label" xml:space="preserve"><value>Cooking time (min)</value></data>
+  <data name="RecipeCreate.Equipment.SectionLabel" xml:space="preserve"><value>Equipment</value></data>
+  <data name="RecipeCreate.Equipment.Oven.Button" xml:space="preserve"><value>Oven required</value></data>
+  <data name="RecipeCreate.Equipment.Baking.Button" xml:space="preserve"><value>Baking required</value></data>
+  <data name="RecipeCreate.Equipment.Cooling.Button" xml:space="preserve"><value>Cooling required</value></data>
+  <data name="RecipeCreate.Category.Label" xml:space="preserve"><value>Category</value></data>
+  <data name="RecipeCreate.Ingredients.SectionLabel" xml:space="preserve"><value>Ingredients</value></data>
+  <data name="RecipeCreate.Ingredient.Name.Label" xml:space="preserve"><value>Name</value></data>
+  <data name="RecipeCreate.Ingredient.Name.Placeholder" xml:space="preserve"><value>e.g. chicken breast</value></data>
+  <data name="RecipeCreate.Ingredient.Name.Required" xml:space="preserve"><value>Name is required.</value></data>
+  <data name="RecipeCreate.Ingredient.Quantity.Label" xml:space="preserve"><value>Quantity</value></data>
+  <data name="RecipeCreate.Ingredient.Quantity.Invalid" xml:space="preserve"><value>Quantity must be greater than 0.</value></data>
+  <data name="RecipeCreate.Ingredient.Unit.Label" xml:space="preserve"><value>Unit</value></data>
+  <data name="RecipeCreate.Ingredient.Unit.Required" xml:space="preserve"><value>Unit is required.</value></data>
+  <data name="RecipeCreate.Ingredient.AddButton" xml:space="preserve"><value>+ Add ingredient</value></data>
+  <data name="RecipeCreate.Ingredient.Match.Exact" xml:space="preserve"><value>Exact ingredient match found.</value></data>
+  <data name="RecipeCreate.Ingredient.Match.Alias" xml:space="preserve"><value>Alias match found; linked to existing ingredient.</value></data>
+  <data name="RecipeCreate.Ingredient.Match.Fuzzy" xml:space="preserve"><value>Fuzzy match: {0} ({1}).</value></data>
+  <data name="RecipeCreate.Ingredient.Match.None" xml:space="preserve"><value>No match found. You can continue with new input.</value></data>
+  <data name="RecipeCreate.Instructions.SectionLabel" xml:space="preserve"><value>Instructions</value></data>
+  <data name="RecipeCreate.Instructions.StepsHint" xml:space="preserve"><value>Steps</value></data>
+  <data name="RecipeCreate.Step.Placeholder" xml:space="preserve"><value>e.g. Dice the onion. Heat oil in a pan...</value></data>
+  <data name="RecipeCreate.Step.Text.Required" xml:space="preserve"><value>Step text is required.</value></data>
+  <data name="RecipeCreate.Step.AddButton" xml:space="preserve"><value>+ Add step</value></data>
+  <data name="RecipeCreate.CancelButton" xml:space="preserve"><value>Cancel</value></data>
+  <data name="RecipeCreate.SaveButton" xml:space="preserve"><value>Save recipe</value></data>
+  <data name="RecipeCreate.Saved.Message" xml:space="preserve"><value>Saved.</value></data>
+  <data name="Category.All.Label" xml:space="preserve"><value>All</value></data>
+  <data name="Category.Vegetarian.Label" xml:space="preserve"><value>Vegetarian</value></data>
+  <data name="Category.Meat.Label" xml:space="preserve"><value>Meat</value></data>
+  <data name="Category.Vegan.Label" xml:space="preserve"><value>Vegan</value></data>
+  <data name="Search.Recipes.Placeholder" xml:space="preserve"><value>Search recipes...</value></data>
+  <data name="View.Mode.Label" xml:space="preserve"><value>View:</value></data>
+  <data name="View.Cards.Label" xml:space="preserve"><value>Cards</value></data>
+  <data name="Recipe.Time.Prepare.Label" xml:space="preserve"><value>Prepare</value></data>
+  <data name="Recipe.Time.Cook.Label" xml:space="preserve"><value>Cook</value></data>
+  <data name="Recipe.Ingredients.SectionLabel" xml:space="preserve"><value>Ingredients</value></data>
+  <data name="Photo.Upload.Hint" xml:space="preserve"><value>Click to add a photo or drag an image here</value></data>
+  <data name="Photo.AltText" xml:space="preserve"><value>Recipe photo</value></data>
+  <data name="Photo.Remove.AriaLabel" xml:space="preserve"><value>Remove photo</value></data>
+  <data name="Photo.UploadFailed.Message" xml:space="preserve"><value>Upload failed.</value></data>
+  <data name="Common.Remove.AriaLabel" xml:space="preserve"><value>Remove</value></data>
+  <data name="Common.Menu.AriaLabel" xml:space="preserve"><value>Menu</value></data>
+  <data name="Language.Selector.AriaLabel" xml:space="preserve"><value>Select language</value></data>
+  <data name="Error.PageTitle" xml:space="preserve"><value>Error</value></data>
+  <data name="Error.Heading" xml:space="preserve"><value>Error.</value></data>
+  <data name="Error.Subheading" xml:space="preserve"><value>An error occurred while processing your request.</value></data>
+  <data name="Error.RequestId.Label" xml:space="preserve"><value>Request ID:</value></data>
+  <data name="Error.DevelopmentMode.Heading" xml:space="preserve"><value>Development Mode</value></data>
+  <data name="Error.DevelopmentMode.Intro" xml:space="preserve"><value>Swapping to Development environment will display more detailed information about the error that occurred.</value></data>
+  <data name="Error.DevelopmentMode.Warning" xml:space="preserve"><value>The Development environment shouldn't be enabled for deployed applications.</value></data>
+  <data name="Error.DevelopmentMode.Instructions" xml:space="preserve"><value>It can result in displaying sensitive information from exceptions to end users. For local debugging, enable the Development environment by setting the ASPNETCORE_ENVIRONMENT environment variable to Development and restarting the app.</value></data>
+  <data name="NotFound.PageTitle" xml:space="preserve"><value>Not Found</value></data>
+  <data name="NotFound.Heading" xml:space="preserve"><value>Not Found</value></data>
+  <data name="NotFound.Message" xml:space="preserve"><value>Sorry, the content you are looking for does not exist.</value></data>
+</root>

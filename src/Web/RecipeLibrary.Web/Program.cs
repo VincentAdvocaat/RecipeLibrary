@@ -1,3 +1,5 @@
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
 using RecipeLibrary.Application;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Components;
@@ -14,6 +16,21 @@ if (builder.Environment.IsDevelopment())
 }
 
 // Add services to the container.
+builder.Services.AddLocalization();
+
+var supportedCultures = new[] { new CultureInfo("nl-NL"), new CultureInfo("en-US") };
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    options.DefaultRequestCulture = new RequestCulture("nl-NL");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+    options.RequestCultureProviders =
+    [
+        new CookieRequestCultureProvider(),
+        new AcceptLanguageHeaderRequestCultureProvider()
+    ];
+});
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -68,6 +85,9 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+
+var localizationOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<RequestLocalizationOptions>>().Value;
+app.UseRequestLocalization(localizationOptions);
 
 app.UseAntiforgery();
 
@@ -125,6 +145,29 @@ app.MapGet("/tags/search", async (string q, IQueryBus queryBus, CancellationToke
         ct);
     return Results.Ok(result);
 }).DisableAntiforgery();
+
+app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext httpContext) =>
+{
+    if (culture is not ("nl-NL" or "en-US"))
+        return Results.BadRequest();
+
+    var returnPath = string.IsNullOrWhiteSpace(redirectUri) || !redirectUri.StartsWith('/')
+        ? "/"
+        : redirectUri;
+
+    httpContext.Response.Cookies.Append(
+        CookieRequestCultureProvider.DefaultCookieName,
+        CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+        new CookieOptions
+        {
+            Expires = DateTimeOffset.UtcNow.AddYears(1),
+            IsEssential = true,
+            SameSite = SameSiteMode.Lax,
+            HttpOnly = true
+        });
+
+    return Results.Redirect(returnPath);
+});
 
 app.MapPost("/ingredients/{id:guid}/tags", async (Guid id, AddIngredientTagsRequest request, ICommandBus commandBus, CancellationToken ct) =>
 {
