@@ -14,10 +14,11 @@ alwaysApply: true
 
 ## UI (Dutch via resources)
 
-- All user-visible strings in **Blazor** use `IStringLocalizer<SharedResources>`—never hardcoded Dutch or English in `.razor` markup or `@code` string literals.
+- All user-visible strings in **Blazor** (labels, buttons, placeholders, `PageTitle`, `aria-label`, status text) use `IStringLocalizer<SharedResources>` (or feature-specific resource classes)—**never** hardcoded Dutch or English in `.razor` markup or `@code` string literals.
 - Store Dutch text only in `Resources/SharedResources.nl.resx`. Use **English resource keys** with pattern `[Area].[Element].[Type]` (e.g. `RecipeCreate.Title.Label`, `RecipeCreate.SaveButton`, `Nav.MyRecipes`).
-- Default request culture: `nl-NL`. Set `<html lang="nl">` in `App.razor`.
-- Add keys to `SharedResources.resx` (English fallback) and Dutch values in `SharedResources.nl.resx`.
+- Default request culture: `nl-NL`. Set `<html lang="@CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">` in `App.razor`.
+- When adding UI text: add the key to `SharedResources.resx` (neutral fallback), `SharedResources.en-US.resx` (English), and `SharedResources.nl.resx` (Dutch).
+- **Language switcher**: show language names in their **native** form (`Nederlands`, `English`) as code constants—not via `L[...]` (so they do not change with UI culture).
 
 ## Examples
 
@@ -37,7 +38,12 @@ throw new ArgumentException("Titel is verplicht.");
 throw new ArgumentException("Title is required.");
 ```
 
+```sql
+-- OK in scripts/seed-*.sql
+N'Lasagna bestaat uit drie onderdelen...'
+```
+
 ## Refactors
 
-- Rename Dutch code artifacts to English (e.g. `RecipeOverview`, `ShowCardsLabel`).
+- Rename Dutch code artifacts to English (e.g. `ReceptenOverzicht` → `RecipeOverview`, `ShowKaartenLabel` → `ShowCardsLabel`).
 - Migrate existing inline UI strings to resources before adding new features.
