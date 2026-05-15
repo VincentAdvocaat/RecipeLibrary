@@ -1,54 +1,93 @@
-@* Molecule: language dropdown with country flags (nl-NL / en-US). *@
+@* Molecule: language dropdown with SVG flags from wwwroot/images/flags. *@
 @namespace RecipeLibrary.Components.Molecules
 @using System.Globalization
 @inject NavigationManager Navigation
 
 <div class="relative @CssClass">
-    <label class="sr-only" for="language-select">@L["Language.Selector.AriaLabel"]</label>
-    <div class="relative inline-flex items-center">
-        <span class="pointer-events-none absolute left-2.5 text-base leading-none" aria-hidden="true">@CurrentFlag</span>
-        <select id="language-select"
-                class="appearance-none rounded border border-gray-300 bg-white py-1.5 pl-9 pr-8 text-sm text-gray-700 hover:bg-gray-50 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500 cursor-pointer"
-                value="@CurrentCulture"
-                @onchange="OnCultureChanged">
-            <option value="nl-NL">@DutchOptionLabel</option>
-            <option value="en-US">@EnglishOptionLabel</option>
-        </select>
+    @if (_isOpen)
+    {
+        <button type="button"
+                class="fixed inset-0 z-10 cursor-default"
+                tabindex="-1"
+                aria-hidden="true"
+                @onclick="Close"></button>
+    }
+    <button type="button"
+            id="language-select"
+            class="relative z-20 inline-flex items-center gap-2 rounded border border-gray-300 bg-white py-1.5 pl-2.5 pr-8 text-sm text-gray-700 hover:bg-gray-50 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+            aria-haspopup="listbox"
+            aria-expanded="@_isOpen"
+            aria-label="@L["Language.Selector.AriaLabel"]"
+            @onclick="Toggle">
+        <CountryFlag Code="@CurrentFlagCode" />
+        <span>@CurrentNativeName</span>
         <span class="pointer-events-none absolute right-2 text-gray-400" aria-hidden="true">
             <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.24 4.5a.75.75 0 01-1.08 0l-4.24-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
             </svg>
         </span>
-    </div>
+    </button>
+    @if (_isOpen)
+    {
+        <ul class="absolute right-0 z-20 mt-1 min-w-full list-none rounded border border-gray-300 bg-white py-1 shadow-lg"
+            role="listbox"
+            aria-labelledby="language-select">
+            @foreach (var lang in Languages)
+            {
+                <li role="presentation">
+                    <button type="button"
+                            class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm @(lang.Culture == CurrentCulture ? "bg-gray-100 font-medium text-gray-900" : "text-gray-700 hover:bg-gray-50")"
+                            role="option"
+                            aria-selected="@(lang.Culture == CurrentCulture)"
+                            @onclick="() => SelectCulture(lang.Culture)">
+                        <CountryFlag Code="@lang.FlagCode" />
+                        <span>@lang.Name</span>
+                    </button>
+                </li>
+            }
+        </ul>
+    }
 </div>
 
 @code {
-  private const string DutchCulture = "nl-NL";
-  private const string EnglishCulture = "en-US";
-  private const string DutchFlag = "\U0001F1F3\U0001F1F1";
-  private const string EnglishFlag = "\U0001F1EC\U0001F1E7";
-  private const string DutchNativeName = "Nederlands";
-  private const string EnglishNativeName = "English";
+    private const string DutchCulture = "nl-NL";
+    private const string EnglishCulture = "en-US";
+    private const string DutchNativeName = "Nederlands";
+    private const string EnglishNativeName = "English";
 
-  [Parameter] public string? CssClass { get; set; }
+    private static readonly LanguageOption[] Languages =
+    [
+        new(DutchCulture, "nl", DutchNativeName),
+        new(EnglishCulture, "gb", EnglishNativeName),
+    ];
 
-  private string CurrentCulture =>
-      CultureInfo.CurrentUICulture.Name is EnglishCulture ? EnglishCulture : DutchCulture;
+    private bool _isOpen;
 
-  private string CurrentFlag => CurrentCulture is EnglishCulture ? EnglishFlag : DutchFlag;
+    [Parameter] public string? CssClass { get; set; }
 
-  private string DutchOptionLabel => $"{DutchFlag} {DutchNativeName}";
+    private string CurrentCulture =>
+        CultureInfo.CurrentUICulture.Name is EnglishCulture ? EnglishCulture : DutchCulture;
 
-  private string EnglishOptionLabel => $"{EnglishFlag} {EnglishNativeName}";
+    private string CurrentFlagCode =>
+        CurrentCulture is EnglishCulture ? "gb" : "nl";
 
-  private void OnCultureChanged(ChangeEventArgs e)
-  {
-    var culture = e.Value?.ToString();
-    if (culture is not (DutchCulture or EnglishCulture) || culture == CurrentCulture)
-      return;
+    private string CurrentNativeName =>
+        CurrentCulture is EnglishCulture ? EnglishNativeName : DutchNativeName;
 
-    var returnPath = new Uri(Navigation.Uri).PathAndQuery;
-    var redirectUri = Uri.EscapeDataString(returnPath);
-    Navigation.NavigateTo($"/culture/set?culture={culture}&redirectUri={redirectUri}", forceLoad: true);
-  }
+    private void Toggle() => _isOpen = !_isOpen;
+
+    private void Close() => _isOpen = false;
+
+    private void SelectCulture(string culture)
+    {
+        Close();
+        if (culture == CurrentCulture)
+            return;
+
+        var returnPath = new Uri(Navigation.Uri).PathAndQuery;
+        var redirectUri = Uri.EscapeDataString(returnPath);
+        Navigation.NavigateTo($"/culture/set?culture={culture}&redirectUri={redirectUri}", forceLoad: true);
+    }
+
+    private sealed record LanguageOption(string Culture, string FlagCode, string Name);
 }
