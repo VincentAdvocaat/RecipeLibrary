@@ -15,6 +15,15 @@
                 <AppNavLink Href="/recipes/create">@L["Nav.AddRecipe"]</AppNavLink>
                 <AppNavLink Href="/recipes">@L["Nav.MyRecipes"]</AppNavLink>
             }
+            <a href="/shopping-list" class="relative text-gray-700 text-sm font-medium hover:text-gray-900 no-underline">
+                @L["Nav.ShoppingList"]
+                @if (ShoppingBadgeCount > 0)
+                {
+                    <span class="absolute -top-2 -right-3 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-gray-800 px-1.5 py-0.5 text-xs font-medium text-white">
+                        @ShoppingBadgeCount
+                    </span>
+                }
+            </a>
         </nav>
     </div>
     <div class="flex items-center gap-4">
@@ -34,4 +43,5 @@
     [Parameter] public ViewToggle.ViewModeKind ViewMode { get; set; }
     [Parameter] public EventCallback<ViewToggle.ViewModeKind> ViewModeChanged { get; set; }
     [Parameter] public string? CssClass { get; set; }
+    [Parameter] public int ShoppingBadgeCount { get; set; }
 }

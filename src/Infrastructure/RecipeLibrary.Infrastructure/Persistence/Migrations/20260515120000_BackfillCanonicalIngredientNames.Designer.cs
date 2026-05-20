@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RecipeLibrary.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using RecipeLibrary.Infrastructure.Persistence;
 namespace RecipeLibrary.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(RecipeDbContext))]
-    partial class RecipeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260515120000_BackfillCanonicalIngredientNames")]
+    partial class BackfillCanonicalIngredientNames
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -263,119 +266,6 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.ToTable("Tags", (string)null);
                 });
 
-            modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingListGroup", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("OwnerUserId")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ShoppingListGroups");
-                });
-
-            modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingList", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("GroupId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("StoreOrder")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GroupId", "StoreOrder")
-                        .IsUnique();
-
-                    b.ToTable("ShoppingLists");
-                });
-
-            modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingListItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("CanonicalIngredientId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<bool>("IsChecked")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Preparation")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<decimal>("Quantity")
-                        .HasPrecision(18, 3)
-                        .HasColumnType("decimal(18,3)");
-
-                    b.Property<Guid>("ShoppingListId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Unit")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ShoppingListId");
-
-                    b.ToTable("ShoppingListItems");
-                });
-
-            modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingListItemSource", b =>
-                {
-                    b.Property<Guid>("ShoppingListItemId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("RecipeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("RecipeTitle")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("ShoppingListItemId", "RecipeId");
-
-                    b.ToTable("ShoppingListItemSources");
-                });
-
             modelBuilder.Entity("RecipeLibrary.Domain.Entities.Ingredient", b =>
                 {
                     b.HasOne("RecipeLibrary.Domain.Entities.CanonicalIngredient", "IngredientDefinition")
@@ -441,39 +331,6 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingList", b =>
-                {
-                    b.HasOne("RecipeLibrary.Domain.Entities.ShoppingListGroup", "Group")
-                        .WithMany("Lists")
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Group");
-                });
-
-            modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingListItem", b =>
-                {
-                    b.HasOne("RecipeLibrary.Domain.Entities.ShoppingList", "ShoppingList")
-                        .WithMany("Items")
-                        .HasForeignKey("ShoppingListId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ShoppingList");
-                });
-
-            modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingListItemSource", b =>
-                {
-                    b.HasOne("RecipeLibrary.Domain.Entities.ShoppingListItem", "Item")
-                        .WithMany("Sources")
-                        .HasForeignKey("ShoppingListItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Item");
-                });
-
             modelBuilder.Entity("RecipeLibrary.Domain.Entities.CanonicalIngredient", b =>
                 {
                     b.Navigation("Aliases");
@@ -488,21 +345,6 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.Navigation("InstructionSteps");
                 });
 
-            modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingListGroup", b =>
-                {
-                    b.Navigation("Lists");
-                });
-
-            modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingList", b =>
-                {
-                    b.Navigation("Items");
-                });
-
-            modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingListItem", b =>
-                {
-                    b.Navigation("Sources");
-                });
-
             modelBuilder.Entity("RecipeLibrary.Domain.Entities.Tag", b =>
                 {
                     b.Navigation("IngredientTags");
@@ -511,3 +353,4 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
         }
     }
 }
+

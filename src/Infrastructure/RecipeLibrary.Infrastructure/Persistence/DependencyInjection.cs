@@ -23,6 +23,7 @@ public static class PersistenceServiceRegistration
 
         services.AddScoped<IRecipeRepository, EfRecipeRepository>();
         services.AddScoped<IIngredientRepository, EfIngredientRepository>();
+        services.AddScoped<IShoppingListRepository, EfShoppingListRepository>();
         return services;
     }
 

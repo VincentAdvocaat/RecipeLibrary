@@ -78,6 +78,16 @@ public sealed class GetRecipeByIdQueryHandlerTests
         public Task<Recipe?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
             Task.FromResult(recipe is not null && recipe.Id == id ? recipe : null);
 
+        public Task<IReadOnlyList<Recipe>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+        {
+            if (recipe is not null && ids.Contains(recipe.Id))
+            {
+                return Task.FromResult<IReadOnlyList<Recipe>>([recipe]);
+            }
+
+            return Task.FromResult<IReadOnlyList<Recipe>>([]);
+        }
+
         public Task<Recipe?> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default) =>
             GetByIdAsync(id, ct);
 

@@ -1,6 +1,8 @@
 @page "/recipes/{RecipeId:guid}"
 
 @inject IQueryBus QueryBus
+@inject ICommandBus CommandBus
+@inject ShoppingListSessionService ShoppingSession
 @inject NavigationManager Navigation
 
 @if (_recipe is null && !_redirected)
@@ -73,7 +75,30 @@ else if (_recipe is not null)
                         </div>
                     }
 
-                    <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                    @if (_addMessage is not null)
+                    {
+                        <p class="text-sm text-green-700">@_addMessage <AppNavLink Href="/shopping-list">@L["Nav.ShoppingList"]</AppNavLink></p>
+                    }
+
+                    <div class="flex flex-wrap items-end gap-3 pt-4 border-t border-gray-200">
+                        @if (_shoppingLists.Count > 1)
+                        {
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">@L["RecipeDetail.AddToShoppingList.TargetLabel"]</label>
+                                <select class="rounded border border-gray-300 text-sm px-2 py-1.5"
+                                        @bind="_targetShoppingListId">
+                                    @foreach (var list in _shoppingLists)
+                                    {
+                                        <option value="@list.Id">@list.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                        <button type="button"
+                                class="px-3 py-1.5 rounded bg-gray-800 text-white text-sm font-medium"
+                                @onclick="AddToShoppingListAsync">
+                            @L["RecipeDetail.AddToShoppingListButton"]
+                        </button>
                         <AppNavLink Href="@($"/recipes/{_recipe.Id}/edit")">@L["RecipeDetail.EditButton"]</AppNavLink>
                         <button type="button"
                                 class="text-sm font-medium text-red-600 hover:text-red-800"
@@ -109,12 +134,13 @@ else if (_recipe is not null)
 @code {
     [Parameter] public Guid RecipeId { get; set; }
 
-    [Inject] private ICommandBus CommandBus { get; set; } = null!;
-
     private GetRecipeByIdResult? _recipe;
     private IReadOnlyList<string> _ingredientTags = [];
+    private IReadOnlyList<ShoppingListDto> _shoppingLists = [];
+    private Guid _targetShoppingListId;
     private bool _redirected;
     private bool _showDeleteConfirm;
+    private string? _addMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -130,6 +156,31 @@ else if (_recipe is not null)
 
         _recipe = result;
         await LoadIngredientTagsAsync();
+        await LoadShoppingListsAsync();
+    }
+
+    private async Task LoadShoppingListsAsync()
+    {
+        var group = await ShoppingSession.GetOrCreateGroupAsync();
+        _shoppingLists = group.Lists.OrderBy(l => l.StoreOrder).ToList();
+        _targetShoppingListId = _shoppingLists.FirstOrDefault()?.Id ?? Guid.Empty;
+    }
+
+    private async Task AddToShoppingListAsync()
+    {
+        if (_targetShoppingListId == Guid.Empty)
+        {
+            return;
+        }
+
+        await CommandBus.SendAsync<AddRecipesToShoppingListCommand, AddRecipesToShoppingListResult>(
+            new AddRecipesToShoppingListCommand
+            {
+                ShoppingListId = _targetShoppingListId,
+                RecipeIds = [RecipeId],
+            });
+
+        _addMessage = L["RecipeDetail.AddedToShoppingList.Message"];
     }
 
     private async Task LoadIngredientTagsAsync()

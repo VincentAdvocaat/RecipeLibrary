@@ -143,4 +143,38 @@
   <data name="Auth.SignIn" xml:space="preserve"><value>Inloggen</value></data>
   <data name="Auth.SignOut" xml:space="preserve"><value>Uitloggen</value></data>
   <data name="Auth.SignedInAs" xml:space="preserve"><value>Ingelogd als {0}</value></data>
+  <data name="Nav.ShoppingList" xml:space="preserve"><value>Boodschappenlijst</value></data>
+  <data name="ShoppingList.NumberedNameFormat" xml:space="preserve"><value>Boodschappenlijst {0}</value></data>
+  <data name="ShoppingList.PageTitle" xml:space="preserve"><value>Boodschappenlijst</value></data>
+  <data name="ShoppingList.Empty.Message" xml:space="preserve"><value>Je boodschappenlijst is leeg. Voeg recepten toe om te beginnen.</value></data>
+  <data name="ShoppingList.Empty.Link" xml:space="preserve"><value>Bekijk recepten</value></data>
+  <data name="ShoppingList.Split.StartButton" xml:space="preserve"><value>Opsplitsen in aparte lijst</value></data>
+  <data name="ShoppingList.Split.CancelButton" xml:space="preserve"><value>Annuleren</value></data>
+  <data name="ShoppingList.Split.SelectAll" xml:space="preserve"><value>Alles selecteren</value></data>
+  <data name="ShoppingList.Split.ClearSelection" xml:space="preserve"><value>Selectie wissen</value></data>
+  <data name="ShoppingList.Split.SelectedCount" xml:space="preserve"><value>{0} geselecteerd</value></data>
+  <data name="ShoppingList.Split.CreateFromSelection" xml:space="preserve"><value>Aparte lijst maken van selectie</value></data>
+  <data name="ShoppingList.Split.Name.Label" xml:space="preserve"><value>Naam voor de nieuwe lijst</value></data>
+  <data name="ShoppingList.Split.Name.Placeholder" xml:space="preserve"><value>bijv. Slager</value></data>
+  <data name="ShoppingList.Split.ConfirmButton" xml:space="preserve"><value>Lijst aanmaken</value></data>
+  <data name="ShoppingList.EditName.Button" xml:space="preserve"><value>Hernoemen</value></data>
+  <data name="ShoppingList.EditName.SaveButton" xml:space="preserve"><value>Opslaan</value></data>
+  <data name="ShoppingList.Clear.Button" xml:space="preserve"><value>Lijst legen</value></data>
+  <data name="ShoppingList.ClearConfirm.Message" xml:space="preserve"><value>Alle items van deze lijst verwijderen?</value></data>
+  <data name="ShoppingList.DeleteList.Button" xml:space="preserve"><value>Deze lijst verwijderen</value></data>
+  <data name="ShoppingList.DeleteListConfirm.Message" xml:space="preserve"><value>Deze boodschappenlijst en alle items verwijderen?</value></data>
+  <data name="ShoppingList.DeleteGroup.Button" xml:space="preserve"><value>Alle lijsten verwijderen</value></data>
+  <data name="ShoppingList.DeleteGroupConfirm.Message" xml:space="preserve"><value>Alle boodschappenlijsten verwijderen? Dit kan niet ongedaan worden gemaakt.</value></data>
+  <data name="ShoppingList.MoveTo.Button" xml:space="preserve"><value>Verplaatsen naar {0}</value></data>
+  <data name="ShoppingList.RemoveItem.Button" xml:space="preserve"><value>Verwijderen</value></data>
+  <data name="ShoppingList.FromRecipes.Label" xml:space="preserve"><value>Van: {0}</value></data>
+  <data name="RecipeDetail.AddToShoppingListButton" xml:space="preserve"><value>Toevoegen aan boodschappenlijst</value></data>
+  <data name="RecipeDetail.AddedToShoppingList.Message" xml:space="preserve"><value>Toegevoegd aan boodschappenlijst.</value></data>
+  <data name="RecipeDetail.AddToShoppingList.TargetLabel" xml:space="preserve"><value>Toevoegen aan</value></data>
+  <data name="RecipeOverview.SelectMode.Button" xml:space="preserve"><value>Selecteren</value></data>
+  <data name="RecipeOverview.SelectMode.CancelButton" xml:space="preserve"><value>Annuleren</value></data>
+  <data name="RecipeOverview.AddSelectedToShoppingList" xml:space="preserve"><value>{0} recepten toevoegen aan boodschappenlijst</value></data>
+  <data name="RecipeOverview.AddedToShoppingList.Message" xml:space="preserve"><value>{0} recepten toegevoegd aan boodschappenlijst.</value></data>
+  <data name="ShoppingList.Confirm.Yes" xml:space="preserve"><value>Ja</value></data>
+  <data name="ShoppingList.Confirm.No" xml:space="preserve"><value>Nee</value></data>
 </root>

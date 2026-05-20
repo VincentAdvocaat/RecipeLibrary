@@ -8,6 +8,7 @@ using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Components;
 using RecipeLibrary.Infrastructure.FileStorage;
 using RecipeLibrary.Infrastructure.Persistence;
+using RecipeLibrary.Web.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -68,6 +69,8 @@ builder.Services.AddApplication();
 
 var recipeImagesDefaultPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "RecipeLibraryUploads"));
 builder.Services.AddRecipeFileStorage(builder.Configuration, recipeImagesDefaultPath);
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ShoppingListSessionService>();
 builder.Services.AddScoped(sp =>
 {
     var nav = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
@@ -194,6 +197,35 @@ app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext htt
         });
 
     return Results.Redirect(returnPath);
+});
+
+app.MapGet("/shopping-list/session/set", (Guid groupId, string? redirectUri, HttpContext httpContext) =>
+{
+    if (groupId == Guid.Empty)
+    {
+        return Results.BadRequest();
+    }
+
+    httpContext.Response.Cookies.Append(
+        ShoppingListSessionService.GroupIdCookieName,
+        groupId.ToString(),
+        ShoppingListSessionService.CreateGroupCookieOptions());
+
+    return Results.Redirect(ShoppingListSessionService.NormalizeRedirect(redirectUri));
+});
+
+app.MapGet("/shopping-list/session/clear", (string? redirectUri, HttpContext httpContext) =>
+{
+    httpContext.Response.Cookies.Delete(
+        ShoppingListSessionService.GroupIdCookieName,
+        new CookieOptions
+        {
+            SameSite = SameSiteMode.Lax,
+            HttpOnly = true,
+            Path = "/",
+        });
+
+    return Results.Redirect(ShoppingListSessionService.NormalizeRedirect(redirectUri));
 });
 
 app.MapPost("/ingredients/{id:guid}/tags", async (Guid id, AddIngredientTagsRequest request, ICommandBus commandBus, CancellationToken ct) =>
