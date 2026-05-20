@@ -7,7 +7,7 @@
         @foreach (var item in Items)
         {
             <li class="flex flex-wrap gap-x-2">
-                <span class="font-medium tabular-nums">@FormatQuantity(item.Quantity) @GetUnitLabel(item.Unit)</span>
+                <span class="font-medium tabular-nums">@FormatLine(item)</span>
                 <span>
                     @item.Name
                     @if (!string.IsNullOrWhiteSpace(item.Preparation))
@@ -24,8 +24,15 @@
     [Parameter] public IReadOnlyList<RecipeDetailIngredientItem> Items { get; set; } = [];
     [Parameter] public string? CssClass { get; set; }
 
-    private static string FormatQuantity(decimal quantity) =>
-        quantity % 1 == 0 ? ((int)quantity).ToString() : quantity.ToString("0.###");
+    private string FormatLine(RecipeDetailIngredientItem item)
+    {
+        var unit = UnitRules.TryParse(item.Unit, out var parsed) ? parsed : Unit.Unknown;
+        var quantityText = unit == Unit.Unknown
+            ? ((long)decimal.Round(item.Quantity, 0, MidpointRounding.AwayFromZero))
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : IngredientQuantityFormatter.Format(item.Quantity, unit);
+        return $"{quantityText} {GetUnitLabel(item.Unit)}";
+    }
 
     private string GetUnitLabel(string unit)
     {

@@ -22,7 +22,8 @@ internal static class RecipeIngredientBuilder
         foreach (var ingredientDto in ingredientDtos)
         {
             var name = (ingredientDto.Name ?? string.Empty).Trim();
-            var unit = ParseUnitOrThrow(ingredientDto.Unit);
+            var unit = UnitRules.ParseOrThrow(ingredientDto.Unit);
+            var quantity = IngredientQuantityFormatter.Normalize(ingredientDto.Quantity, unit);
             var parsed = parser.ParseIngredient(name);
             var match = await matcher.MatchAsync(parsed.Name, ct);
             var canonicalIngredient = match.Ingredient;
@@ -45,7 +46,7 @@ internal static class RecipeIngredientBuilder
                 Name = name,
                 Preparation = parsed.Preparation,
                 IngredientId = canonicalIngredient.Id,
-                Quantity = new Quantity(ingredientDto.Quantity),
+                Quantity = new Quantity(quantity),
                 Unit = unit,
             });
         }
@@ -69,21 +70,5 @@ internal static class RecipeIngredientBuilder
                 };
             })
             .ToList();
-    }
-
-    private static Unit ParseUnitOrThrow(string? unit)
-    {
-        var raw = (unit ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            throw new ArgumentException("Ingredient unit is required.");
-        }
-
-        if (!Enum.TryParse<Unit>(raw, ignoreCase: true, out var parsed) || parsed == Unit.Unknown)
-        {
-            throw new ArgumentException($"Unknown unit '{raw}'. Use one of: {string.Join(", ", Enum.GetNames<Unit>().Where(n => n != nameof(Unit.Unknown)))}");
-        }
-
-        return parsed;
     }
 }

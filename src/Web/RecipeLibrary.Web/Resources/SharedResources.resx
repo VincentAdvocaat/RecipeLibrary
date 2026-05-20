@@ -135,11 +135,11 @@
   <data name="RecipeCreate.IngredientTags.Label" xml:space="preserve"><value>Ingredient tags (optional)</value></data>
   <data name="RecipeCreate.IngredientTags.Placeholder" xml:space="preserve"><value>e.g. vegetable, dairy</value></data>
   <data name="RecipeCreate.IngredientTags.AddButton" xml:space="preserve"><value>Add tag</value></data>
-  <data name="Recipe.Unit.Gram" xml:space="preserve"><value>g</value></data>
-  <data name="Recipe.Unit.Milliliter" xml:space="preserve"><value>ml</value></data>
-  <data name="Recipe.Unit.Teaspoon" xml:space="preserve"><value>tsp</value></data>
-  <data name="Recipe.Unit.Tablespoon" xml:space="preserve"><value>tbsp</value></data>
-  <data name="Recipe.Unit.Piece" xml:space="preserve"><value>pc</value></data>
+  <data name="Recipe.Unit.Gram" xml:space="preserve"><value>gram</value></data>
+  <data name="Recipe.Unit.Milliliter" xml:space="preserve"><value>milliliter</value></data>
+  <data name="Recipe.Unit.Teaspoon" xml:space="preserve"><value>teaspoon</value></data>
+  <data name="Recipe.Unit.Tablespoon" xml:space="preserve"><value>tablespoon</value></data>
+  <data name="Recipe.Unit.Piece" xml:space="preserve"><value>piece</value></data>
   <data name="Auth.SignIn" xml:space="preserve"><value>Sign in</value></data>
   <data name="Auth.SignOut" xml:space="preserve"><value>Sign out</value></data>
   <data name="Auth.SignedInAs" xml:space="preserve"><value>Signed in as {0}</value></data>

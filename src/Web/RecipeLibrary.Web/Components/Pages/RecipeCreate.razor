@@ -118,16 +118,15 @@
                             </div>
                             <div class="w-24">
                                 <label class="block text-xs text-gray-500 mb-0.5">@L["RecipeCreate.Ingredient.Quantity.Label"]</label>
-                                <InputNumber class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" @bind-Value="item.Quantity" />
+                                <IngredientQuantityInput CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                                         @bind-Quantity="item.Quantity"
+                                                         QuantityChangedAfter="@(() => NormalizeIngredientQuantity(index))" />
                             </div>
                             <div class="w-32">
                                 <label class="block text-xs text-gray-500 mb-0.5">@L["RecipeCreate.Ingredient.Unit.Label"]</label>
-                                <InputSelect class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" @bind-Value="item.UnitName">
-                                    @foreach (var unit in _unitOptions)
-                                    {
-                                        <option value="@unit">@unit</option>
-                                    }
-                                </InputSelect>
+                                <IngredientUnitSelect CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                                      @bind-UnitName="item.UnitName"
+                                                      UnitNameChangedAfter="@(() => NormalizeIngredientQuantity(index))" />
                             </div>
                             <button type="button" class="p-2 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded" aria-label="@L["Common.Remove.AriaLabel"]" @onclick="() => RemoveIngredient(index)" disabled="@(_vm.Ingredients.Count <= 1)">
                                 <Icon Name="@Icon.IconName.Trash" CssClass="w-5 h-5" />
@@ -219,10 +218,6 @@
         public string Text { get; set; } = string.Empty;
     }
 
-    private readonly string[] _unitOptions = Enum.GetNames<Unit>()
-        .Where(n => n != nameof(Unit.Unknown))
-        .ToArray();
-
     private readonly CreateRecipeVm _vm = new();
     private string? _imageUrl;
     private bool _isSaving;
@@ -264,6 +259,17 @@
         _vm.Ingredients.RemoveAt(index);
         _ingredientSuggestions.Remove(index);
         _ingredientMatchMessages.Remove(index);
+        StateHasChanged();
+    }
+
+    private void NormalizeIngredientQuantity(int index)
+    {
+        var item = _vm.Ingredients[index];
+        if (UnitRules.TryParse(item.UnitName, out var unit))
+        {
+            item.Quantity = IngredientQuantityFormatter.Normalize(item.Quantity, unit);
+        }
+
         StateHasChanged();
     }
 

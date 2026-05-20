@@ -1,4 +1,6 @@
 using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Application.Ingredients;
+using RecipeLibrary.Domain.ValueObjects;
 
 namespace RecipeLibrary.Application.Validators;
 
@@ -42,16 +44,13 @@ public static class CreateRecipeCommandValidator
                 throw new ArgumentException("Ingredient name is required.", nameof(command));
             }
 
-            if (ingredient.Quantity <= 0)
+            var unitRaw = (ingredient.Unit ?? string.Empty).Trim();
+            if (!UnitRules.TryParse(unitRaw, out var unit))
             {
-                throw new ArgumentException("Ingredient quantity must be greater than 0.", nameof(command));
+                throw new ArgumentException("Ingredient unit is required or not recognized.", nameof(command));
             }
 
-            var unit = (ingredient.Unit ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(unit))
-            {
-                throw new ArgumentException("Ingredient unit is required.", nameof(command));
-            }
+            IngredientQuantityFormatter.ValidateQuantity(ingredient.Quantity, unit);
         }
 
         if (command.InstructionSteps is null || command.InstructionSteps.Count == 0)

@@ -1,0 +1,38 @@
+@* Molecule: whole-number quantity input (invariant display, no decimal comma). *@
+@namespace RecipeLibrary.Components.Molecules
+
+<input type="number"
+       class="@CssClass"
+       min="1"
+       step="1"
+       inputmode="numeric"
+       value="@_displayValue"
+       @onchange="OnChangeAsync" />
+
+@code {
+    [Parameter] public decimal Quantity { get; set; } = 1;
+    [Parameter] public EventCallback<decimal> QuantityChanged { get; set; }
+    [Parameter] public EventCallback QuantityChangedAfter { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+
+    private int _displayValue => (int)decimal.Round(Quantity, 0, MidpointRounding.AwayFromZero);
+
+    private async Task OnChangeAsync(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString();
+        if (!int.TryParse(raw, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+            && !int.TryParse(raw, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.CurrentCulture, out parsed))
+        {
+            return;
+        }
+
+        if (parsed < 1)
+        {
+            return;
+        }
+
+        Quantity = parsed;
+        await QuantityChanged.InvokeAsync(Quantity);
+        await QuantityChangedAfter.InvokeAsync();
+    }
+}
