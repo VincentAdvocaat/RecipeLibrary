@@ -32,7 +32,10 @@ services:
       ConnectionStrings__RecipeDb: "Server=sql,1433;Database=RecipeLibrary;User Id=sa;Password=${MSSQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
     ports:
       - "8080:8080"
+    volumes:
+      - recipe-uploads:/RecipeLibraryUploads
     restart: "no"
 
 volumes:
   sqldata:
+  recipe-uploads:
