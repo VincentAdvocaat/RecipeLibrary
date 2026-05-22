@@ -1,66 +1,66 @@
----
-description: EF Core-migraties alleen via dotnet ef; nooit handmatig
-alwaysApply: true
----
-
-# EF Core-migraties (verplicht)
-
-## Aanmaken: altijd via `dotnet ef migrations add`
-
-Maak **nooit** handmatig migratiebestanden (`*_MigrationName.cs`, `*.Designer.cs`, of alleen `RecipeDbContextModelSnapshot.cs` aanpassen). EF Core herkent handmatige migraties zonder `[Migration("...")]` op de Designer **niet**; `Database.Migrate()` bij opstart slaat ze dan over → `Invalid object name '...'` bij runtime.
-
-Gebruik **altijd** de EF CLI vanuit de **actieve worktree** (niet vanuit `main` tenzij je daar werkt):
-
-```powershell
-dotnet tool install --global dotnet-ef --version 10.0.2   # eenmalig, of bij upgrade EF-pakket
-
-dotnet ef migrations add <MigrationName> `
-  --project src/Infrastructure/RecipeLibrary.Infrastructure `
-  --startup-project src/Web/RecipeLibrary.Web
-```
-
-Verwacht na `add`:
-
-- `<timestamp>_<MigrationName>.cs` (alleen `Up`/`Down`)
-- `<timestamp>_<MigrationName>.Designer.cs` met `[Migration("...")]`
-- bijgewerkte `RecipeDbContextModelSnapshot.cs`
-
-## Controleren vóór commit/PR
-
-Geen verschil tussen model en laatste migratie:
-
-```powershell
-dotnet ef migrations has-pending-model-changes `
-  --project src/Infrastructure/RecipeLibrary.Infrastructure `
-  --startup-project src/Web/RecipeLibrary.Web
-```
-
-Uitkomst moet zijn: **No changes have been made to the model since the last migration.**
-
-Overzicht migraties (design-time; DB optioneel):
-
-```powershell
-dotnet ef migrations list `
-  --project src/Infrastructure/RecipeLibrary.Infrastructure `
-  --startup-project src/Web/RecipeLibrary.Web
-```
-
-## Toepassen op de database
-
-- **Lokaal / Development**: de Web-app roept bij opstart `EnsurePersistenceMigrated()` aan (`Database.Migrate()`). Herstart de app na nieuwe migraties.
-- **Handmatig** (optioneel): `dotnet ef database update` met dezelfde `--project` en `--startup-project`.
-- SQL-container: `docker compose up -d sql --wait`; `.env` met `MSSQL_SA_PASSWORD` voor lokale connection string.
-
-## Design-time factory
-
-`RecipeDbContextFactory` levert de connection string voor EF-tools. Migratie-**generatie** vereist geen bereikbare database; `migrations list` kan wel een LocalDB-waarschuwing geven in Linux-containers — dat is normaal.
-
-## Verboden
-
-- Handmatig `CreateTable` in een nieuw `.cs` zonder `dotnet ef migrations add`
-- Alleen `RecipeDbContextModelSnapshot.cs` wijzigen zonder bijbehorende migratie via EF CLI
-- Migraties in `main` toevoegen terwijl je in een feature-worktree werkt (andere branch/worktree)
-
-## .NET-versie
-
-Project target **net10.0**. Gebruik `dotnet-ef` **10.0.x** (zelfde major als `Microsoft.EntityFrameworkCore.*` in Infrastructure). Bij geen lokale .NET 10 SDK: dezelfde commando's in `mcr.microsoft.com/dotnet/sdk:10.0` met repo als volume.
+---
+description: EF Core-migraties alleen via dotnet ef; nooit handmatig
+alwaysApply: true
+---
+
+# EF Core-migraties (verplicht)
+
+## Aanmaken: altijd via `dotnet ef migrations add`
+
+Maak **nooit** handmatig migratiebestanden (`*_MigrationName.cs`, `*.Designer.cs`, of alleen `RecipeDbContextModelSnapshot.cs` aanpassen). EF Core herkent handmatige migraties zonder `[Migration("...")]` op de Designer **niet**; `Database.Migrate()` bij opstart slaat ze dan over → `Invalid object name '...'` bij runtime.
+
+Gebruik **altijd** de EF CLI vanuit de **actieve worktree** (niet vanuit `main` tenzij je daar werkt):
+
+```powershell
+dotnet tool install --global dotnet-ef --version 10.0.2   # eenmalig, of bij upgrade EF-pakket
+
+dotnet ef migrations add <MigrationName> `
+  --project src/Infrastructure/RecipeLibrary.Infrastructure `
+  --startup-project src/Web/RecipeLibrary.Web
+```
+
+Verwacht na `add`:
+
+- `<timestamp>_<MigrationName>.cs` (alleen `Up`/`Down`)
+- `<timestamp>_<MigrationName>.Designer.cs` met `[Migration("...")]`
+- bijgewerkte `RecipeDbContextModelSnapshot.cs`
+
+## Controleren vóór commit/PR
+
+Geen verschil tussen model en laatste migratie:
+
+```powershell
+dotnet ef migrations has-pending-model-changes `
+  --project src/Infrastructure/RecipeLibrary.Infrastructure `
+  --startup-project src/Web/RecipeLibrary.Web
+```
+
+Uitkomst moet zijn: **No changes have been made to the model since the last migration.**
+
+Overzicht migraties (design-time; DB optioneel):
+
+```powershell
+dotnet ef migrations list `
+  --project src/Infrastructure/RecipeLibrary.Infrastructure `
+  --startup-project src/Web/RecipeLibrary.Web
+```
+
+## Toepassen op de database
+
+- **Lokaal / Development**: de Web-app roept bij opstart `EnsurePersistenceMigrated()` aan (`Database.Migrate()`). Herstart de app na nieuwe migraties.
+- **Handmatig** (optioneel): `dotnet ef database update` met dezelfde `--project` en `--startup-project`.
+- SQL-container: `docker compose up -d sql --wait`; `.env` met `MSSQL_SA_PASSWORD` voor lokale connection string.
+
+## Design-time factory
+
+`RecipeDbContextFactory` levert de connection string voor EF-tools. Migratie-**generatie** vereist geen bereikbare database; `migrations list` kan wel een LocalDB-waarschuwing geven in Linux-containers — dat is normaal.
+
+## Verboden
+
+- Handmatig `CreateTable` in een nieuw `.cs` zonder `dotnet ef migrations add`
+- Alleen `RecipeDbContextModelSnapshot.cs` wijzigen zonder bijbehorende migratie via EF CLI
+- Migraties in `main` toevoegen terwijl je in een feature-worktree werkt (andere branch/worktree)
+
+## .NET-versie
+
+Project target **net10.0**. Gebruik `dotnet-ef` **10.0.x** (zelfde major als `Microsoft.EntityFrameworkCore.*` in Infrastructure). Bij geen lokale .NET 10 SDK: dezelfde commando's in `mcr.microsoft.com/dotnet/sdk:10.0` met repo als volume.
