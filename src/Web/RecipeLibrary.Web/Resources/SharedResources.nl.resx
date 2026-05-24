@@ -82,8 +82,18 @@
   <data name="RecipeCreate.Ingredient.AddButton" xml:space="preserve"><value>+ Ingrediënt toevoegen</value></data>
   <data name="RecipeCreate.Ingredient.Match.Exact" xml:space="preserve"><value>Exacte ingredient-match gevonden.</value></data>
   <data name="RecipeCreate.Ingredient.Match.Alias" xml:space="preserve"><value>Alias-match gevonden; gekoppeld aan bestaand ingredient.</value></data>
-  <data name="RecipeCreate.Ingredient.Match.Fuzzy" xml:space="preserve"><value>Fuzzy match: {0} ({1}).</value></data>
+  <data name="RecipeCreate.Ingredient.Match.Fuzzy" xml:space="preserve"><value>Mogelijke match: {0} ({1}). Bevestig bij opslaan.</value></data>
   <data name="RecipeCreate.Ingredient.Match.None" xml:space="preserve"><value>Geen match gevonden. Je kunt doorgaan met nieuwe invoer.</value></data>
+  <data name="RecipeCreate.Ingredient.Match.DidYouMean" xml:space="preserve"><value>Bedoelde u:</value></data>
+  <data name="RecipeCreate.Ingredient.Match.ConfirmOnSave" xml:space="preserve"><value>Geen exacte match. Kies een suggestie of bevestig bij opslaan.</value></data>
+  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.Title" xml:space="preserve"><value>Controleer ingrediënten</value></data>
+  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.Message" xml:space="preserve"><value>Deze ingrediënten bestaan nog niet. Bedoelde u een van de suggesties?</value></data>
+  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.UseSuggestion" xml:space="preserve"><value>Gebruik {0}</value></data>
+  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.ConfirmNew" xml:space="preserve"><value>Toch opslaan als '{0}'</value></data>
+  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.Proceed" xml:space="preserve"><value>Doorgaan met opslaan</value></data>
+  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.Cancel" xml:space="preserve"><value>Annuleren</value></data>
+  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.ResolvedSuggestion" xml:space="preserve"><value>Wordt gebruikt: {0}</value></data>
+  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.ResolvedNew" xml:space="preserve"><value>Wordt opgeslagen als nieuw ingrediënt: {0}</value></data>
   <data name="RecipeCreate.Instructions.SectionLabel" xml:space="preserve"><value>Instructies</value></data>
   <data name="RecipeCreate.Instructions.StepsHint" xml:space="preserve"><value>Stappen</value></data>
   <data name="RecipeCreate.Step.Placeholder" xml:space="preserve"><value>Bijvoorbeeld: Snijd de ui. Verhit olie in een pan...</value></data>

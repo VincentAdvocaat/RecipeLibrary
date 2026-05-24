@@ -22,6 +22,7 @@ public sealed class IngredientMatcherTests
 
         Assert.Equal("alias", result.MatchType);
         Assert.Equal("gember", result.Ingredient?.CanonicalName);
+        Assert.False(result.RequiresConfirmation);
     }
 
     [Fact]
@@ -39,6 +40,7 @@ public sealed class IngredientMatcherTests
 
         Assert.Equal("exact", result.MatchType);
         Assert.Equal("tomaat", result.Ingredient?.CanonicalName);
+        Assert.False(result.RequiresConfirmation);
     }
 
     [Fact]
@@ -56,7 +58,61 @@ public sealed class IngredientMatcherTests
 
         Assert.Equal("fuzzy", result.MatchType);
         Assert.Equal("gember", result.Ingredient?.CanonicalName);
-        Assert.True(result.Confidence > 0.7m);
+        Assert.True(result.Confidence > IngredientMatcher.FuzzyMatchScore);
+        Assert.True(result.RequiresConfirmation);
+        Assert.Contains(result.Suggestions, x => x.Ingredient.CanonicalName == "gember");
+    }
+
+    [Fact]
+    public async Task MatchAsync_RequiresConfirmation_WhenCloseSuggestionsExist()
+    {
+        var repo = new FakeIngredientRepository(
+            ingredients:
+            [
+                new CanonicalIngredient { Id = Guid.NewGuid(), CanonicalName = "gember", NormalizedName = "gember", CreatedAt = DateTimeOffset.UtcNow }
+            ],
+            aliases: new Dictionary<string, string>());
+
+        var sut = new IngredientMatcher(repo, new IngredientTextNormalizer());
+        var result = await sut.MatchAsync("gembr");
+
+        Assert.True(result.RequiresConfirmation);
+        Assert.NotEmpty(result.Suggestions);
+    }
+
+    [Fact]
+    public async Task MatchAsync_DoesNotRequireConfirmation_WhenNoCloseSuggestionsExist()
+    {
+        var repo = new FakeIngredientRepository(
+            ingredients:
+            [
+                new CanonicalIngredient { Id = Guid.NewGuid(), CanonicalName = "gember", NormalizedName = "gember", CreatedAt = DateTimeOffset.UtcNow }
+            ],
+            aliases: new Dictionary<string, string>());
+
+        var sut = new IngredientMatcher(repo, new IngredientTextNormalizer());
+        var result = await sut.MatchAsync("xyzabc123");
+
+        Assert.Equal("none", result.MatchType);
+        Assert.False(result.RequiresConfirmation);
+        Assert.Empty(result.Suggestions);
+    }
+
+    [Fact]
+    public async Task MatchAsync_FiltersSuggestionsBelowMinScore()
+    {
+        var repo = new FakeIngredientRepository(
+            ingredients:
+            [
+                new CanonicalIngredient { Id = Guid.NewGuid(), CanonicalName = "gember", NormalizedName = "gember", CreatedAt = DateTimeOffset.UtcNow },
+                new CanonicalIngredient { Id = Guid.NewGuid(), CanonicalName = "aardappel", NormalizedName = "aardappel", CreatedAt = DateTimeOffset.UtcNow },
+            ],
+            aliases: new Dictionary<string, string>());
+
+        var sut = new IngredientMatcher(repo, new IngredientTextNormalizer());
+        var result = await sut.MatchAsync("xyzabc123");
+
+        Assert.All(result.Suggestions, x => Assert.True(x.Score >= IngredientMatcher.SuggestionMinScore));
     }
 
     private sealed class FakeIngredientRepository(

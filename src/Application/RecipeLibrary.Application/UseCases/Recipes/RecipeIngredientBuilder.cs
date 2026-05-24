@@ -25,10 +25,9 @@ internal static class RecipeIngredientBuilder
             var unit = UnitRules.ParseOrThrow(ingredientDto.Unit);
             var quantity = IngredientQuantityFormatter.Normalize(ingredientDto.Quantity, unit);
             var resolved = lineResolver.Resolve(ingredientDto.Name, ingredientDto.Preparation);
-            var match = await matcher.MatchAsync(resolved.DisplayName, ct);
-            var canonicalIngredient = match.Ingredient;
+            CanonicalIngredient canonicalIngredient;
 
-            if (canonicalIngredient is null)
+            if (ingredientDto.CreateAsNewIngredient)
             {
                 var normalized = normalizer.Normalize(resolved.DisplayName);
                 canonicalIngredient = await ingredientRepository.CreateIngredientWithAliasAsync(
@@ -37,6 +36,17 @@ internal static class RecipeIngredientBuilder
                     rawName,
                     normalizer.Normalize(rawName),
                     ct);
+            }
+            else
+            {
+                var match = await matcher.MatchAsync(resolved.DisplayName, ct);
+                canonicalIngredient = match.Ingredient
+                    ?? await CreateNewIngredientAsync(
+                        ingredientRepository,
+                        normalizer,
+                        resolved.DisplayName,
+                        rawName,
+                        ct);
             }
 
             ingredients.Add(new Ingredient
@@ -52,6 +62,22 @@ internal static class RecipeIngredientBuilder
         }
 
         return ingredients;
+    }
+
+    private static async Task<CanonicalIngredient> CreateNewIngredientAsync(
+        IIngredientRepository ingredientRepository,
+        IIngredientTextNormalizer normalizer,
+        string displayName,
+        string rawName,
+        CancellationToken ct)
+    {
+        var normalized = normalizer.Normalize(displayName);
+        return await ingredientRepository.CreateIngredientWithAliasAsync(
+            displayName,
+            normalized,
+            rawName,
+            normalizer.Normalize(rawName),
+            ct);
     }
 
     public static IReadOnlyList<InstructionStep> BuildSteps(Guid recipeId, IReadOnlyList<CreateRecipeInstructionStepDto> stepDtos)

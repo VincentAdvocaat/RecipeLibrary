@@ -30,8 +30,16 @@ public sealed class MatchIngredientCommandHandler(
         {
             MatchType = result.MatchType,
             Confidence = result.Confidence,
+            RequiresConfirmation = result.RequiresConfirmation,
             Ingredient = result.Ingredient is null ? null : new IngredientLookupItem { Id = result.Ingredient.Id, Name = result.Ingredient.CanonicalName },
-            Suggestions = result.Suggestions.Select(x => new IngredientLookupItem { Id = x.Id, Name = x.CanonicalName }).ToList()
+            Suggestions = result.Suggestions
+                .Select(x => new IngredientSuggestionItem
+                {
+                    Id = x.Ingredient.Id,
+                    Name = x.Ingredient.CanonicalName,
+                    Score = x.Score,
+                })
+                .ToList(),
         };
     }
 }

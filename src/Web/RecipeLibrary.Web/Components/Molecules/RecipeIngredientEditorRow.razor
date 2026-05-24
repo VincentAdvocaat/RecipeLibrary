@@ -49,10 +49,27 @@
             {
                 <button type="button"
                         class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                        @onclick="() => SelectSuggestion(suggestion.Name)">
+                        @onclick="() => SelectSearchSuggestion(suggestion.Name)">
                     @HighlightMatch(suggestion.Name, Item.Name)
                 </button>
             }
+        </div>
+    }
+
+    @if (Item.RequiresConfirmation && Item.MatchSuggestions.Count > 0)
+    {
+        <div class="max-w-md space-y-1">
+            <p class="text-xs text-gray-500">@L["RecipeCreate.Ingredient.Match.DidYouMean"]</p>
+            <div class="rounded border border-amber-200 bg-amber-50 shadow-sm">
+                @foreach (var suggestion in Item.MatchSuggestions)
+                {
+                    <button type="button"
+                            class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-amber-100"
+                            @onclick="() => SelectMatchSuggestion(suggestion.Name)">
+                        @HighlightMatch(suggestion.Name, Item.Name)
+                    </button>
+                }
+            </div>
         </div>
     }
 
@@ -82,6 +99,7 @@
     private async Task OnNameInput(ChangeEventArgs e)
     {
         Item.Name = e.Value?.ToString() ?? string.Empty;
+        RecipeIngredientSaveHelper.ResetMatchState(Item);
         await ItemChanged.InvokeAsync(Item);
         await OnNameChanged.InvokeAsync(Item.Name);
     }
@@ -107,7 +125,9 @@
         var input = Item.Name.Trim();
         if (input.Length == 0)
         {
+            RecipeIngredientSaveHelper.ResetMatchState(Item);
             await MatchMessageChanged.InvokeAsync(string.Empty);
+            await ItemChanged.InvokeAsync(Item);
             return;
         }
 
@@ -123,6 +143,7 @@
                     Item.Preparation = parsed.Preparation;
                 }
 
+                RecipeIngredientSaveHelper.ResetMatchState(Item);
                 await ItemChanged.InvokeAsync(Item);
                 input = Item.Name.Trim();
             }
@@ -132,31 +153,47 @@
         var payload = await match.Content.ReadFromJsonAsync<MatchIngredientResult>();
         if (payload is null)
         {
+            RecipeIngredientSaveHelper.ResetMatchState(Item);
             await MatchMessageChanged.InvokeAsync(string.Empty);
+            await ItemChanged.InvokeAsync(Item);
             return;
         }
 
-        if (payload.MatchType == "fuzzy" && !string.IsNullOrWhiteSpace(payload.Ingredient?.Name))
-        {
-            Item.Name = payload.Ingredient.Name;
-            await ItemChanged.InvokeAsync(Item);
-        }
+        Item.RequiresConfirmation = payload.RequiresConfirmation;
+        Item.MatchSuggestions = payload.Suggestions.ToList();
+        Item.LastMatchType = payload.MatchType;
+        Item.SaveResolution = IngredientSaveResolution.Pending;
 
         var message = payload.MatchType switch
         {
             "exact" => L["RecipeCreate.Ingredient.Match.Exact"],
             "alias" => L["RecipeCreate.Ingredient.Match.Alias"],
             "fuzzy" => L["RecipeCreate.Ingredient.Match.Fuzzy", payload.Ingredient?.Name ?? "", payload.Confidence.ToString("P0")],
+            _ when payload.RequiresConfirmation => L["RecipeCreate.Ingredient.Match.ConfirmOnSave"],
             _ => L["RecipeCreate.Ingredient.Match.None"]
         };
         await MatchMessageChanged.InvokeAsync(message);
+        await ItemChanged.InvokeAsync(Item);
     }
 
-    private async Task SelectSuggestion(string name)
+    private async Task SelectSearchSuggestion(string name)
     {
         Item.Name = name;
+        RecipeIngredientSaveHelper.ResetMatchState(Item);
         await ItemChanged.InvokeAsync(Item);
         await OnNameChanged.InvokeAsync(name);
+    }
+
+    private async Task SelectMatchSuggestion(string name)
+    {
+        Item.Name = name;
+        Item.SaveResolution = IngredientSaveResolution.AcceptedSuggestion;
+        Item.RequiresConfirmation = false;
+        Item.MatchSuggestions = [];
+        Item.LastMatchType = null;
+        await ItemChanged.InvokeAsync(Item);
+        await OnNameChanged.InvokeAsync(name);
+        await MatchMessageChanged.InvokeAsync(L["RecipeCreate.Ingredient.Match.Exact"]);
     }
 
     private static string HighlightMatch(string name, string query)
