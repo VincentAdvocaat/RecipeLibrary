@@ -52,6 +52,29 @@
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <data name="Nav.MyRecipes" xml:space="preserve"><value>Mijn Recepten</value></data>
   <data name="Nav.AddRecipe" xml:space="preserve"><value>Recept Toevoegen</value></data>
+  <data name="Nav.ImportRecipe" xml:space="preserve"><value>Recept Importeren</value></data>
+  <data name="RecipeImport.PageTitle" xml:space="preserve"><value>Recept Importeren</value></data>
+  <data name="RecipeImport.Paste.Label" xml:space="preserve"><value>Plak recepttekst of HTML</value></data>
+  <data name="RecipeImport.Paste.Placeholder" xml:space="preserve"><value>Plak een recept van een website of als plain text...</value></data>
+  <data name="RecipeImport.Url.Label" xml:space="preserve"><value>Of importeer via URL</value></data>
+  <data name="RecipeImport.Url.Placeholder" xml:space="preserve"><value>https://voorbeeld.nl/recept</value></data>
+  <data name="RecipeImport.Url.Hint" xml:space="preserve"><value>Optioneel. Als ingevuld, wordt de URL opgehaald in plaats van geplakte content.</value></data>
+  <data name="RecipeImport.ProcessButton" xml:space="preserve"><value>Import verwerken</value></data>
+  <data name="RecipeImport.CancelButton" xml:space="preserve"><value>Annuleren</value></data>
+  <data name="RecipeImport.BackButton" xml:space="preserve"><value>Terug naar invoer</value></data>
+  <data name="RecipeImport.ContinueButton" xml:space="preserve"><value>Doorgaan naar receptformulier</value></data>
+  <data name="RecipeImport.Preview.Intro" xml:space="preserve"><value>Controleer het geïmporteerde recept en corrigeer regels waar nodig.</value></data>
+  <data name="RecipeImport.Source.Label" xml:space="preserve"><value>Importbron</value></data>
+  <data name="RecipeImport.Source.JsonLd" xml:space="preserve"><value>Gestructureerde data (JSON-LD)</value></data>
+  <data name="RecipeImport.Source.PlainText" xml:space="preserve"><value>Plain text</value></data>
+  <data name="RecipeImport.Source.Mixed" xml:space="preserve"><value>Gemengd</value></data>
+  <data name="RecipeImport.Source.Unknown" xml:space="preserve"><value>Onbekend</value></data>
+  <data name="RecipeImport.ParseMethod.Ai" xml:space="preserve"><value>AI</value></data>
+  <data name="RecipeImport.ParseMethod.Structured" xml:space="preserve"><value>Gestructureerd</value></data>
+  <data name="RecipeImport.ParseMethod.Deterministic" xml:space="preserve"><value>Regels</value></data>
+  <data name="RecipeImport.Ingredient.LowConfidence" xml:space="preserve"><value>Lage betrouwbaarheid ({0}) — geparsed via {1}. Controleer dit.</value></data>
+  <data name="RecipeImport.Error.EmptyContent" xml:space="preserve"><value>Voer geplakte content of een URL in.</value></data>
+  <data name="RecipeImport.Error.NoResult" xml:space="preserve"><value>Import leverde geen resultaat op.</value></data>
   <data name="Nav.Overview" xml:space="preserve"><value>Overzicht</value></data>
   <data name="RecipeOverview.PageTitle" xml:space="preserve"><value>Recepten Overzicht</value></data>
   <data name="RecipeCreate.PageTitle" xml:space="preserve"><value>Nieuw Recept Toevoegen</value></data>
