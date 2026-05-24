@@ -5,6 +5,8 @@ using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.UseCases.Ingredients;
 using RecipeLibrary.Application.UseCases.RecipeImages;
 using RecipeLibrary.Application.UseCases.Recipes;
+using RecipeLibrary.Application.UseCases.ShoppingLists;
+using RecipeLibrary.Application.ShoppingLists;
 
 namespace RecipeLibrary.Application;
 
@@ -33,6 +35,20 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<SearchTagsQuery, IReadOnlyList<TagLookupItem>>, SearchTagsQueryHandler>();
         services.AddScoped<IngredientMatcher>();
         services.AddScoped<IngredientNameParser>();
+        services.AddScoped<ShoppingListIngredientMerger>();
+
+        services.AddScoped<IQueryHandler<GetOrCreateShoppingListGroupQuery, GetOrCreateShoppingListGroupResult>, GetOrCreateShoppingListGroupQueryHandler>();
+        services.AddScoped<IQueryHandler<GetNextShoppingListNameQuery, GetNextShoppingListNameResult>, GetNextShoppingListNameQueryHandler>();
+        services.AddScoped<IQueryHandler<GetShoppingListSummaryQuery, ShoppingListSummaryResult>, GetShoppingListSummaryQueryHandler>();
+        services.AddScoped<ICommandHandler<AddRecipesToShoppingListCommand, AddRecipesToShoppingListResult>, AddRecipesToShoppingListCommandHandler>();
+        services.AddScoped<ICommandHandler<ToggleShoppingListItemCommand, ToggleShoppingListItemResult>, ToggleShoppingListItemCommandHandler>();
+        services.AddScoped<ICommandHandler<RemoveShoppingListItemCommand, RemoveShoppingListItemResult>, RemoveShoppingListItemCommandHandler>();
+        services.AddScoped<ICommandHandler<ClearShoppingListCommand, ClearShoppingListResult>, ClearShoppingListCommandHandler>();
+        services.AddScoped<ICommandHandler<DeleteShoppingListCommand, DeleteShoppingListResult>, DeleteShoppingListCommandHandler>();
+        services.AddScoped<ICommandHandler<DeleteShoppingListGroupCommand, DeleteShoppingListGroupResult>, DeleteShoppingListGroupCommandHandler>();
+        services.AddScoped<ICommandHandler<SplitShoppingListCommand, SplitShoppingListResult>, SplitShoppingListCommandHandler>();
+        services.AddScoped<ICommandHandler<MoveShoppingListItemCommand, MoveShoppingListItemResult>, MoveShoppingListItemCommandHandler>();
+        services.AddScoped<ICommandHandler<UpdateShoppingListNameCommand, UpdateShoppingListNameResult>, UpdateShoppingListNameCommandHandler>();
 
         return services;
     }

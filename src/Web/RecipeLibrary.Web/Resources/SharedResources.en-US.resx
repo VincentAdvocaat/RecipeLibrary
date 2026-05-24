@@ -143,4 +143,38 @@
   <data name="Auth.SignIn" xml:space="preserve"><value>Sign in</value></data>
   <data name="Auth.SignOut" xml:space="preserve"><value>Sign out</value></data>
   <data name="Auth.SignedInAs" xml:space="preserve"><value>Signed in as {0}</value></data>
+  <data name="Nav.ShoppingList" xml:space="preserve"><value>Shopping list</value></data>
+  <data name="ShoppingList.NumberedNameFormat" xml:space="preserve"><value>Shopping list {0}</value></data>
+  <data name="ShoppingList.PageTitle" xml:space="preserve"><value>Shopping list</value></data>
+  <data name="ShoppingList.Empty.Message" xml:space="preserve"><value>Your shopping list is empty. Add recipes to get started.</value></data>
+  <data name="ShoppingList.Empty.Link" xml:space="preserve"><value>Browse recipes</value></data>
+  <data name="ShoppingList.Split.StartButton" xml:space="preserve"><value>Split into separate list</value></data>
+  <data name="ShoppingList.Split.CancelButton" xml:space="preserve"><value>Cancel</value></data>
+  <data name="ShoppingList.Split.SelectAll" xml:space="preserve"><value>Select all</value></data>
+  <data name="ShoppingList.Split.ClearSelection" xml:space="preserve"><value>Clear selection</value></data>
+  <data name="ShoppingList.Split.SelectedCount" xml:space="preserve"><value>{0} selected</value></data>
+  <data name="ShoppingList.Split.CreateFromSelection" xml:space="preserve"><value>Create separate list from selection</value></data>
+  <data name="ShoppingList.Split.Name.Label" xml:space="preserve"><value>Name for the new list</value></data>
+  <data name="ShoppingList.Split.Name.Placeholder" xml:space="preserve"><value>e.g. Butcher</value></data>
+  <data name="ShoppingList.Split.ConfirmButton" xml:space="preserve"><value>Create list</value></data>
+  <data name="ShoppingList.EditName.Button" xml:space="preserve"><value>Rename</value></data>
+  <data name="ShoppingList.EditName.SaveButton" xml:space="preserve"><value>Save</value></data>
+  <data name="ShoppingList.Clear.Button" xml:space="preserve"><value>Clear list</value></data>
+  <data name="ShoppingList.ClearConfirm.Message" xml:space="preserve"><value>Remove all items from this list?</value></data>
+  <data name="ShoppingList.DeleteList.Button" xml:space="preserve"><value>Delete this list</value></data>
+  <data name="ShoppingList.DeleteListConfirm.Message" xml:space="preserve"><value>Delete this shopping list and all its items?</value></data>
+  <data name="ShoppingList.DeleteGroup.Button" xml:space="preserve"><value>Delete all lists</value></data>
+  <data name="ShoppingList.DeleteGroupConfirm.Message" xml:space="preserve"><value>Delete all shopping lists? This cannot be undone.</value></data>
+  <data name="ShoppingList.MoveTo.Button" xml:space="preserve"><value>Move to {0}</value></data>
+  <data name="ShoppingList.RemoveItem.Button" xml:space="preserve"><value>Remove</value></data>
+  <data name="ShoppingList.FromRecipes.Label" xml:space="preserve"><value>From: {0}</value></data>
+  <data name="RecipeDetail.AddToShoppingListButton" xml:space="preserve"><value>Add to shopping list</value></data>
+  <data name="RecipeDetail.AddedToShoppingList.Message" xml:space="preserve"><value>Added to shopping list.</value></data>
+  <data name="RecipeDetail.AddToShoppingList.TargetLabel" xml:space="preserve"><value>Add to</value></data>
+  <data name="RecipeOverview.SelectMode.Button" xml:space="preserve"><value>Select</value></data>
+  <data name="RecipeOverview.SelectMode.CancelButton" xml:space="preserve"><value>Cancel</value></data>
+  <data name="RecipeOverview.AddSelectedToShoppingList" xml:space="preserve"><value>Add {0} recipes to shopping list</value></data>
+  <data name="RecipeOverview.AddedToShoppingList.Message" xml:space="preserve"><value>{0} recipes added to shopping list.</value></data>
+  <data name="ShoppingList.Confirm.Yes" xml:space="preserve"><value>Yes</value></data>
+  <data name="ShoppingList.Confirm.No" xml:space="preserve"><value>No</value></data>
 </root>

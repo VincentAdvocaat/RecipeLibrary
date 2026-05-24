@@ -2,45 +2,99 @@
 @page "/recipes"
 
 @inject IQueryBus QueryBus
+@inject ICommandBus CommandBus
+@inject ShoppingListSessionService ShoppingSession
 
 <PageTitle>@L["RecipeOverview.PageTitle"]</PageTitle>
 
 <div class="min-h-screen bg-gray-100">
-    <div class="container mx-auto p-4 max-w-5xl">
+    <div class="container mx-auto p-4 max-w-5xl @( _selectMode ? "pb-24" : "" )">
         @if (_viewMode == ViewToggle.ViewModeKind.List)
         {
-            <RecipeOverviewHeader Title="@L["RecipeOverview.PageTitle"]" ShowViewToggleInHeader="false" />
+            <RecipeOverviewHeader Title="@L["RecipeOverview.PageTitle"]" ShowViewToggleInHeader="false" ShoppingBadgeCount="@_badgeCount" />
             <SearchFilterBar SearchQuery="@_searchQuery"
                              SearchQueryChanged="@OnSearchQueryChanged"
                              ViewMode="@_viewMode"
                              ViewModeChanged="@OnViewModeChanged"
                              SelectedCategory="@_selectedCategory"
                              SelectedCategoryChanged="@OnCategoryChanged" />
-            <div class="space-y-3">
-                @foreach (var item in _items)
-                {
-                    <RecipeListItem Item="@item" />
-                }
-            </div>
         }
         else
         {
             <RecipeOverviewHeader Title="@L["RecipeOverview.PageTitle"]"
                                   ShowViewToggleInHeader="true"
                                   ViewMode="@_viewMode"
-                                  ViewModeChanged="@OnViewModeChanged" />
+                                  ViewModeChanged="@OnViewModeChanged"
+                                  ShoppingBadgeCount="@_badgeCount" />
             <SearchViewBar SearchQuery="@_searchQuery"
                            SearchQueryChanged="@OnSearchQueryChanged"
                            ViewMode="@_viewMode"
                            ViewModeChanged="@OnViewModeChanged" />
+        }
+
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+            @if (!_selectMode)
+            {
+                <button type="button"
+                        class="px-3 py-1.5 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
+                        @onclick="StartSelectMode">
+                    @L["RecipeOverview.SelectMode.Button"]
+                </button>
+            }
+            else
+            {
+                <button type="button"
+                        class="px-3 py-1.5 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
+                        @onclick="CancelSelectMode">
+                    @L["RecipeOverview.SelectMode.CancelButton"]
+                </button>
+            }
+        </div>
+
+        @if (_statusMessage is not null)
+        {
+            <p class="mb-4 text-sm text-green-700">@_statusMessage</p>
+        }
+
+        @if (_viewMode == ViewToggle.ViewModeKind.List)
+        {
+            <div class="space-y-3">
+                @foreach (var item in _items)
+                {
+                    <RecipeListItem Item="@item"
+                                    SelectMode="@_selectMode"
+                                    IsSelected="@_selectedRecipeIds.Contains(item.Id)"
+                                    OnSelectionChanged="@(e => ToggleRecipeSelection(item.Id, e))" />
+                }
+            </div>
+        }
+        else
+        {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 @foreach (var item in _items)
                 {
-                    <RecipeCard Item="@item" />
+                    <RecipeCard Item="@item"
+                                SelectMode="@_selectMode"
+                                IsSelected="@_selectedRecipeIds.Contains(item.Id)"
+                                OnSelectionChanged="@(e => ToggleRecipeSelection(item.Id, e))" />
                 }
             </div>
         }
     </div>
+
+    @if (_selectMode)
+    {
+        <div class="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white shadow-lg">
+            <div class="container mx-auto max-w-5xl px-4 py-3 flex justify-end">
+                <button type="button"
+                        class="px-4 py-2 rounded bg-gray-800 text-white text-sm font-medium disabled:opacity-50"
+                        disabled="@(_selectedRecipeIds.Count == 0)"
+                        @onclick="AddSelectedToShoppingListAsync">
+                    @L["RecipeOverview.AddSelectedToShoppingList", _selectedRecipeIds.Count]
+                </button>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -48,10 +102,23 @@
     private int? _selectedCategory;
     private ViewToggle.ViewModeKind _viewMode = ViewToggle.ViewModeKind.List;
     private IReadOnlyList<RecipeOverviewItem> _items = [];
+    private bool _selectMode;
+    private HashSet<Guid> _selectedRecipeIds = [];
+    private int _badgeCount;
+    private string? _statusMessage;
+    private Guid _defaultShoppingListId;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadRecipes();
+        await LoadRecipesAsync();
+        await LoadBadgeAsync();
+    }
+
+    private async Task LoadBadgeAsync()
+    {
+        var group = await ShoppingSession.GetOrCreateGroupAsync();
+        _defaultShoppingListId = group.Lists.OrderBy(l => l.StoreOrder).First().Id;
+        _badgeCount = await ShoppingSession.GetUncheckedCountAsync(group.GroupId);
     }
 
     private async Task OnViewModeChanged(ViewToggle.ViewModeKind mode)
@@ -63,23 +130,74 @@
     private async Task OnSearchQueryChanged(string? value)
     {
         _searchQuery = value;
-        await LoadRecipes();
+        await LoadRecipesAsync();
     }
 
     private async Task OnCategoryChanged(int? value)
     {
         _selectedCategory = value;
-        await LoadRecipes();
+        await LoadRecipesAsync();
     }
 
-    private async Task LoadRecipes()
+    private async Task LoadRecipesAsync()
     {
         var query = new GetRecipeListQuery
         {
             Search = string.IsNullOrWhiteSpace(_searchQuery) ? null : _searchQuery.Trim(),
-            Category = _selectedCategory
+            Category = _selectedCategory,
         };
         var result = await QueryBus.QueryAsync<GetRecipeListQuery, GetRecipeListResult>(query);
         _items = result.Items;
+    }
+
+    private void StartSelectMode()
+    {
+        _selectMode = true;
+        _selectedRecipeIds.Clear();
+        _statusMessage = null;
+    }
+
+    private void CancelSelectMode()
+    {
+        _selectMode = false;
+        _selectedRecipeIds.Clear();
+    }
+
+    private void ToggleRecipeSelection(Guid recipeId, ChangeEventArgs e)
+    {
+        var isChecked = e.Value is bool b && b;
+        if (isChecked)
+        {
+            _selectedRecipeIds.Add(recipeId);
+        }
+        else
+        {
+            _selectedRecipeIds.Remove(recipeId);
+        }
+    }
+
+    private async Task AddSelectedToShoppingListAsync()
+    {
+        if (_selectedRecipeIds.Count == 0)
+        {
+            return;
+        }
+
+        var group = await ShoppingSession.GetOrCreateGroupAsync();
+        var targetListId = group.Lists.Count == 1
+            ? group.Lists[0].Id
+            : _defaultShoppingListId;
+
+        var result = await CommandBus.SendAsync<AddRecipesToShoppingListCommand, AddRecipesToShoppingListResult>(
+            new AddRecipesToShoppingListCommand
+            {
+                ShoppingListId = targetListId,
+                RecipeIds = _selectedRecipeIds.ToList(),
+            });
+
+        _statusMessage = L["RecipeOverview.AddedToShoppingList.Message", result.RecipesAdded];
+        _selectMode = false;
+        _selectedRecipeIds.Clear();
+        await LoadBadgeAsync();
     }
 }

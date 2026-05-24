@@ -1,21 +1,33 @@
 @* Organism: one recipe row for list view (image + title + description + meta). *@
 @namespace RecipeLibrary.Components.Organisms
 
-<a href="@($"/recipes/{Item.Id}")" class="flex gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 no-underline text-inherit @CssClass">
-    <div class="w-24 h-24 flex-shrink-0 rounded overflow-hidden">
-        <Image Src="@Item.ImageUrl" Alt="@Item.Title" Square="true" CssClass="w-full h-full" />
-    </div>
-    <div class="flex-1 min-w-0">
-        <Heading Level="3" CssClass="mt-0 mb-1">@Item.Title</Heading>
-        @if (!string.IsNullOrEmpty(Item.Description))
-        {
-            <p class="text-sm text-gray-600 mb-2 line-clamp-2">@Item.Description</p>
-        }
-        <RecipeMeta PreparationMinutes="@Item.PreparationMinutes" CookingMinutes="@Item.CookingMinutes" />
-    </div>
-</a>
+<div class="flex gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 @CssClass">
+    @if (SelectMode)
+    {
+        <input type="checkbox"
+               class="mt-3 rounded border-gray-300 flex-shrink-0"
+               checked="@IsSelected"
+               @onchange="OnSelectionChanged" />
+    }
+    <a href="@($"/recipes/{Item.Id}")" class="flex gap-4 flex-1 min-w-0 no-underline text-inherit">
+        <div class="w-24 h-24 flex-shrink-0 rounded overflow-hidden">
+            <Image Src="@Item.ImageUrl" Alt="@Item.Title" Square="true" CssClass="w-full h-full" />
+        </div>
+        <div class="flex-1 min-w-0">
+            <Heading Level="3" CssClass="mt-0 mb-1">@Item.Title</Heading>
+            @if (!string.IsNullOrEmpty(Item.Description))
+            {
+                <p class="text-sm text-gray-600 mb-2 line-clamp-2">@Item.Description</p>
+            }
+            <RecipeMeta PreparationMinutes="@Item.PreparationMinutes" CookingMinutes="@Item.CookingMinutes" />
+        </div>
+    </a>
+</div>
 
 @code {
     [Parameter, EditorRequired] public RecipeOverviewItem Item { get; set; } = null!;
+    [Parameter] public bool SelectMode { get; set; }
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnSelectionChanged { get; set; }
     [Parameter] public string? CssClass { get; set; }
 }

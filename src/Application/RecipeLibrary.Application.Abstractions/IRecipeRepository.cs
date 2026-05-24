@@ -11,6 +11,8 @@ public interface IRecipeRepository
 
     Task<Recipe?> GetByIdAsync(Guid id, CancellationToken ct = default);
 
+    Task<IReadOnlyList<Recipe>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default);
+
     Task<Recipe?> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default);
 
     Task UpdateAsync(Recipe recipe, CancellationToken ct = default);

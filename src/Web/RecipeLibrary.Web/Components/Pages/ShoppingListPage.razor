@@ -1,0 +1,459 @@
+@page "/shopping-list"
+@rendermode InteractiveServer
+
+@inject ICommandBus CommandBus
+@inject ShoppingListSessionService ShoppingSession
+@inject NavigationManager Navigation
+
+<PageTitle>@L["ShoppingList.PageTitle"]</PageTitle>
+
+<div class="min-h-screen bg-gray-100">
+    <div class="container mx-auto p-4 max-w-4xl">
+        <RecipeOverviewHeader Title="@L["ShoppingList.PageTitle"]" ShoppingBadgeCount="@_badgeCount" />
+
+        @if (_group is null)
+        {
+            <p class="text-gray-600">@L["RecipeDetail.Loading"]</p>
+        }
+        else
+        {
+            @if (_group.Lists.Count > 1)
+            {
+                <div class="flex gap-2 mb-4 border-b border-gray-200">
+                    @foreach (var list in _group.Lists.OrderBy(l => l.StoreOrder))
+                    {
+                        <button type="button"
+                                class="px-4 py-2 text-sm font-medium border-b-2 -mb-px @(list.Id == _activeListId ? "border-gray-800 text-gray-900" : "border-transparent text-gray-600 hover:text-gray-900")"
+                                @onclick="() => SelectTab(list.Id)">
+                            @list.Name
+                        </button>
+                    }
+                </div>
+            }
+
+            @if (_activeList is not null)
+            {
+                <div class="bg-white rounded-lg shadow p-6 space-y-4">
+                    <div class="flex flex-wrap items-center gap-3 justify-between">
+                        @if (_editingName)
+                        {
+                            <div class="flex flex-wrap items-center gap-2 flex-1">
+                                <InputText class="rounded border border-gray-300 px-3 py-1.5 text-sm flex-1 min-w-[12rem]"
+                                           @bind-Value="_editNameDraft" />
+                                <button type="button"
+                                        class="px-3 py-1.5 rounded bg-gray-800 text-white text-sm"
+                                        @onclick="SaveNameAsync">
+                                    @L["ShoppingList.EditName.SaveButton"]
+                                </button>
+                                <button type="button"
+                                        class="text-sm text-gray-600"
+                                        @onclick="() => _editingName = false">
+                                    @L["ShoppingList.Split.CancelButton"]
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <Heading Level="2" CssClass="m-0 text-lg">@_activeList.Name</Heading>
+                            <button type="button"
+                                    class="text-sm text-gray-600 hover:text-gray-900"
+                                    @onclick="StartEditName">
+                                @L["ShoppingList.EditName.Button"]
+                            </button>
+                        }
+                    </div>
+
+                    @if (_splitMode && _group.Lists.Count == 1)
+                    {
+                        <div class="flex flex-wrap items-center gap-3 pb-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">@L["ShoppingList.Split.SelectedCount", _selectedItemIds.Count]</span>
+                            <button type="button" class="text-sm text-gray-700 underline" @onclick="SelectAllForSplit">@L["ShoppingList.Split.SelectAll"]</button>
+                            <button type="button" class="text-sm text-gray-700 underline" @onclick="ClearSplitSelection">@L["ShoppingList.Split.ClearSelection"]</button>
+                            <button type="button"
+                                    class="text-sm text-gray-600"
+                                    @onclick="CancelSplitMode">
+                                @L["ShoppingList.Split.CancelButton"]
+                            </button>
+                            <button type="button"
+                                    class="ml-auto px-3 py-1.5 rounded bg-gray-800 text-white text-sm disabled:opacity-50"
+                                    disabled="@(_selectedItemIds.Count == 0)"
+                                    @onclick="OpenSplitDialogAsync">
+                                @L["ShoppingList.Split.CreateFromSelection"]
+                            </button>
+                        </div>
+                    }
+                    else if (_group.Lists.Count == 1 && _activeList.Items.Count > 0)
+                    {
+                        <button type="button"
+                                class="text-sm font-medium text-gray-700 hover:text-gray-900"
+                                @onclick="StartSplitMode">
+                            @L["ShoppingList.Split.StartButton"]
+                        </button>
+                    }
+
+                    @if (_activeList.Items.Count == 0)
+                    {
+                        <p class="text-gray-600">@L["ShoppingList.Empty.Message"]</p>
+                        <AppNavLink Href="/recipes">@L["ShoppingList.Empty.Link"]</AppNavLink>
+                    }
+                    else
+                    {
+                        <ul class="space-y-2">
+                            @foreach (var item in _activeList.Items)
+                            {
+                                <li class="flex flex-wrap items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+                                    @if (_splitMode)
+                                    {
+                                        <input type="checkbox"
+                                               class="mt-1 rounded border-gray-300"
+                                               checked="@_selectedItemIds.Contains(item.Id)"
+                                               @onchange="e => ToggleSplitSelection(item.Id, e)" />
+                                    }
+                                    else
+                                    {
+                                        <input type="checkbox"
+                                               class="mt-1 rounded border-gray-300"
+                                               checked="@item.IsChecked"
+                                               @onchange="e => ToggleCheckedAsync(item.Id, e)" />
+                                    }
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex flex-wrap gap-x-2 text-sm">
+                                            <span class="font-medium tabular-nums text-gray-900">@FormatLine(item)</span>
+                                            <span class="text-gray-800">
+                                                @item.DisplayName
+                                                @if (!string.IsNullOrWhiteSpace(item.Preparation))
+                                                {
+                                                    <span class="text-gray-500">(@item.Preparation)</span>
+                                                }
+                                            </span>
+                                        </div>
+                                        @if (item.Sources.Count > 0)
+                                        {
+                                            <p class="text-xs text-gray-500 mt-0.5">@L["ShoppingList.FromRecipes.Label", FormatSources(item)]</p>
+                                        }
+                                    </div>
+                                    @if (!_splitMode && _otherList is not null)
+                                    {
+                                        <button type="button"
+                                                class="text-xs text-gray-600 hover:text-gray-900"
+                                                @onclick="() => MoveItemAsync(item.Id, _otherList.Id)">
+                                            @L["ShoppingList.MoveTo.Button", _otherList.Name]
+                                        </button>
+                                    }
+                                    @if (!_splitMode)
+                                    {
+                                        <button type="button"
+                                                class="text-xs text-red-600 hover:text-red-800"
+                                                @onclick="() => RemoveItemAsync(item.Id)">
+                                            @L["ShoppingList.RemoveItem.Button"]
+                                        </button>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                        @if (!_splitMode)
+                        {
+                            <button type="button"
+                                    class="text-sm text-gray-700 hover:text-gray-900"
+                                    @onclick="() => _confirmClear = true">
+                                @L["ShoppingList.Clear.Button"]
+                            </button>
+                            <button type="button"
+                                    class="text-sm text-red-600 hover:text-red-800"
+                                    @onclick="() => _confirmDeleteList = true">
+                                @L["ShoppingList.DeleteList.Button"]
+                            </button>
+                            @if (_group.Lists.Count > 1)
+                            {
+                                <button type="button"
+                                        class="text-sm text-red-600 hover:text-red-800"
+                                        @onclick="() => _confirmDeleteGroup = true">
+                                    @L["ShoppingList.DeleteGroup.Button"]
+                                </button>
+                            }
+                        }
+                    </div>
+
+                    @if (_confirmClear)
+                    {
+                        <ConfirmPanel Message="@L["ShoppingList.ClearConfirm.Message"]"
+                                      OnYes="ClearListAsync"
+                                      OnNo="() => _confirmClear = false" />
+                    }
+                    @if (_confirmDeleteList)
+                    {
+                        <ConfirmPanel Message="@L["ShoppingList.DeleteListConfirm.Message"]"
+                                      OnYes="DeleteListAsync"
+                                      OnNo="() => _confirmDeleteList = false" />
+                    }
+                    @if (_confirmDeleteGroup)
+                    {
+                        <ConfirmPanel Message="@L["ShoppingList.DeleteGroupConfirm.Message"]"
+                                      OnYes="DeleteGroupAsync"
+                                      OnNo="() => _confirmDeleteGroup = false" />
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@if (_showSplitDialog)
+{
+    <div class="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md space-y-4">
+            <Heading Level="3" CssClass="m-0">@L["ShoppingList.Split.CreateFromSelection"]</Heading>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">@L["ShoppingList.Split.Name.Label"]</label>
+                <InputText class="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                           placeholder="@L["ShoppingList.Split.Name.Placeholder"]"
+                           @bind-Value="_newListName" />
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button type="button"
+                        class="px-3 py-1.5 rounded border border-gray-300 text-sm"
+                        @onclick="() => _showSplitDialog = false">
+                    @L["ShoppingList.Split.CancelButton"]
+                </button>
+                <button type="button"
+                        class="px-3 py-1.5 rounded bg-gray-800 text-white text-sm"
+                        @onclick="ConfirmSplitAsync">
+                    @L["ShoppingList.Split.ConfirmButton"]
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private GetOrCreateShoppingListGroupResult? _group;
+    private Guid _activeListId;
+    private int _badgeCount;
+    private bool _splitMode;
+    private HashSet<Guid> _selectedItemIds = [];
+    private bool _showSplitDialog;
+    private string _newListName = string.Empty;
+    private bool _editingName;
+    private string _editNameDraft = string.Empty;
+    private bool _confirmClear;
+    private bool _confirmDeleteList;
+    private bool _confirmDeleteGroup;
+
+    private ShoppingListDto? _activeList =>
+        _group?.Lists.FirstOrDefault(l => l.Id == _activeListId);
+
+    private ShoppingListDto? _otherList =>
+        _group?.Lists.FirstOrDefault(l => l.Id != _activeListId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _group = await ShoppingSession.GetOrCreateGroupAsync();
+        _badgeCount = await ShoppingSession.GetUncheckedCountAsync(_group.GroupId);
+
+        if (_activeListId == Guid.Empty || _group.Lists.All(l => l.Id != _activeListId))
+        {
+            _activeListId = _group.Lists.OrderBy(l => l.StoreOrder).First().Id;
+        }
+    }
+
+    private void SelectTab(Guid listId)
+    {
+        _activeListId = listId;
+        _splitMode = false;
+        _selectedItemIds.Clear();
+    }
+
+    private void StartSplitMode()
+    {
+        _splitMode = true;
+        _selectedItemIds.Clear();
+    }
+
+    private void CancelSplitMode()
+    {
+        _splitMode = false;
+        _selectedItemIds.Clear();
+    }
+
+    private void ToggleSplitSelection(Guid itemId, ChangeEventArgs e)
+    {
+        var isChecked = e.Value is bool b && b;
+        if (isChecked)
+        {
+            _selectedItemIds.Add(itemId);
+        }
+        else
+        {
+            _selectedItemIds.Remove(itemId);
+        }
+    }
+
+    private void SelectAllForSplit()
+    {
+        if (_activeList is null)
+        {
+            return;
+        }
+
+        _selectedItemIds = _activeList.Items.Select(i => i.Id).ToHashSet();
+    }
+
+    private void ClearSplitSelection() => _selectedItemIds.Clear();
+
+    private async Task OpenSplitDialogAsync()
+    {
+        _newListName = await ShoppingSession.GetNextListNameAsync();
+        _showSplitDialog = true;
+    }
+
+    private async Task ConfirmSplitAsync()
+    {
+        if (_group is null || _selectedItemIds.Count == 0)
+        {
+            return;
+        }
+
+        await CommandBus.SendAsync<SplitShoppingListCommand, SplitShoppingListResult>(
+            new SplitShoppingListCommand
+            {
+                GroupId = _group.GroupId,
+                NewListName = _newListName,
+                ItemIds = _selectedItemIds.ToList(),
+            });
+
+        _showSplitDialog = false;
+        _splitMode = false;
+        _selectedItemIds.Clear();
+        await ReloadAsync();
+
+        var second = _group.Lists.OrderBy(l => l.StoreOrder).LastOrDefault();
+        if (second is not null)
+        {
+            _activeListId = second.Id;
+        }
+    }
+
+    private async Task ToggleCheckedAsync(Guid itemId, ChangeEventArgs e)
+    {
+        var isChecked = e.Value is bool b && b;
+        await CommandBus.SendAsync<ToggleShoppingListItemCommand, ToggleShoppingListItemResult>(
+            new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = isChecked });
+        await ReloadAsync();
+    }
+
+    private async Task RemoveItemAsync(Guid itemId)
+    {
+        await CommandBus.SendAsync<RemoveShoppingListItemCommand, RemoveShoppingListItemResult>(
+            new RemoveShoppingListItemCommand { ItemId = itemId });
+        await ReloadAsync();
+    }
+
+    private async Task MoveItemAsync(Guid itemId, Guid targetListId)
+    {
+        await CommandBus.SendAsync<MoveShoppingListItemCommand, MoveShoppingListItemResult>(
+            new MoveShoppingListItemCommand { ItemId = itemId, TargetShoppingListId = targetListId });
+        await ReloadAsync();
+    }
+
+    private async Task ClearListAsync()
+    {
+        if (_activeList is null)
+        {
+            return;
+        }
+
+        _confirmClear = false;
+        await CommandBus.SendAsync<ClearShoppingListCommand, ClearShoppingListResult>(
+            new ClearShoppingListCommand { ShoppingListId = _activeList.Id });
+        await ReloadAsync();
+    }
+
+    private async Task DeleteListAsync()
+    {
+        if (_activeList is null || _group is null)
+        {
+            return;
+        }
+
+        _confirmDeleteList = false;
+        var result = await CommandBus.SendAsync<DeleteShoppingListCommand, DeleteShoppingListResult>(
+            new DeleteShoppingListCommand { ShoppingListId = _activeList.Id });
+
+        if (!result.Deleted)
+        {
+            return;
+        }
+
+        if (result.RemainingGroupId is null)
+        {
+            ShoppingSession.RedirectToClearSession("/recipes");
+            return;
+        }
+
+        await ReloadAsync();
+        _activeListId = _group.Lists.First().Id;
+    }
+
+    private async Task DeleteGroupAsync()
+    {
+        if (_group is null)
+        {
+            return;
+        }
+
+        _confirmDeleteGroup = false;
+        await CommandBus.SendAsync<DeleteShoppingListGroupCommand, DeleteShoppingListGroupResult>(
+            new DeleteShoppingListGroupCommand { GroupId = _group.GroupId });
+        ShoppingSession.RedirectToClearSession("/recipes");
+    }
+
+    private void StartEditName()
+    {
+        if (_activeList is null)
+        {
+            return;
+        }
+
+        _editNameDraft = _activeList.Name;
+        _editingName = true;
+    }
+
+    private async Task SaveNameAsync()
+    {
+        if (_activeList is null)
+        {
+            return;
+        }
+
+        await CommandBus.SendAsync<UpdateShoppingListNameCommand, UpdateShoppingListNameResult>(
+            new UpdateShoppingListNameCommand
+            {
+                ShoppingListId = _activeList.Id,
+                Name = _editNameDraft,
+            });
+
+        _editingName = false;
+        await ReloadAsync();
+    }
+
+    private string FormatLine(ShoppingListItemDto item) =>
+        ShoppingListDisplayHelper.FormatQuantityLine(item, GetUnitLabel);
+
+    private string GetUnitLabel(string unit)
+    {
+        var key = $"Recipe.Unit.{unit}";
+        var localized = L[key];
+        return localized.ResourceNotFound ? unit : localized.Value;
+    }
+
+    private static string FormatSources(ShoppingListItemDto item) =>
+        ShoppingListDisplayHelper.FormatSourceTitles(item.Sources);
+}

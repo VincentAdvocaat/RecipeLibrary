@@ -68,6 +68,9 @@ public sealed class DeleteRecipeCommandHandlerTests
 
         public Task<Recipe?> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default) => GetByIdAsync(id, ct);
 
+        public Task<IReadOnlyList<Recipe>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Recipe>>([]);
+
         public Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(Guid recipeId, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<string>>([]);
 

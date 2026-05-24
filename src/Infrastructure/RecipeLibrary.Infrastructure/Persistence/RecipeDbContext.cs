@@ -15,6 +15,10 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<IngredientTag> IngredientTags => Set<IngredientTag>();
     public DbSet<IngredientMatchLog> IngredientMatchLogs => Set<IngredientMatchLog>();
+    public DbSet<ShoppingListGroup> ShoppingListGroups => Set<ShoppingListGroup>();
+    public DbSet<ShoppingList> ShoppingLists => Set<ShoppingList>();
+    public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
+    public DbSet<ShoppingListItemSource> ShoppingListItemSources => Set<ShoppingListItemSource>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -202,6 +206,77 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
                 .WithMany()
                 .HasForeignKey(x => x.MatchedIngredientId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ShoppingListGroup>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.OwnerUserId)
+                .HasMaxLength(256);
+
+            b.Property(x => x.CreatedAt).IsRequired();
+            b.Property(x => x.UpdatedAt).IsRequired();
+
+            b.HasMany(x => x.Lists)
+                .WithOne(x => x.Group)
+                .HasForeignKey(x => x.GroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ShoppingList>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Name)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            b.Property(x => x.StoreOrder).IsRequired();
+            b.Property(x => x.CreatedAt).IsRequired();
+            b.Property(x => x.UpdatedAt).IsRequired();
+
+            b.HasIndex(x => new { x.GroupId, x.StoreOrder })
+                .IsUnique();
+
+            b.HasMany(x => x.Items)
+                .WithOne(x => x.ShoppingList)
+                .HasForeignKey(x => x.ShoppingListId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ShoppingListItem>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.DisplayName)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            b.Property(x => x.Preparation)
+                .HasMaxLength(200);
+
+            b.Property(x => x.Quantity)
+                .HasConversion(quantityConverter)
+                .HasPrecision(18, 3);
+
+            b.Property(x => x.Unit)
+                .HasConversion<string>()
+                .HasMaxLength(32);
+
+            b.HasMany(x => x.Sources)
+                .WithOne(x => x.Item)
+                .HasForeignKey(x => x.ShoppingListItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ShoppingListItemSource>(b =>
+        {
+            b.HasKey(x => new { x.ShoppingListItemId, x.RecipeId });
+
+            b.Property(x => x.RecipeTitle)
+                .HasMaxLength(200)
+                .IsRequired();
         });
     }
 }

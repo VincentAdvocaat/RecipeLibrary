@@ -46,6 +46,20 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
             .FirstOrDefaultAsync(r => r.Id == id, ct);
     }
 
+    public async Task<IReadOnlyList<Recipe>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+    {
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        return await dbContext.Recipes
+            .AsNoTracking()
+            .Include(r => r.Ingredients)
+            .Where(r => ids.Contains(r.Id))
+            .ToListAsync(ct);
+    }
+
     public Task<Recipe?> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default)
     {
         return dbContext.Recipes
