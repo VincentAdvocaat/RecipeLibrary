@@ -1,0 +1,181 @@
+@* Molecule: one ingredient row for recipe create/edit with preparation field. *@
+@namespace RecipeLibrary.Components.Molecules
+
+@using System.Net.Http.Json
+@using RecipeLibrary.Application.Contracts
+@using RecipeLibrary.Domain.ValueObjects
+@using RecipeLibrary.Web.Models
+
+@inject HttpClient Http
+
+<div class="space-y-1">
+    <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem_8rem_auto] gap-x-3 gap-y-0.5">
+        <label class="text-xs text-gray-500 mb-0.5 sm:mb-0">@L["RecipeCreate.Ingredient.Name.Label"]</label>
+        <label class="text-xs text-gray-500 mb-0.5 sm:mb-0">@L["RecipeCreate.Ingredient.Preparation.Label"]</label>
+        <label class="text-xs text-gray-500 mb-0.5 sm:mb-0">@L["RecipeCreate.Ingredient.Quantity.Label"]</label>
+        <label class="text-xs text-gray-500 mb-0.5 sm:mb-0">@L["RecipeCreate.Ingredient.Unit.Label"]</label>
+        <span class="hidden sm:block" aria-hidden="true"></span>
+
+        <input class="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+               placeholder="@L["RecipeCreate.Ingredient.Name.Placeholder"]"
+               value="@Item.Name"
+               @oninput="OnNameInput"
+               @onblur="OnNameBlurAsync" />
+        <input class="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+               placeholder="@L["RecipeCreate.Ingredient.Preparation.Placeholder"]"
+               value="@Item.Preparation"
+               @oninput="OnPreparationInput" />
+        <IngredientQuantityInput CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                 @bind-Quantity="Item.Quantity"
+                                 QuantityChangedAfter="OnQuantityOrUnitChanged" />
+        <IngredientUnitSelect CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                              @bind-UnitName="Item.UnitName"
+                              UnitNameChangedAfter="OnQuantityOrUnitChanged" />
+        <div class="flex items-center sm:items-end sm:pb-0.5">
+            <button type="button"
+                    class="p-2 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded"
+                    aria-label="@L["Common.Remove.AriaLabel"]"
+                    @onclick="OnRemove"
+                    disabled="@(!CanRemove)">
+                <Icon Name="@Icon.IconName.Trash" CssClass="w-5 h-5" />
+            </button>
+        </div>
+    </div>
+
+    @if (Suggestions.Count > 0)
+    {
+        <div class="max-w-md rounded border border-gray-200 bg-white shadow-sm">
+            @foreach (var suggestion in Suggestions)
+            {
+                <button type="button"
+                        class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                        @onclick="() => SelectSuggestion(suggestion.Name)">
+                    @HighlightMatch(suggestion.Name, Item.Name)
+                </button>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(MatchMessage))
+    {
+        <p class="text-xs text-gray-500">@MatchMessage</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RecipeIngredientEditorItem Item { get; set; } = null!;
+
+    [Parameter] public EventCallback<RecipeIngredientEditorItem> ItemChanged { get; set; }
+
+    [Parameter] public IReadOnlyList<IngredientLookupItem> Suggestions { get; set; } = [];
+
+    [Parameter] public string? MatchMessage { get; set; }
+
+    [Parameter] public EventCallback<string?> MatchMessageChanged { get; set; }
+
+    [Parameter] public EventCallback<string> OnNameChanged { get; set; }
+
+    [Parameter] public bool CanRemove { get; set; } = true;
+
+    [Parameter] public EventCallback OnRemove { get; set; }
+
+    private async Task OnNameInput(ChangeEventArgs e)
+    {
+        Item.Name = e.Value?.ToString() ?? string.Empty;
+        await ItemChanged.InvokeAsync(Item);
+        await OnNameChanged.InvokeAsync(Item.Name);
+    }
+
+    private async Task OnPreparationInput(ChangeEventArgs e)
+    {
+        Item.Preparation = e.Value?.ToString();
+        await ItemChanged.InvokeAsync(Item);
+    }
+
+    private async Task OnQuantityOrUnitChanged()
+    {
+        if (UnitRules.TryParse(Item.UnitName, out var unit))
+        {
+            Item.Quantity = IngredientQuantityFormatter.Normalize(Item.Quantity, unit);
+        }
+
+        await ItemChanged.InvokeAsync(Item);
+    }
+
+    private async Task OnNameBlurAsync()
+    {
+        var input = Item.Name.Trim();
+        if (input.Length == 0)
+        {
+            await MatchMessageChanged.InvokeAsync(string.Empty);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Item.Preparation))
+        {
+            var parseResponse = await Http.PostAsJsonAsync("/ingredients/parse-line", new ParseIngredientLineRequest { Input = input });
+            var parsed = await parseResponse.Content.ReadFromJsonAsync<ParseIngredientLineResult>();
+            if (parsed is not null)
+            {
+                Item.Name = parsed.Name;
+                if (!string.IsNullOrWhiteSpace(parsed.Preparation))
+                {
+                    Item.Preparation = parsed.Preparation;
+                }
+
+                await ItemChanged.InvokeAsync(Item);
+                input = Item.Name.Trim();
+            }
+        }
+
+        var match = await Http.PostAsJsonAsync("/ingredients/match", new MatchIngredientCommand { Input = input });
+        var payload = await match.Content.ReadFromJsonAsync<MatchIngredientResult>();
+        if (payload is null)
+        {
+            await MatchMessageChanged.InvokeAsync(string.Empty);
+            return;
+        }
+
+        if (payload.MatchType == "fuzzy" && !string.IsNullOrWhiteSpace(payload.Ingredient?.Name))
+        {
+            Item.Name = payload.Ingredient.Name;
+            await ItemChanged.InvokeAsync(Item);
+        }
+
+        var message = payload.MatchType switch
+        {
+            "exact" => L["RecipeCreate.Ingredient.Match.Exact"],
+            "alias" => L["RecipeCreate.Ingredient.Match.Alias"],
+            "fuzzy" => L["RecipeCreate.Ingredient.Match.Fuzzy", payload.Ingredient?.Name ?? "", payload.Confidence.ToString("P0")],
+            _ => L["RecipeCreate.Ingredient.Match.None"]
+        };
+        await MatchMessageChanged.InvokeAsync(message);
+    }
+
+    private async Task SelectSuggestion(string name)
+    {
+        Item.Name = name;
+        await ItemChanged.InvokeAsync(Item);
+        await OnNameChanged.InvokeAsync(name);
+    }
+
+    private static string HighlightMatch(string name, string query)
+    {
+        var term = (query ?? string.Empty).Trim();
+        if (term.Length == 0)
+        {
+            return name;
+        }
+
+        var matchIndex = name.IndexOf(term, StringComparison.OrdinalIgnoreCase);
+        if (matchIndex < 0)
+        {
+            return name;
+        }
+
+        var before = name[..matchIndex];
+        var match = name.Substring(matchIndex, term.Length);
+        var after = name[(matchIndex + term.Length)..];
+        return $"{before}[{match}]{after}";
+    }
+}

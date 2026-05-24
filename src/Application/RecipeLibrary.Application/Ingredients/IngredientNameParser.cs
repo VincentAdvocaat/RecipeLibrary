@@ -2,12 +2,15 @@ namespace RecipeLibrary.Application.Ingredients;
 
 public sealed class IngredientNameParser
 {
-    private static readonly string[] PreparationKeywords =
+    private static readonly string[] PreparationPhrases =
     [
+        "fijn gesneden",
+        "in blokjes",
+        "in reepjes",
+        "fijngehakt",
         "gesneden",
         "geraspt",
-        "fijngehakt",
-        "gepeld"
+        "gepeld",
     ];
 
     public ParsedIngredient ParseIngredient(string? input)
@@ -18,12 +21,13 @@ public sealed class IngredientNameParser
             return new ParsedIngredient(string.Empty, null);
         }
 
-        foreach (var keyword in PreparationKeywords)
+        foreach (var phrase in PreparationPhrases)
         {
-            if (value.EndsWith($" {keyword}", StringComparison.OrdinalIgnoreCase))
+            var suffix = $" {phrase}";
+            if (value.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
             {
-                var name = value[..^($" {keyword}".Length)].Trim();
-                return new ParsedIngredient(name, keyword);
+                var name = value[..^suffix.Length].Trim();
+                return new ParsedIngredient(name, phrase);
             }
         }
 

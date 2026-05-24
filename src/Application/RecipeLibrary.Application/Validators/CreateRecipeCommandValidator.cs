@@ -51,6 +51,11 @@ public static class CreateRecipeCommandValidator
             }
 
             IngredientQuantityFormatter.ValidateQuantity(ingredient.Quantity, unit);
+
+            if (ingredient.Preparation is { Length: > 200 })
+            {
+                throw new ArgumentException("Ingredient preparation cannot exceed 200 characters.", nameof(command));
+            }
         }
 
         if (command.InstructionSteps is null || command.InstructionSteps.Count == 0)

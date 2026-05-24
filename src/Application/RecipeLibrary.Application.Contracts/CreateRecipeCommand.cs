@@ -25,6 +25,8 @@ public sealed class CreateRecipeIngredientDto
 {
     public string Name { get; init; } = string.Empty;
 
+    public string? Preparation { get; init; }
+
     public decimal Quantity { get; init; }
 
     /// <summary>

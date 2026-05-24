@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<SearchTagsQuery, IReadOnlyList<TagLookupItem>>, SearchTagsQueryHandler>();
         services.AddScoped<IngredientMatcher>();
         services.AddScoped<IngredientNameParser>();
+        services.AddScoped<IngredientLineResolver>();
         services.AddScoped<ShoppingListIngredientMerger>();
 
         services.AddScoped<IQueryHandler<GetOrCreateShoppingListGroupQuery, GetOrCreateShoppingListGroupResult>, GetOrCreateShoppingListGroupQueryHandler>();

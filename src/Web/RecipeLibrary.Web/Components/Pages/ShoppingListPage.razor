@@ -120,10 +120,9 @@
                                         <div class="flex flex-wrap gap-x-2 text-sm">
                                             <span class="font-medium tabular-nums text-gray-900">@FormatLine(item)</span>
                                             <span class="text-gray-800">
-                                                @item.DisplayName
-                                                @if (!string.IsNullOrWhiteSpace(item.Preparation))
+                                                @item.DisplayName@if (!string.IsNullOrWhiteSpace(item.Preparation))
                                                 {
-                                                    <span class="text-gray-500">(@item.Preparation)</span>
+                                                    <span class="text-gray-500"> (@item.Preparation)</span>
                                                 }
                                             </span>
                                         </div>

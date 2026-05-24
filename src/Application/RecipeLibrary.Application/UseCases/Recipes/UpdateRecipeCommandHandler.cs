@@ -12,7 +12,7 @@ public sealed class UpdateRecipeCommandHandler(
     IIngredientRepository ingredientRepository,
     IIngredientTextNormalizer normalizer,
     IngredientMatcher matcher,
-    IngredientNameParser parser)
+    IngredientLineResolver lineResolver)
     : ICommandHandler<UpdateRecipeCommand, UpdateRecipeResult>
 {
     public async Task<UpdateRecipeResult> HandleAsync(UpdateRecipeCommand command, CancellationToken ct = default)
@@ -46,7 +46,7 @@ public sealed class UpdateRecipeCommandHandler(
             ingredientRepository,
             normalizer,
             matcher,
-            parser,
+            lineResolver,
             ct);
 
         var builtSteps = RecipeIngredientBuilder.BuildSteps(existing.Id, command.InstructionSteps);

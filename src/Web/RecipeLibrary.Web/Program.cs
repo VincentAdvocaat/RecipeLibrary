@@ -5,6 +5,7 @@ using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using RecipeLibrary.Application;
 using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Components;
 using RecipeLibrary.Infrastructure.FileStorage;
 using RecipeLibrary.Infrastructure.Persistence;
@@ -158,6 +159,16 @@ app.MapPost("/ingredients/match", async (MatchIngredientCommand command, IComman
 {
     var result = await commandBus.SendAsync<MatchIngredientCommand, MatchIngredientResult>(command, ct);
     return Results.Ok(result);
+}).DisableAntiforgery();
+
+app.MapPost("/ingredients/parse-line", (ParseIngredientLineRequest request, IngredientNameParser parser) =>
+{
+    var parsed = parser.ParseIngredient(request.Input);
+    return Results.Ok(new ParseIngredientLineResult
+    {
+        Name = parsed.Name,
+        Preparation = parsed.Preparation,
+    });
 }).DisableAntiforgery();
 
 app.MapGet("/ingredients/search", async (string q, IQueryBus queryBus, CancellationToken ct) =>

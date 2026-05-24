@@ -9,10 +9,9 @@
             <li class="flex flex-wrap gap-x-2">
                 <span class="font-medium tabular-nums">@FormatLine(item)</span>
                 <span>
-                    @item.Name
-                    @if (!string.IsNullOrWhiteSpace(item.Preparation))
+                    @item.Name@if (!string.IsNullOrWhiteSpace(item.Preparation))
                     {
-                        <span class="text-gray-500">(@item.Preparation)</span>
+                        <span class="text-gray-500"> (@item.Preparation)</span>
                     }
                 </span>
             </li>

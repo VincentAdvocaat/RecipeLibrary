@@ -1,5 +1,17 @@
 namespace RecipeLibrary.Application.Contracts;
 
+public sealed class ParseIngredientLineRequest
+{
+    public string Input { get; init; } = string.Empty;
+}
+
+public sealed class ParseIngredientLineResult
+{
+    public string Name { get; init; } = string.Empty;
+
+    public string? Preparation { get; init; }
+}
+
 public sealed class MatchIngredientCommand : ICommand<MatchIngredientResult>
 {
     public string Input { get; init; } = string.Empty;

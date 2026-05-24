@@ -73,6 +73,8 @@
   <data name="RecipeCreate.Ingredient.Name.Label" xml:space="preserve"><value>Naam</value></data>
   <data name="RecipeCreate.Ingredient.Name.Placeholder" xml:space="preserve"><value>bijv. kipfilet</value></data>
   <data name="RecipeCreate.Ingredient.Name.Required" xml:space="preserve"><value>Naam is verplicht.</value></data>
+  <data name="RecipeCreate.Ingredient.Preparation.Label" xml:space="preserve"><value>Bereiding</value></data>
+  <data name="RecipeCreate.Ingredient.Preparation.Placeholder" xml:space="preserve"><value>bijv. fijn gesneden, in blokjes</value></data>
   <data name="RecipeCreate.Ingredient.Quantity.Label" xml:space="preserve"><value>Hoeveelheid</value></data>
   <data name="RecipeCreate.Ingredient.Quantity.Invalid" xml:space="preserve"><value>Hoeveelheid moet groter dan 0 zijn.</value></data>
   <data name="RecipeCreate.Ingredient.Unit.Label" xml:space="preserve"><value>Eenheid</value></data>
