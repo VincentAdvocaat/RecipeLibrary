@@ -38,6 +38,7 @@ public sealed class GetRecipeByIdQueryHandlerTests
                     Id = Guid.NewGuid(),
                     RecipeId = recipeId,
                     Name = "Gehakt",
+                    Preparation = "fijngehakt",
                     Quantity = new Quantity(500),
                     Unit = Unit.Gram,
                 }
@@ -63,6 +64,7 @@ public sealed class GetRecipeByIdQueryHandlerTests
         Assert.Equal("Test Lasagna", result!.Title);
         Assert.Single(result.Ingredients);
         Assert.Equal("Gehakt", result.Ingredients[0].Name);
+        Assert.Equal("fijngehakt", result.Ingredients[0].Preparation);
         Assert.Equal(500, result.Ingredients[0].Quantity);
         Assert.Equal("Gram", result.Ingredients[0].Unit);
         Assert.Single(result.Steps);

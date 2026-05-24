@@ -1,5 +1,6 @@
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Domain.Entities;
 using RecipeLibrary.Domain.ValueObjects;
 
@@ -32,7 +33,10 @@ public sealed class GetRecipeListQueryHandler(IRecipeRepository recipeRepository
             PreparationMinutes = recipe.PreparationMinutes,
             CookingMinutes = recipe.CookingMinutes,
             Category = (int)recipe.Category,
-            IngredientNames = recipe.Ingredients.OrderBy(i => i.Name).Select(i => i.Name).ToList(),
+            IngredientNames = recipe.Ingredients
+                .OrderBy(i => i.Name)
+                .Select(i => IngredientListDisplay.FormatNameWithPreparation(i.Name, i.Preparation))
+                .ToList(),
         };
     }
 }

@@ -14,28 +14,28 @@ internal static class RecipeIngredientBuilder
         IIngredientRepository ingredientRepository,
         IIngredientTextNormalizer normalizer,
         IngredientMatcher matcher,
-        IngredientNameParser parser,
+        IngredientLineResolver lineResolver,
         CancellationToken ct)
     {
         var ingredients = new List<Ingredient>();
 
         foreach (var ingredientDto in ingredientDtos)
         {
-            var name = (ingredientDto.Name ?? string.Empty).Trim();
+            var rawName = (ingredientDto.Name ?? string.Empty).Trim();
             var unit = UnitRules.ParseOrThrow(ingredientDto.Unit);
             var quantity = IngredientQuantityFormatter.Normalize(ingredientDto.Quantity, unit);
-            var parsed = parser.ParseIngredient(name);
-            var match = await matcher.MatchAsync(parsed.Name, ct);
+            var resolved = lineResolver.Resolve(ingredientDto.Name, ingredientDto.Preparation);
+            var match = await matcher.MatchAsync(resolved.DisplayName, ct);
             var canonicalIngredient = match.Ingredient;
 
             if (canonicalIngredient is null)
             {
-                var normalized = normalizer.Normalize(parsed.Name);
+                var normalized = normalizer.Normalize(resolved.DisplayName);
                 canonicalIngredient = await ingredientRepository.CreateIngredientWithAliasAsync(
-                    parsed.Name,
+                    resolved.DisplayName,
                     normalized,
-                    name,
-                    normalizer.Normalize(name),
+                    rawName,
+                    normalizer.Normalize(rawName),
                     ct);
             }
 
@@ -43,8 +43,8 @@ internal static class RecipeIngredientBuilder
             {
                 Id = Guid.NewGuid(),
                 RecipeId = recipeId,
-                Name = name,
-                Preparation = parsed.Preparation,
+                Name = resolved.DisplayName,
+                Preparation = resolved.Preparation,
                 IngredientId = canonicalIngredient.Id,
                 Quantity = new Quantity(quantity),
                 Unit = unit,

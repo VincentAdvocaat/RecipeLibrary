@@ -12,7 +12,7 @@ public sealed class CreateRecipeCommandHandler(
     IIngredientRepository ingredientRepository,
     IIngredientTextNormalizer normalizer,
     IngredientMatcher matcher,
-    IngredientNameParser parser)
+    IngredientLineResolver lineResolver)
     : ICommandHandler<CreateRecipeCommand, CreateRecipeResult>
 {
     public async Task<CreateRecipeResult> HandleAsync(CreateRecipeCommand command, CancellationToken ct = default)
@@ -51,7 +51,7 @@ public sealed class CreateRecipeCommandHandler(
             ingredientRepository,
             normalizer,
             matcher,
-            parser,
+            lineResolver,
             ct);
         foreach (var ingredient in builtIngredients)
         {

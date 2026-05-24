@@ -5,6 +5,7 @@
 @using RecipeLibrary.Application.Contracts
 @using RecipeLibrary.Domain.ValueObjects
 @using RecipeLibrary.Resources
+@using RecipeLibrary.Web.Models
 @using RecipeCategory = RecipeLibrary.Domain.ValueObjects.RecipeCategory
 @inject ICommandBus CommandBus
 @inject IQueryBus QueryBus
@@ -89,50 +90,16 @@
                     <Heading Level="3" CssClass="text-sm font-medium text-gray-900">@L["RecipeCreate.Ingredients.SectionLabel"]</Heading>
                     @for (var i = 0; i < _vm.Ingredients.Count; i++)
                     {
-                        var item = _vm.Ingredients[i];
                         var index = i;
-                        <div class="flex flex-wrap items-end gap-3">
-                            <div class="flex-1 min-w-[120px]">
-                                <label class="block text-xs text-gray-500 mb-0.5">@L["RecipeCreate.Ingredient.Name.Label"]</label>
-                                <input class="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                                       placeholder="@L["RecipeCreate.Ingredient.Name.Placeholder"]"
-                                       value="@item.Name"
-                                       @oninput="e => OnIngredientInput(index, e.Value?.ToString())"
-                                       @onblur="() => OnIngredientBlur(index)" />
-                                @if (_ingredientSuggestions.TryGetValue(index, out var suggestions) && suggestions.Count > 0)
-                                {
-                                    <div class="mt-1 rounded border border-gray-200 bg-white shadow-sm">
-                                        @foreach (var suggestion in suggestions)
-                                        {
-                                            <button type="button"
-                                                    class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                                                    @onclick="() => SelectIngredientSuggestion(index, suggestion.Name)">
-                                                @HighlightMatch(suggestion.Name, item.Name)
-                                            </button>
-                                        }
-                                    </div>
-                                }
-                                @if (_ingredientMatchMessages.TryGetValue(index, out var matchMessage) && !string.IsNullOrWhiteSpace(matchMessage))
-                                {
-                                    <p class="mt-1 text-xs text-gray-500">@matchMessage</p>
-                                }
-                            </div>
-                            <div class="w-24">
-                                <label class="block text-xs text-gray-500 mb-0.5">@L["RecipeCreate.Ingredient.Quantity.Label"]</label>
-                                <IngredientQuantityInput CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                                                         @bind-Quantity="item.Quantity"
-                                                         QuantityChangedAfter="@(() => NormalizeIngredientQuantity(index))" />
-                            </div>
-                            <div class="w-32">
-                                <label class="block text-xs text-gray-500 mb-0.5">@L["RecipeCreate.Ingredient.Unit.Label"]</label>
-                                <IngredientUnitSelect CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                                                      @bind-UnitName="item.UnitName"
-                                                      UnitNameChangedAfter="@(() => NormalizeIngredientQuantity(index))" />
-                            </div>
-                            <button type="button" class="p-2 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded" aria-label="@L["Common.Remove.AriaLabel"]" @onclick="() => RemoveIngredient(index)" disabled="@(_vm.Ingredients.Count <= 1)">
-                                <Icon Name="@Icon.IconName.Trash" CssClass="w-5 h-5" />
-                            </button>
-                        </div>
+                        var item = _vm.Ingredients[index];
+                        <RecipeIngredientEditorRow Item="@item"
+                                                 ItemChanged="@(_ => OnIngredientRowChanged())"
+                                                 Suggestions="@GetIngredientSuggestions(index)"
+                                                 MatchMessage="@GetIngredientMatchMessage(index)"
+                                                 MatchMessageChanged="@(msg => SetIngredientMatchMessage(index, msg))"
+                                                 OnNameChanged="@(name => OnIngredientNameSearch(index, name))"
+                                                 CanRemove="@(_vm.Ingredients.Count > 1)"
+                                                 OnRemove="@(() => RemoveIngredient(index))" />
                     }
                     <button type="button" class="inline-flex items-center px-3 py-1.5 rounded border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50" @onclick="AddIngredient">
                         @L["RecipeCreate.Ingredient.AddButton"]
@@ -196,21 +163,9 @@
 
         public int Category { get; set; } = (int)RecipeCategory.Vegetarian;
 
-        public List<IngredientVm> Ingredients { get; set; } = [new IngredientVm()];
+        public List<RecipeIngredientEditorItem> Ingredients { get; set; } = [new RecipeIngredientEditorItem()];
 
         public List<StepVm> Steps { get; set; } = [new StepVm { StepNumber = 1 }];
-    }
-
-    private sealed class IngredientVm
-    {
-        [Required(ErrorMessageResourceType = typeof(SharedResources), ErrorMessageResourceName = "RecipeCreate.Ingredient.Name.Required")]
-        public string Name { get; set; } = string.Empty;
-
-        [Range(typeof(decimal), "0.0001", "1000000", ErrorMessageResourceType = typeof(SharedResources), ErrorMessageResourceName = "RecipeCreate.Ingredient.Quantity.Invalid")]
-        public decimal Quantity { get; set; } = 1;
-
-        [Required(ErrorMessageResourceType = typeof(SharedResources), ErrorMessageResourceName = "RecipeCreate.Ingredient.Unit.Required")]
-        public string UnitName { get; set; } = nameof(Unit.Gram);
     }
 
     private sealed class StepVm
@@ -250,15 +205,16 @@
         _vm.CookingTimeMinutes = recipe.CookingMinutes;
         _vm.Category = recipe.Category;
         _imageUrl = recipe.ImageUrl;
-        _vm.Ingredients = recipe.Ingredients.Select(x => new IngredientVm
+        _vm.Ingredients = recipe.Ingredients.Select(x => new RecipeIngredientEditorItem
         {
             Name = x.Name,
+            Preparation = x.Preparation,
             Quantity = x.Quantity,
             UnitName = x.Unit,
         }).ToList();
         if (_vm.Ingredients.Count == 0)
         {
-            _vm.Ingredients.Add(new IngredientVm());
+            _vm.Ingredients.Add(new RecipeIngredientEditorItem());
         }
 
         _vm.Steps = recipe.Steps.Select(x => new StepVm
@@ -294,7 +250,7 @@
 
     private void AddIngredient()
     {
-        _vm.Ingredients.Add(new IngredientVm());
+        _vm.Ingredients.Add(new RecipeIngredientEditorItem());
         StateHasChanged();
     }
 
@@ -307,26 +263,37 @@
         StateHasChanged();
     }
 
-    private void NormalizeIngredientQuantity(int index)
+    private void OnIngredientRowChanged() => StateHasChanged();
+
+    private IReadOnlyList<IngredientLookupItem> GetIngredientSuggestions(int index) =>
+        _ingredientSuggestions.TryGetValue(index, out var suggestions) ? suggestions : [];
+
+    private string? GetIngredientMatchMessage(int index) =>
+        _ingredientMatchMessages.TryGetValue(index, out var message) ? message : null;
+
+    private Task SetIngredientMatchMessage(int index, string? message)
     {
-        var item = _vm.Ingredients[index];
-        if (UnitRules.TryParse(item.UnitName, out var unit))
+        if (string.IsNullOrWhiteSpace(message))
         {
-            item.Quantity = IngredientQuantityFormatter.Normalize(item.Quantity, unit);
+            _ingredientMatchMessages.Remove(index);
+        }
+        else
+        {
+            _ingredientMatchMessages[index] = message;
         }
 
         StateHasChanged();
+        return Task.CompletedTask;
     }
 
-    private async Task OnIngredientInput(int index, string? value)
+    private async Task OnIngredientNameSearch(int index, string name)
     {
         if (index < 0 || index >= _vm.Ingredients.Count)
         {
             return;
         }
 
-        _vm.Ingredients[index].Name = value ?? string.Empty;
-        var query = _vm.Ingredients[index].Name.Trim();
+        var query = name.Trim();
         if (query.Length < 2)
         {
             _ingredientSuggestions[index] = [];
@@ -338,75 +305,6 @@
         var suggestions = await Http.GetFromJsonAsync<List<IngredientLookupItem>>($"/ingredients/search?q={encoded}") ?? [];
         _ingredientSuggestions[index] = suggestions;
         StateHasChanged();
-    }
-
-    private async Task OnIngredientBlur(int index)
-    {
-        if (index < 0 || index >= _vm.Ingredients.Count)
-        {
-            return;
-        }
-
-        var input = _vm.Ingredients[index].Name.Trim();
-        if (input.Length == 0)
-        {
-            _ingredientMatchMessages[index] = string.Empty;
-            return;
-        }
-
-        var match = await Http.PostAsJsonAsync("/ingredients/match", new MatchIngredientCommand { Input = input });
-        var payload = await match.Content.ReadFromJsonAsync<MatchIngredientResult>();
-        if (payload is null)
-        {
-            _ingredientMatchMessages[index] = string.Empty;
-            return;
-        }
-
-        if (payload.MatchType == "fuzzy" && !string.IsNullOrWhiteSpace(payload.Ingredient?.Name))
-        {
-            _vm.Ingredients[index].Name = payload.Ingredient.Name;
-        }
-
-        _ingredientMatchMessages[index] = payload.MatchType switch
-        {
-            "exact" => L["RecipeCreate.Ingredient.Match.Exact"],
-            "alias" => L["RecipeCreate.Ingredient.Match.Alias"],
-            "fuzzy" => L["RecipeCreate.Ingredient.Match.Fuzzy", payload.Ingredient?.Name ?? "", payload.Confidence.ToString("P0")],
-            _ => L["RecipeCreate.Ingredient.Match.None"]
-        };
-        StateHasChanged();
-    }
-
-    private void SelectIngredientSuggestion(int index, string name)
-    {
-        if (index < 0 || index >= _vm.Ingredients.Count)
-        {
-            return;
-        }
-
-        _vm.Ingredients[index].Name = name;
-        _ingredientSuggestions[index] = [];
-        StateHasChanged();
-    }
-
-    private static string HighlightMatch(string name, string query)
-    {
-        var term = (query ?? string.Empty).Trim();
-        if (term.Length == 0)
-        {
-            return name;
-        }
-
-        var matchIndex = name.IndexOf(term, StringComparison.OrdinalIgnoreCase);
-        if (matchIndex < 0)
-        {
-            return name;
-        }
-
-        var before = name[..matchIndex];
-        var match = name.Substring(matchIndex, term.Length);
-        var after = name[(matchIndex + term.Length)..];
-        return $"{before}[{match}]{after}";
     }
 
     private void AddStep()
@@ -444,6 +342,7 @@
                 Ingredients = _vm.Ingredients.Select(x => new CreateRecipeIngredientDto
                 {
                     Name = x.Name,
+                    Preparation = string.IsNullOrWhiteSpace(x.Preparation) ? null : x.Preparation.Trim(),
                     Quantity = x.Quantity,
                     Unit = x.UnitName,
                 }).ToList(),

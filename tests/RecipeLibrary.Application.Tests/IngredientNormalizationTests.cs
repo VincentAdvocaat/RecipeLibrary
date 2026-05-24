@@ -25,4 +25,26 @@ public sealed class IngredientNormalizationTests
         Assert.Equal("gember", parsed.Name);
         Assert.Equal("geraspt", parsed.Preparation);
     }
+
+    [Fact]
+    public void ParseIngredient_ExtractsMultiWordPhrase()
+    {
+        var sut = new IngredientNameParser();
+
+        var parsed = sut.ParseIngredient("ui fijn gesneden");
+
+        Assert.Equal("ui", parsed.Name);
+        Assert.Equal("fijn gesneden", parsed.Preparation);
+    }
+
+    [Fact]
+    public void ParseIngredient_ExtractsInBlokjes()
+    {
+        var sut = new IngredientNameParser();
+
+        var parsed = sut.ParseIngredient("courgette in blokjes");
+
+        Assert.Equal("courgette", parsed.Name);
+        Assert.Equal("in blokjes", parsed.Preparation);
+    }
 }
