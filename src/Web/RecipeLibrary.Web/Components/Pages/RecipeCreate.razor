@@ -6,10 +6,12 @@
 @using RecipeLibrary.Domain.ValueObjects
 @using RecipeLibrary.Resources
 @using RecipeLibrary.Web.Models
+@using RecipeLibrary.Web.Services
 @using RecipeCategory = RecipeLibrary.Domain.ValueObjects.RecipeCategory
 @inject ICommandBus CommandBus
 @inject NavigationManager Navigation
 @inject HttpClient Http
+@inject RecipeImportDraftService ImportDraft
 
 <PageTitle>@L["RecipeCreate.PageTitle"]</PageTitle>
 
@@ -184,6 +186,42 @@
     private readonly Dictionary<int, List<IngredientLookupItem>> _ingredientSuggestions = [];
     private readonly Dictionary<int, string> _ingredientMatchMessages = [];
     private List<string> _ingredientTags = [];
+
+    protected override void OnInitialized()
+    {
+        if (!ImportDraft.TryConsumeDraft(out var draft) || draft is null)
+        {
+            return;
+        }
+
+        _vm.Title = draft.Title ?? string.Empty;
+        _vm.Description = draft.Description;
+        _vm.PreparationTimeMinutes = draft.PreparationTimeMinutes ?? _vm.PreparationTimeMinutes;
+        _vm.CookingTimeMinutes = draft.CookingTimeMinutes ?? _vm.CookingTimeMinutes;
+        _vm.Ingredients = draft.Ingredients.Select(x => new RecipeIngredientEditorItem
+        {
+            Name = x.Name,
+            Preparation = x.Preparation,
+            Quantity = x.Quantity,
+            UnitName = x.Unit,
+        }).ToList();
+
+        if (_vm.Ingredients.Count == 0)
+        {
+            _vm.Ingredients.Add(new RecipeIngredientEditorItem());
+        }
+
+        _vm.Steps = draft.Steps.Select(x => new StepVm
+        {
+            StepNumber = x.StepNumber,
+            Text = x.Text,
+        }).ToList();
+
+        if (_vm.Steps.Count == 0)
+        {
+            _vm.Steps.Add(new StepVm { StepNumber = 1 });
+        }
+    }
 
     private Task OnIngredientTagsChanged(IReadOnlyList<string> tags)
     {
