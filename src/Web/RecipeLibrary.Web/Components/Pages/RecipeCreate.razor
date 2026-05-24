@@ -144,6 +144,13 @@
     </div>
 </div>
 
+<IngredientMatchConfirmDialog IsOpen="_showMatchConfirmDialog"
+                              Items="_confirmDialogItems"
+                              OnUseSuggestion="HandleConfirmUseSuggestion"
+                              OnConfirmNew="HandleConfirmNewIngredient"
+                              OnProceed="HandleConfirmDialogProceed"
+                              OnCancel="HandleConfirmDialogCancel" />
+
 @code {
     private sealed class CreateRecipeVm
     {
@@ -184,6 +191,8 @@
     private readonly Dictionary<int, List<IngredientLookupItem>> _ingredientSuggestions = [];
     private readonly Dictionary<int, string> _ingredientMatchMessages = [];
     private List<string> _ingredientTags = [];
+    private bool _showMatchConfirmDialog;
+    private List<RecipeIngredientEditorItem> _confirmDialogItems = [];
 
     private Task OnIngredientTagsChanged(IReadOnlyList<string> tags)
     {
@@ -280,6 +289,21 @@
     {
         _statusMessage = null;
         _saveSucceeded = false;
+
+        await RecipeIngredientSaveHelper.RefreshMatchStatesAsync(Http, _vm.Ingredients);
+        if (RecipeIngredientSaveHelper.HasPendingConfirmations(_vm.Ingredients))
+        {
+            _confirmDialogItems = RecipeIngredientSaveHelper.GetPendingConfirmations(_vm.Ingredients).ToList();
+            _showMatchConfirmDialog = true;
+            StateHasChanged();
+            return;
+        }
+
+        await SaveRecipeAsync();
+    }
+
+    private async Task SaveRecipeAsync()
+    {
         _isSaving = true;
 
         try
@@ -292,13 +316,7 @@
                 PreparationTimeMinutes = _vm.PreparationTimeMinutes,
                 CookingTimeMinutes = _vm.CookingTimeMinutes,
                 Category = _vm.Category,
-                Ingredients = _vm.Ingredients.Select(x => new CreateRecipeIngredientDto
-                {
-                    Name = x.Name,
-                    Preparation = string.IsNullOrWhiteSpace(x.Preparation) ? null : x.Preparation.Trim(),
-                    Quantity = x.Quantity,
-                    Unit = x.UnitName,
-                }).ToList(),
+                Ingredients = RecipeIngredientSaveHelper.ToIngredientDtos(_vm.Ingredients),
                 InstructionSteps = _vm.Steps.Select(x => new CreateRecipeInstructionStepDto
                 {
                     StepNumber = x.StepNumber,
@@ -321,8 +339,39 @@
         finally
         {
             _isSaving = false;
+            _confirmDialogItems = [];
+            _showMatchConfirmDialog = false;
             StateHasChanged();
         }
+    }
+
+    private void HandleConfirmUseSuggestion((RecipeIngredientEditorItem Item, IngredientSuggestionItem Suggestion) args)
+    {
+        args.Item.Name = args.Suggestion.Name;
+        args.Item.SaveResolution = IngredientSaveResolution.AcceptedSuggestion;
+        args.Item.RequiresConfirmation = false;
+        args.Item.MatchSuggestions = [];
+        StateHasChanged();
+    }
+
+    private void HandleConfirmNewIngredient(RecipeIngredientEditorItem item)
+    {
+        item.SaveResolution = IngredientSaveResolution.ConfirmedNew;
+        item.RequiresConfirmation = false;
+        StateHasChanged();
+    }
+
+    private void HandleConfirmDialogCancel()
+    {
+        _showMatchConfirmDialog = false;
+        _confirmDialogItems = [];
+        StateHasChanged();
+    }
+
+    private async Task HandleConfirmDialogProceed()
+    {
+        _showMatchConfirmDialog = false;
+        await SaveRecipeAsync();
     }
 
     private async Task ApplyIngredientTagsAsync()

@@ -17,12 +17,20 @@ public sealed class MatchIngredientCommand : ICommand<MatchIngredientResult>
     public string Input { get; init; } = string.Empty;
 }
 
+public sealed class IngredientSuggestionItem
+{
+    public Guid Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public decimal Score { get; init; }
+}
+
 public sealed class MatchIngredientResult
 {
     public string MatchType { get; init; } = "none";
     public IngredientLookupItem? Ingredient { get; init; }
     public decimal Confidence { get; init; }
-    public IReadOnlyList<IngredientLookupItem> Suggestions { get; init; } = [];
+    public bool RequiresConfirmation { get; init; }
+    public IReadOnlyList<IngredientSuggestionItem> Suggestions { get; init; } = [];
 }
 
 public sealed class SearchIngredientsQuery : IQuery<IReadOnlyList<IngredientLookupItem>>

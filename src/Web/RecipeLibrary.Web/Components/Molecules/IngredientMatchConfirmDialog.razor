@@ -1,0 +1,87 @@
+@namespace RecipeLibrary.Components.Molecules
+
+@using RecipeLibrary.Application.Contracts
+@using RecipeLibrary.Web.Models
+
+@if (IsOpen)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="ingredient-match-confirm-title">
+        <div class="w-full max-w-lg rounded-lg bg-white shadow-lg">
+            <div class="border-b border-gray-200 px-5 py-4">
+                <h3 id="ingredient-match-confirm-title" class="text-base font-semibold text-gray-900">
+                    @L["RecipeCreate.Ingredient.Match.ConfirmDialog.Title"]
+                </h3>
+                <p class="mt-1 text-sm text-gray-600">@L["RecipeCreate.Ingredient.Match.ConfirmDialog.Message"]</p>
+            </div>
+
+            <div class="max-h-[60vh] overflow-y-auto px-5 py-4 space-y-4">
+                @foreach (var item in Items)
+                {
+                    <div class="rounded border border-gray-200 p-3 space-y-2">
+                        <p class="text-sm font-medium text-gray-900">@item.Name</p>
+                        @if (item.MatchSuggestions.Count > 0)
+                        {
+                            <div class="flex flex-wrap gap-2">
+                                @foreach (var suggestion in item.MatchSuggestions)
+                                {
+                                    <button type="button"
+                                            class="px-3 py-1.5 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
+                                            @onclick="() => OnUseSuggestion.InvokeAsync((item, suggestion))">
+                                        @L["RecipeCreate.Ingredient.Match.ConfirmDialog.UseSuggestion", suggestion.Name]
+                                    </button>
+                                }
+                            </div>
+                        }
+                        @if (item.SaveResolution == IngredientSaveResolution.Pending)
+                        {
+                            <button type="button"
+                                    class="block text-sm text-gray-600 underline hover:text-gray-900"
+                                    @onclick="() => OnConfirmNew.InvokeAsync(item)">
+                                @L["RecipeCreate.Ingredient.Match.ConfirmDialog.ConfirmNew", item.Name]
+                            </button>
+                        }
+                        else if (item.SaveResolution == IngredientSaveResolution.AcceptedSuggestion)
+                        {
+                            <p class="text-xs text-green-700">@L["RecipeCreate.Ingredient.Match.ConfirmDialog.ResolvedSuggestion", item.Name]</p>
+                        }
+                        else if (item.SaveResolution == IngredientSaveResolution.ConfirmedNew)
+                        {
+                            <p class="text-xs text-gray-600">@L["RecipeCreate.Ingredient.Match.ConfirmDialog.ResolvedNew", item.Name]</p>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="flex justify-end gap-3 border-t border-gray-200 px-5 py-4">
+                <button type="button"
+                        class="px-4 py-2 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
+                        @onclick="OnCancel">
+                    @L["RecipeCreate.Ingredient.Match.ConfirmDialog.Cancel"]
+                </button>
+                <button type="button"
+                        class="px-4 py-2 rounded bg-gray-800 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:pointer-events-none"
+                        disabled="@(!AllResolved)"
+                        @onclick="OnProceed">
+                    @L["RecipeCreate.Ingredient.Match.ConfirmDialog.Proceed"]
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+
+    [Parameter] public IReadOnlyList<RecipeIngredientEditorItem> Items { get; set; } = [];
+
+    [Parameter] public EventCallback<(RecipeIngredientEditorItem Item, IngredientSuggestionItem Suggestion)> OnUseSuggestion { get; set; }
+
+    [Parameter] public EventCallback<RecipeIngredientEditorItem> OnConfirmNew { get; set; }
+
+    [Parameter] public EventCallback OnProceed { get; set; }
+
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool AllResolved =>
+        Items.All(x => x.SaveResolution != IngredientSaveResolution.Pending);
+}
