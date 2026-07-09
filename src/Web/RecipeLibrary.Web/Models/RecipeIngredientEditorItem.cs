@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Domain.ValueObjects;
 using RecipeLibrary.Resources;
 
@@ -16,4 +17,12 @@ public sealed class RecipeIngredientEditorItem
 
     [Required(ErrorMessageResourceType = typeof(SharedResources), ErrorMessageResourceName = "RecipeCreate.Ingredient.Unit.Required")]
     public string UnitName { get; set; } = nameof(Unit.Gram);
+
+    public IngredientSaveResolution SaveResolution { get; set; } = IngredientSaveResolution.Pending;
+
+    public bool RequiresConfirmation { get; set; }
+
+    public List<IngredientSuggestionItem> MatchSuggestions { get; set; } = [];
+
+    public string? LastMatchType { get; set; }
 }

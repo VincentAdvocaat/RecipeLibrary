@@ -5,6 +5,10 @@ namespace RecipeLibrary.Application.Ingredients;
 
 public sealed class IngredientMatcher(IIngredientRepository ingredientRepository, IIngredientTextNormalizer normalizer)
 {
+    public const decimal SuggestionMinScore = 0.45m;
+    public const decimal FuzzyMatchScore = 0.70m;
+    public const int MaxSuggestions = 5;
+
     public async Task<IngredientMatchResult> MatchAsync(string? input, CancellationToken ct = default)
     {
         var raw = (input ?? string.Empty).Trim();
@@ -33,17 +37,22 @@ public sealed class IngredientMatcher(IIngredientRepository ingredientRepository
         }
 
         var scored = candidates
-            .Select(x => new { Ingredient = x, Score = Similarity(normalized, x.NormalizedName) })
+            .Select(x => new ScoredIngredientSuggestion(x, Similarity(normalized, x.NormalizedName)))
             .OrderByDescending(x => x.Score)
             .ToList();
 
-        var best = scored.FirstOrDefault();
-        if (best is not null && best.Score > 0.7m)
+        var filteredSuggestions = scored
+            .Where(x => x.Score >= SuggestionMinScore)
+            .Take(MaxSuggestions)
+            .ToList();
+
+        var best = filteredSuggestions.FirstOrDefault();
+        if (best is not null && best.Score > FuzzyMatchScore)
         {
-            return IngredientMatchResult.Fuzzy(normalized, best.Ingredient, best.Score, scored.Take(5).Select(x => x.Ingredient).ToList());
+            return IngredientMatchResult.Fuzzy(normalized, best.Ingredient, best.Score, filteredSuggestions);
         }
 
-        return IngredientMatchResult.None(normalized, scored.Take(5).Select(x => x.Ingredient).ToList());
+        return IngredientMatchResult.None(normalized, filteredSuggestions);
     }
 
     private static decimal Similarity(string a, string b)
@@ -133,22 +142,29 @@ public sealed class IngredientMatcher(IIngredientRepository ingredientRepository
     }
 }
 
+public sealed record ScoredIngredientSuggestion(CanonicalIngredient Ingredient, decimal Score);
+
 public sealed record IngredientMatchResult(
     string MatchType,
     CanonicalIngredient? Ingredient,
     decimal Confidence,
     string NormalizedInput,
-    IReadOnlyList<CanonicalIngredient> Suggestions)
+    IReadOnlyList<ScoredIngredientSuggestion> Suggestions,
+    bool RequiresConfirmation)
 {
     public static IngredientMatchResult Exact(string normalizedInput, CanonicalIngredient ingredient) =>
-        new("exact", ingredient, 1m, normalizedInput, []);
+        new("exact", ingredient, 1m, normalizedInput, [], false);
 
     public static IngredientMatchResult Alias(string normalizedInput, CanonicalIngredient ingredient) =>
-        new("alias", ingredient, 0.95m, normalizedInput, []);
+        new("alias", ingredient, 0.95m, normalizedInput, [], false);
 
-    public static IngredientMatchResult Fuzzy(string normalizedInput, CanonicalIngredient ingredient, decimal confidence, IReadOnlyList<CanonicalIngredient> suggestions) =>
-        new("fuzzy", ingredient, confidence, normalizedInput, suggestions);
+    public static IngredientMatchResult Fuzzy(
+        string normalizedInput,
+        CanonicalIngredient ingredient,
+        decimal confidence,
+        IReadOnlyList<ScoredIngredientSuggestion> suggestions) =>
+        new("fuzzy", ingredient, confidence, normalizedInput, suggestions, suggestions.Count > 0);
 
-    public static IngredientMatchResult None(string normalizedInput, IReadOnlyList<CanonicalIngredient> suggestions) =>
-        new("none", null, 0m, normalizedInput, suggestions);
+    public static IngredientMatchResult None(string normalizedInput, IReadOnlyList<ScoredIngredientSuggestion> suggestions) =>
+        new("none", null, 0m, normalizedInput, suggestions, suggestions.Count > 0);
 }
