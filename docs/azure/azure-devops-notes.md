@@ -1,4 +1,12 @@
-## Azure DevOps (later) – minimal pipeline sketch
+## Azure DevOps – status
+
+De GitHub ↔ Azure DevOps integratie is actief. Zie **`ado-github-integration.md`**
+voor de dagelijkse workflow (clone vanaf GitHub, `AB#` in commits, pipeline-links).
+
+De pipeline draait vanaf `azure-pipelines.yml` in GitHub; onderstaand schema is nog
+relevant voor infra/deploy-stappen.
+
+### Minimal pipeline sketch
 
 This is intentionally minimal and cost-conscious. Azure DevOps has a free tier for small teams, but build minutes/agents depend on your setup. The simplest path is:
 
