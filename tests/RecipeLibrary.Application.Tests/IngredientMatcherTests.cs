@@ -7,6 +7,12 @@ namespace RecipeLibrary.Application.Tests;
 
 public sealed class IngredientMatcherTests
 {
+    private static readonly IReadOnlyList<CanonicalIngredient> GehaktIngredients =
+    [
+        new CanonicalIngredient { Id = Guid.NewGuid(), CanonicalName = "gehakt", NormalizedName = "gehakt", CreatedAt = DateTimeOffset.UtcNow },
+        new CanonicalIngredient { Id = Guid.NewGuid(), CanonicalName = "runder gehakt", NormalizedName = "runder gehakt", CreatedAt = DateTimeOffset.UtcNow },
+    ];
+
     [Fact]
     public async Task MatchAsync_UsesAliasBeforeFuzzy()
     {
@@ -17,8 +23,7 @@ public sealed class IngredientMatcherTests
             ],
             aliases: new Dictionary<string, string> { ["verse gember"] = "gember" });
 
-        var sut = new IngredientMatcher(repo, new IngredientTextNormalizer());
-        var result = await sut.MatchAsync("verse gember");
+        var result = await CreateMatcher(repo).MatchAsync("verse gember");
 
         Assert.Equal("alias", result.MatchType);
         Assert.Equal("gember", result.Ingredient?.CanonicalName);
@@ -35,8 +40,7 @@ public sealed class IngredientMatcherTests
             ],
             aliases: new Dictionary<string, string>());
 
-        var sut = new IngredientMatcher(repo, new IngredientTextNormalizer());
-        var result = await sut.MatchAsync("tomaat");
+        var result = await CreateMatcher(repo).MatchAsync("tomaat");
 
         Assert.Equal("exact", result.MatchType);
         Assert.Equal("tomaat", result.Ingredient?.CanonicalName);
@@ -53,8 +57,7 @@ public sealed class IngredientMatcherTests
             ],
             aliases: new Dictionary<string, string>());
 
-        var sut = new IngredientMatcher(repo, new IngredientTextNormalizer());
-        var result = await sut.MatchAsync("gembre");
+        var result = await CreateMatcher(repo).MatchAsync("gembre");
 
         Assert.Equal("fuzzy", result.MatchType);
         Assert.Equal("gember", result.Ingredient?.CanonicalName);
@@ -73,8 +76,7 @@ public sealed class IngredientMatcherTests
             ],
             aliases: new Dictionary<string, string>());
 
-        var sut = new IngredientMatcher(repo, new IngredientTextNormalizer());
-        var result = await sut.MatchAsync("gembr");
+        var result = await CreateMatcher(repo).MatchAsync("gembr");
 
         Assert.True(result.RequiresConfirmation);
         Assert.NotEmpty(result.Suggestions);
@@ -90,8 +92,7 @@ public sealed class IngredientMatcherTests
             ],
             aliases: new Dictionary<string, string>());
 
-        var sut = new IngredientMatcher(repo, new IngredientTextNormalizer());
-        var result = await sut.MatchAsync("xyzabc123");
+        var result = await CreateMatcher(repo).MatchAsync("xyzabc123");
 
         Assert.Equal("none", result.MatchType);
         Assert.False(result.RequiresConfirmation);
@@ -109,11 +110,52 @@ public sealed class IngredientMatcherTests
             ],
             aliases: new Dictionary<string, string>());
 
-        var sut = new IngredientMatcher(repo, new IngredientTextNormalizer());
-        var result = await sut.MatchAsync("xyzabc123");
+        var result = await CreateMatcher(repo).MatchAsync("xyzabc123");
 
         Assert.All(result.Suggestions, x => Assert.True(x.Score >= IngredientMatcher.SuggestionMinScore));
     }
+
+    [Fact]
+    public async Task MatchAsync_SuggestsGehaktAndRunderGehakt_WhenInputIsGehak()
+    {
+        var repo = new FakeIngredientRepository(GehaktIngredients, new Dictionary<string, string>());
+
+        var result = await CreateMatcher(repo).MatchAsync("gehak");
+
+        Assert.True(result.RequiresConfirmation);
+        Assert.Contains(result.Suggestions, x => x.Ingredient.CanonicalName == "gehakt");
+        Assert.Contains(result.Suggestions, x => x.Ingredient.CanonicalName == "runder gehakt");
+        Assert.All(result.Suggestions, x => Assert.True(x.Score >= IngredientMatcher.SuggestionMinScore));
+    }
+
+    [Fact]
+    public async Task MatchAsync_SuggestsRunderGehakt_WhenInputIsGehakt()
+    {
+        var repo = new FakeIngredientRepository(
+            [GehaktIngredients[1]],
+            new Dictionary<string, string>());
+
+        var result = await CreateMatcher(repo).MatchAsync("gehakt");
+
+        Assert.Contains(result.Suggestions, x => x.Ingredient.CanonicalName == "runder gehakt");
+        Assert.True(result.RequiresConfirmation);
+    }
+
+    [Fact]
+    public async Task MatchAsync_SuggestsGehakt_WhenInputIsRunderGehakt()
+    {
+        var repo = new FakeIngredientRepository(
+            [GehaktIngredients[0]],
+            new Dictionary<string, string>());
+
+        var result = await CreateMatcher(repo).MatchAsync("runder gehakt");
+
+        Assert.Contains(result.Suggestions, x => x.Ingredient.CanonicalName == "gehakt");
+        Assert.True(result.RequiresConfirmation);
+    }
+
+    private static IngredientMatcher CreateMatcher(IIngredientRepository repo) =>
+        new(repo, new IngredientTextNormalizer(), new IngredientSimilarityScorer());
 
     private sealed class FakeIngredientRepository(
         IReadOnlyList<CanonicalIngredient> ingredients,
@@ -127,8 +169,12 @@ public sealed class IngredientMatcherTests
         public Task<CanonicalIngredient> CreateIngredientWithAliasAsync(string canonicalName, string normalizedName, string alias, string normalizedAlias, CancellationToken ct = default)
             => Task.FromResult(new CanonicalIngredient { Id = Guid.NewGuid(), CanonicalName = canonicalName, NormalizedName = normalizedName, CreatedAt = DateTimeOffset.UtcNow });
 
-        public Task<IReadOnlyList<CanonicalIngredient>> GetFuzzyCandidatesAsync(string normalizedQuery, int take, CancellationToken ct = default)
-            => Task.FromResult(ingredients);
+        public Task<IReadOnlyList<CanonicalIngredient>> GetFuzzyCandidatesAsync(string normalizedQuery, int take, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<CanonicalIngredient>>(
+                ingredients
+                    .Where(x => IngredientCandidateMatcher.Matches(normalizedQuery, x.NormalizedName))
+                    .Take(take)
+                    .ToList());
 
         public Task<CanonicalIngredient?> GetByNormalizedAliasAsync(string normalizedAlias, CancellationToken ct = default)
         {
@@ -143,8 +189,14 @@ public sealed class IngredientMatcherTests
         public Task<CanonicalIngredient?> GetByNormalizedNameAsync(string normalizedName, CancellationToken ct = default)
             => Task.FromResult(ingredients.SingleOrDefault(x => x.NormalizedName == normalizedName));
 
-        public Task<IReadOnlyList<CanonicalIngredient>> SearchAsync(string normalizedQuery, int take, CancellationToken ct = default)
-            => Task.FromResult(ingredients);
+        public Task<IReadOnlyList<CanonicalIngredient>> SearchAsync(string normalizedQuery, int take, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<CanonicalIngredient>>(
+                string.IsNullOrWhiteSpace(normalizedQuery)
+                    ? ingredients.Take(take).ToList()
+                    : ingredients
+                        .Where(x => IngredientCandidateMatcher.Matches(normalizedQuery, x.NormalizedName))
+                        .Take(take)
+                        .ToList());
 
         public Task<IReadOnlyList<Tag>> SearchTagsAsync(string normalizedQuery, int take, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Tag>>([]);

@@ -30,7 +30,7 @@ public sealed class ImportRecipePipelineTests
         new(
             new StructuredRecipeExtractor(),
             new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser())),
-            new IngredientMatcher(new FakeIngredientRepository(), new IngredientTextNormalizer()),
+            new IngredientMatcher(new FakeIngredientRepository(), new IngredientTextNormalizer(), new IngredientSimilarityScorer()),
             new TestNullIngredientLineAiParser(),
             Options.Create(new RecipeImportOptions()));
 

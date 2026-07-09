@@ -38,7 +38,7 @@ public sealed class RecipeIngredientBuilderTests
             ],
             repo,
             new IngredientTextNormalizer(),
-            new IngredientMatcher(repo, new IngredientTextNormalizer()),
+            new IngredientMatcher(repo, new IngredientTextNormalizer(), new IngredientSimilarityScorer()),
             sut,
             CancellationToken.None);
 
@@ -76,7 +76,7 @@ public sealed class RecipeIngredientBuilderTests
             ],
             repo,
             new IngredientTextNormalizer(),
-            new IngredientMatcher(repo, new IngredientTextNormalizer()),
+            new IngredientMatcher(repo, new IngredientTextNormalizer(), new IngredientSimilarityScorer()),
             sut,
             CancellationToken.None);
 
