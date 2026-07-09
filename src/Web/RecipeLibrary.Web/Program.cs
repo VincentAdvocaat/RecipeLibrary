@@ -9,6 +9,7 @@ using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Components;
 using RecipeLibrary.Infrastructure.FileStorage;
 using RecipeLibrary.Infrastructure.Persistence;
+using RecipeLibrary.Infrastructure.RecipeImport;
 using RecipeLibrary.Web.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -66,12 +67,14 @@ if (string.IsNullOrWhiteSpace(recipeDbConnectionString))
 }
 
 builder.Services.AddPersistence(recipeDbConnectionString);
+builder.Services.AddRecipeImport(builder.Configuration);
 builder.Services.AddApplication();
 
 var recipeImagesDefaultPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "RecipeLibraryUploads"));
 builder.Services.AddRecipeFileStorage(builder.Configuration, recipeImagesDefaultPath);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ShoppingListSessionService>();
+builder.Services.AddScoped<RecipeImportDraftService>();
 builder.Services.AddScoped(sp =>
 {
     var nav = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
@@ -169,6 +172,29 @@ app.MapPost("/ingredients/parse-line", (ParseIngredientLineRequest request, Ingr
         Name = parsed.Name,
         Preparation = parsed.Preparation,
     });
+}).DisableAntiforgery();
+
+app.MapPost("/recipes/import", async (ImportRecipeContentQuery query, IQueryBus queryBus, CancellationToken ct) =>
+{
+    var result = await queryBus.QueryAsync<ImportRecipeContentQuery, ImportRecipeResult>(query, ct);
+    return Results.Ok(result);
+}).DisableAntiforgery();
+
+app.MapPost("/recipes/import-url", async (ImportRecipeFromUrlQuery query, IQueryBus queryBus, CancellationToken ct) =>
+{
+    try
+    {
+        var result = await queryBus.QueryAsync<ImportRecipeFromUrlQuery, ImportRecipeResult>(query, ct);
+        return Results.Ok(result);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
 }).DisableAntiforgery();
 
 app.MapGet("/ingredients/search", async (string q, IQueryBus queryBus, CancellationToken ct) =>

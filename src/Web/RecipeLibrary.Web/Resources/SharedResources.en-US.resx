@@ -52,6 +52,29 @@
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <data name="Nav.MyRecipes" xml:space="preserve"><value>My Recipes</value></data>
   <data name="Nav.AddRecipe" xml:space="preserve"><value>Add Recipe</value></data>
+  <data name="Nav.ImportRecipe" xml:space="preserve"><value>Import Recipe</value></data>
+  <data name="RecipeImport.PageTitle" xml:space="preserve"><value>Import Recipe</value></data>
+  <data name="RecipeImport.Paste.Label" xml:space="preserve"><value>Paste recipe text or HTML</value></data>
+  <data name="RecipeImport.Paste.Placeholder" xml:space="preserve"><value>Paste a recipe from a website or plain text...</value></data>
+  <data name="RecipeImport.Url.Label" xml:space="preserve"><value>Or import from URL</value></data>
+  <data name="RecipeImport.Url.Placeholder" xml:space="preserve"><value>https://example.com/recipe</value></data>
+  <data name="RecipeImport.Url.Hint" xml:space="preserve"><value>Optional. When set, the URL is fetched instead of pasted content.</value></data>
+  <data name="RecipeImport.ProcessButton" xml:space="preserve"><value>Process import</value></data>
+  <data name="RecipeImport.CancelButton" xml:space="preserve"><value>Cancel</value></data>
+  <data name="RecipeImport.BackButton" xml:space="preserve"><value>Back to input</value></data>
+  <data name="RecipeImport.ContinueButton" xml:space="preserve"><value>Continue to recipe form</value></data>
+  <data name="RecipeImport.Preview.Intro" xml:space="preserve"><value>Review the imported recipe and correct any lines before continuing.</value></data>
+  <data name="RecipeImport.Source.Label" xml:space="preserve"><value>Import source</value></data>
+  <data name="RecipeImport.Source.JsonLd" xml:space="preserve"><value>Structured data (JSON-LD)</value></data>
+  <data name="RecipeImport.Source.PlainText" xml:space="preserve"><value>Plain text</value></data>
+  <data name="RecipeImport.Source.Mixed" xml:space="preserve"><value>Mixed</value></data>
+  <data name="RecipeImport.Source.Unknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="RecipeImport.ParseMethod.Ai" xml:space="preserve"><value>AI</value></data>
+  <data name="RecipeImport.ParseMethod.Structured" xml:space="preserve"><value>Structured</value></data>
+  <data name="RecipeImport.ParseMethod.Deterministic" xml:space="preserve"><value>Rule-based</value></data>
+  <data name="RecipeImport.Ingredient.LowConfidence" xml:space="preserve"><value>Low confidence ({0}) — parsed via {1}. Please verify.</value></data>
+  <data name="RecipeImport.Error.EmptyContent" xml:space="preserve"><value>Enter pasted content or a URL.</value></data>
+  <data name="RecipeImport.Error.NoResult" xml:space="preserve"><value>Import returned no result.</value></data>
   <data name="Nav.Overview" xml:space="preserve"><value>Overview</value></data>
   <data name="RecipeOverview.PageTitle" xml:space="preserve"><value>Recipe Overview</value></data>
   <data name="RecipeCreate.PageTitle" xml:space="preserve"><value>Add New Recipe</value></data>

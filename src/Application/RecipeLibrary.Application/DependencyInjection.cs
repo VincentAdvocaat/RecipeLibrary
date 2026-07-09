@@ -5,6 +5,8 @@ using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.UseCases.Ingredients;
 using RecipeLibrary.Application.UseCases.RecipeImages;
 using RecipeLibrary.Application.UseCases.Recipes;
+using RecipeLibrary.Application.RecipeImport;
+using RecipeLibrary.Application.UseCases.RecipeImport;
 using RecipeLibrary.Application.UseCases.ShoppingLists;
 using RecipeLibrary.Application.ShoppingLists;
 
@@ -37,6 +39,12 @@ public static class DependencyInjection
         services.AddScoped<IngredientNameParser>();
         services.AddScoped<IngredientLineResolver>();
         services.AddScoped<ShoppingListIngredientMerger>();
+
+        services.AddScoped<IngredientLineParser>();
+        services.AddScoped<StructuredRecipeExtractor>();
+        services.AddScoped<RecipeImportService>();
+        services.AddScoped<IQueryHandler<ImportRecipeContentQuery, ImportRecipeResult>, ImportRecipeContentQueryHandler>();
+        services.AddScoped<IQueryHandler<ImportRecipeFromUrlQuery, ImportRecipeResult>, ImportRecipeFromUrlQueryHandler>();
 
         services.AddScoped<IQueryHandler<GetOrCreateShoppingListGroupQuery, GetOrCreateShoppingListGroupResult>, GetOrCreateShoppingListGroupQueryHandler>();
         services.AddScoped<IQueryHandler<GetNextShoppingListNameQuery, GetNextShoppingListNameResult>, GetNextShoppingListNameQueryHandler>();
