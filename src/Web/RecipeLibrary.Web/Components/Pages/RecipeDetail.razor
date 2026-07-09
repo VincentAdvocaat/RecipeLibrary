@@ -95,12 +95,14 @@ else if (_recipe is not null)
                             </div>
                         }
                         <button type="button"
+                                data-testid="@UiTestIds.AddToShoppingList"
                                 class="px-3 py-1.5 rounded bg-gray-800 text-white text-sm font-medium"
                                 @onclick="AddToShoppingListAsync">
                             @L["RecipeDetail.AddToShoppingListButton"]
                         </button>
-                        <AppNavLink Href="@($"/recipes/{_recipe.Id}/edit")">@L["RecipeDetail.EditButton"]</AppNavLink>
+                        <AppNavLink Href="@($"/recipes/{_recipe.Id}/edit")" data-testid="@UiTestIds.RecipeEdit">@L["RecipeDetail.EditButton"]</AppNavLink>
                         <button type="button"
+                                data-testid="@UiTestIds.RecipeDelete"
                                 class="text-sm font-medium text-red-600 hover:text-red-800"
                                 @onclick="ConfirmDelete">
                             @L["RecipeDetail.DeleteButton"]
@@ -113,11 +115,13 @@ else if (_recipe is not null)
                             <p class="text-sm text-red-800">@L["RecipeDetail.DeleteConfirm.Message"]</p>
                             <div class="flex gap-3">
                                 <button type="button"
+                                        data-testid="@UiTestIds.DeleteConfirmYes"
                                         class="px-3 py-1.5 rounded bg-red-600 text-white text-sm font-medium hover:bg-red-700"
                                         @onclick="DeleteRecipeAsync">
                                     @L["RecipeDetail.DeleteConfirm.ConfirmButton"]
                                 </button>
                                 <button type="button"
+                                        data-testid="@UiTestIds.DeleteConfirmNo"
                                         class="px-3 py-1.5 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
                                         @onclick="() => _showDeleteConfirm = false">
                                     @L["RecipeDetail.DeleteConfirm.CancelButton"]

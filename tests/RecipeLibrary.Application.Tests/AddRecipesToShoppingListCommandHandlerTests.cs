@@ -1,0 +1,111 @@
+using RecipeLibrary.Application.ShoppingLists;
+using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Application.Ingredients;
+using RecipeLibrary.Application.UseCases.ShoppingLists;
+using RecipeLibrary.Domain.Entities;
+using RecipeLibrary.Domain.ValueObjects;
+using Xunit;
+
+namespace RecipeLibrary.Application.Tests;
+
+public sealed class AddRecipesToShoppingListCommandHandlerTests
+{
+    [Fact]
+    public async Task HandleAsync_Throws_WhenNoRecipeIds()
+    {
+        var sut = CreateSut(new FakeShoppingListRepository(), new FakeRecipeRepository(new Recipe { Id = Guid.NewGuid(), Title = new RecipeTitle("X") }));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new AddRecipesToShoppingListCommand { ShoppingListId = Guid.NewGuid(), RecipeIds = [] }));
+    }
+
+    [Fact]
+    public async Task HandleAsync_MergesIngredientsIntoList()
+    {
+        var listId = Guid.NewGuid();
+        var recipeId = Guid.NewGuid();
+        var list = new ShoppingList { Id = listId, Items = [] };
+        var recipe = new Recipe
+        {
+            Id = recipeId,
+            Title = new RecipeTitle("Lasagna"),
+            Ingredients =
+            [
+                new Ingredient
+                {
+                    Id = Guid.NewGuid(),
+                    IngredientId = Guid.NewGuid(),
+                    Name = "Gehakt",
+                    Quantity = new Quantity(500),
+                    Unit = Unit.Gram,
+                },
+            ],
+        };
+
+        var shoppingRepo = new FakeShoppingListRepository { List = list };
+        var recipeRepo = new FakeRecipeRepository(recipe);
+        var sut = CreateSut(shoppingRepo, recipeRepo);
+
+        var result = await sut.HandleAsync(new AddRecipesToShoppingListCommand
+        {
+            ShoppingListId = listId,
+            RecipeIds = [recipeId],
+        });
+
+        Assert.Equal(1, result.RecipesAdded);
+        Assert.Equal(1, result.IngredientsAdded);
+        Assert.NotNull(shoppingRepo.ReplacedItems);
+        Assert.Single(shoppingRepo.ReplacedItems!);
+    }
+
+    private static AddRecipesToShoppingListCommandHandler CreateSut(
+        FakeShoppingListRepository shoppingRepo,
+        FakeRecipeRepository recipeRepo) =>
+        new(recipeRepo, shoppingRepo, new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+
+    private sealed class FakeRecipeRepository(Recipe recipe) : IRecipeRepository
+    {
+        public Task<IReadOnlyList<Recipe>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Recipe>>(ids.Contains(recipe.Id) ? [recipe] : []);
+
+        public Task AddAsync(Recipe recipe, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<Recipe?> GetByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<Recipe?>(null);
+        public Task<Recipe?> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default) => Task.FromResult<Recipe?>(null);
+        public Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(Guid recipeId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<string>>([]);
+        public Task<IReadOnlyList<Recipe>> GetListAsync(string? search, RecipeCategory? category, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Recipe>>([]);
+        public Task UpdateAsync(Recipe recipe, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class FakeShoppingListRepository : IShoppingListRepository
+    {
+        public ShoppingList? List { get; init; }
+        public IReadOnlyList<ShoppingListItem>? ReplacedItems { get; private set; }
+
+        public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) =>
+            Task.FromResult(List?.Id == listId ? List : null);
+
+        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, CancellationToken ct = default)
+        {
+            ReplacedItems = items;
+            return Task.CompletedTask;
+        }
+
+        public Task<ShoppingListGroup?> GetGroupWithListsAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingListGroup?>(null);
+        public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
+        public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
+        public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
+        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<ShoppingList> AddListToGroupAsync(Guid groupId, string name, int storeOrder, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<bool> ToggleItemCheckedAsync(Guid itemId, bool isChecked, CancellationToken ct = default) => Task.FromResult(false);
+        public Task<bool> RemoveItemAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult(false);
+        public Task<ShoppingListItem?> GetItemByIdAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult<ShoppingListItem?>(null);
+        public Task<bool> UpdateListNameAsync(Guid shoppingListId, string name, CancellationToken ct = default) => Task.FromResult(false);
+        public Task<IReadOnlyList<string>> GetListNamesAsync(Guid? groupId = null, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<string>>([]);
+    }
+}

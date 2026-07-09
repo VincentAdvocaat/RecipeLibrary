@@ -1,19 +1,35 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
 - main
 
 pool:
   vmImage: ubuntu-latest
 
+variables:
+  buildConfiguration: Release
+
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- task: UseDotNet@2
+  displayName: Use .NET 10 SDK
+  inputs:
+    packageType: sdk
+    version: 10.x
+
+- script: dotnet restore RecipeLibrary.slnx
+  displayName: Restore
+
+- script: dotnet build RecipeLibrary.slnx --configuration $(buildConfiguration) --no-restore
+  displayName: Build
+
+- script: dotnet test tests/RecipeLibrary.Application.Tests --configuration $(buildConfiguration) --no-build --verbosity normal
+  displayName: Unit tests
+
+- script: dotnet test tests/RecipeLibrary.Web.ComponentTests --configuration $(buildConfiguration) --no-build --verbosity normal
+  displayName: Component tests
+
+- script: dotnet test tests/RecipeLibrary.Web.IntegrationTests --configuration $(buildConfiguration) --no-build --verbosity normal
+  displayName: Integration tests
 
 - script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+    pwsh tests/RecipeLibrary.Web.E2E.Tests/bin/$(buildConfiguration)/net10.0/playwright.ps1 install --with-deps chromium
+    dotnet test tests/RecipeLibrary.Web.E2E.Tests --configuration $(buildConfiguration) --no-build --verbosity normal
+  displayName: Playwright E2E tests

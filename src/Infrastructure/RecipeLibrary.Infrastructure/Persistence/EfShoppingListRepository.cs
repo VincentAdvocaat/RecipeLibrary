@@ -51,6 +51,7 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
     public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default)
     {
         return dbContext.ShoppingLists
+            .AsNoTracking()
             .Include(l => l.Items)
             .ThenInclude(i => i.Sources)
             .FirstOrDefaultAsync(l => l.Id == listId, ct);
@@ -59,6 +60,7 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
     public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default)
     {
         return dbContext.ShoppingLists
+            .AsNoTracking()
             .Include(l => l.Items)
             .ThenInclude(i => i.Sources)
             .FirstOrDefaultAsync(l => l.GroupId == groupId && l.StoreOrder == 1, ct);
@@ -149,6 +151,18 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
             .Where(i => i.ShoppingListId == shoppingListId)
             .ExecuteDeleteAsync(ct);
 
+        foreach (var entry in dbContext.ChangeTracker.Entries<ShoppingListItem>()
+            .Where(e => e.Entity.ShoppingListId == shoppingListId)
+            .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+
+        foreach (var entry in dbContext.ChangeTracker.Entries<ShoppingListItemSource>().ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+
         if (items.Count > 0)
         {
             await dbContext.ShoppingListItems.AddRangeAsync(items, ct);
@@ -159,6 +173,11 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
             .ExecuteUpdateAsync(
                 s => s.SetProperty(l => l.UpdatedAt, DateTimeOffset.UtcNow),
                 ct);
+
+        foreach (var entry in dbContext.ChangeTracker.Entries<ShoppingList>().ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
 
         await dbContext.SaveChangesAsync(ct);
     }

@@ -21,6 +21,8 @@ if (builder.Environment.IsDevelopment())
     DotNetEnv.Env.TraversePath().Load();
 }
 
+// Testing uses appsettings.Testing.json and WebApplicationFactory overrides.
+
 // Add services to the container.
 builder.Services.AddLocalization();
 
@@ -278,6 +280,8 @@ app.MapPost("/ingredients/{id:guid}/tags", async (Guid id, AddIngredientTagsRequ
 }).DisableAntiforgery();
 
 app.Run();
+
+public partial class Program { }
 
 public sealed class AddIngredientTagsRequest
 {

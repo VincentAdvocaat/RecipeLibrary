@@ -29,4 +29,9 @@
     <PackageReference Include="Microsoft.Identity.Web.UI" Version="3.8.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="RecipeLibrary.Web.IntegrationTests" />
+    <InternalsVisibleTo Include="RecipeLibrary.Web.E2E.Tests" />
+  </ItemGroup>
+
 </Project>
