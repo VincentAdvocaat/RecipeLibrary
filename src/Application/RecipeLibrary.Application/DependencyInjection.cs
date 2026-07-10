@@ -7,8 +7,10 @@ using RecipeLibrary.Application.UseCases.RecipeImages;
 using RecipeLibrary.Application.UseCases.Recipes;
 using RecipeLibrary.Application.RecipeImport;
 using RecipeLibrary.Application.UseCases.RecipeImport;
+using RecipeLibrary.Application.UseCases.Pantry;
 using RecipeLibrary.Application.UseCases.ShoppingLists;
 using RecipeLibrary.Application.ShoppingLists;
+using RecipeLibrary.Application.Pantry;
 
 namespace RecipeLibrary.Application;
 
@@ -40,6 +42,8 @@ public static class DependencyInjection
         services.AddScoped<IngredientNameParser>();
         services.AddScoped<IngredientLineResolver>();
         services.AddScoped<ShoppingListIngredientMerger>();
+        services.AddScoped<PantryIngredientMerger>();
+        services.AddScoped<PantrySubtractor>();
 
         services.AddScoped<IngredientLineParser>();
         services.AddScoped<StructuredRecipeExtractor>();
@@ -59,6 +63,14 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<SplitShoppingListCommand, SplitShoppingListResult>, SplitShoppingListCommandHandler>();
         services.AddScoped<ICommandHandler<MoveShoppingListItemCommand, MoveShoppingListItemResult>, MoveShoppingListItemCommandHandler>();
         services.AddScoped<ICommandHandler<UpdateShoppingListNameCommand, UpdateShoppingListNameResult>, UpdateShoppingListNameCommandHandler>();
+        services.AddScoped<ICommandHandler<UpdateShoppingListItemQuantityCommand, UpdateShoppingListItemQuantityResult>, UpdateShoppingListItemQuantityCommandHandler>();
+        services.AddScoped<ICommandHandler<AddManualShoppingListItemCommand, AddManualShoppingListItemResult>, AddManualShoppingListItemCommandHandler>();
+
+        services.AddScoped<IQueryHandler<GetPantryItemsQuery, GetPantryItemsResult>, GetPantryItemsQueryHandler>();
+        services.AddScoped<ICommandHandler<UpsertPantryItemCommand, UpsertPantryItemResult>, UpsertPantryItemCommandHandler>();
+        services.AddScoped<ICommandHandler<UpdatePantryItemQuantityCommand, UpdatePantryItemQuantityResult>, UpdatePantryItemQuantityCommandHandler>();
+        services.AddScoped<ICommandHandler<RemovePantryItemCommand, RemovePantryItemResult>, RemovePantryItemCommandHandler>();
+        services.AddScoped<ICommandHandler<ApplyPantryToShoppingListCommand, ApplyPantryToShoppingListResult>, ApplyPantryToShoppingListCommandHandler>();
 
         return services;
     }

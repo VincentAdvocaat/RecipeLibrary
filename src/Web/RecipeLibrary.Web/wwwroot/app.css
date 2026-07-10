@@ -816,6 +816,10 @@ video {
   width: 3rem;
 }
 
+.w-20 {
+  width: 5rem;
+}
+
 .w-24 {
   width: 6rem;
 }
@@ -976,6 +980,10 @@ video {
 
 .gap-y-0\.5 {
   row-gap: 0.125rem;
+}
+
+.gap-y-2 {
+  row-gap: 0.5rem;
 }
 
 .space-y-0\.5 > :not([hidden]) ~ :not([hidden]) {
@@ -1602,6 +1610,10 @@ h1:focus {
 
   .sm\:grid-cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sm\:grid-cols-\[minmax\(0\2c 1fr\)_6rem_8rem_auto\] {
+    grid-template-columns: minmax(0,1fr) 6rem 8rem auto;
   }
 
   .sm\:grid-cols-\[minmax\(0\2c 1fr\)_minmax\(0\2c 1fr\)_6rem_8rem_auto\] {

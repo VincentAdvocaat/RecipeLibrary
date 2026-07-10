@@ -1,5 +1,6 @@
-using RecipeLibrary.Application.ShoppingLists;
 using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Application.Pantry;
+using RecipeLibrary.Application.ShoppingLists;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.UseCases.ShoppingLists;
@@ -25,7 +26,8 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
     {
         var listId = Guid.NewGuid();
         var recipeId = Guid.NewGuid();
-        var list = new ShoppingList { Id = listId, Items = [] };
+        var groupId = Guid.NewGuid();
+        var list = new ShoppingList { Id = listId, GroupId = groupId, Items = [] };
         var recipe = new Recipe
         {
             Id = recipeId,
@@ -61,8 +63,15 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
 
     private static AddRecipesToShoppingListCommandHandler CreateSut(
         FakeShoppingListRepository shoppingRepo,
-        FakeRecipeRepository recipeRepo) =>
-        new(recipeRepo, shoppingRepo, new AnonymousShoppingListUserContext(), new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+        FakeRecipeRepository recipeRepo,
+        FakePantryRepository? pantryRepo = null) =>
+        new(
+            recipeRepo,
+            shoppingRepo,
+            pantryRepo ?? new FakePantryRepository(),
+            new AnonymousShoppingListUserContext(),
+            new ShoppingListIngredientMerger(new IngredientTextNormalizer()),
+            new PantrySubtractor(new PantryIngredientMerger(new IngredientTextNormalizer())));
 
     private sealed class FakeRecipeRepository(Recipe recipe) : IRecipeRepository
     {
@@ -110,5 +119,26 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
         public Task<ShoppingListItem?> GetItemByIdAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult<ShoppingListItem?>(null);
         public Task<bool> UpdateListNameAsync(Guid shoppingListId, string name, CancellationToken ct = default) => Task.FromResult(false);
         public Task<IReadOnlyList<string>> GetListNamesAsync(Guid? groupId = null, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<string>>([]);
+        public Task<bool> UpdateItemQuantityAsync(Guid itemId, decimal quantity, CancellationToken ct = default) => Task.FromResult(false);
+    }
+
+    private sealed class FakePantryRepository : IPantryRepository
+    {
+        public IReadOnlyList<PantryItem> Items { get; init; } = [];
+
+        public Task<IReadOnlyList<PantryItem>> GetByOwnerKeyAsync(string ownerKey, CancellationToken ct = default) =>
+            Task.FromResult(Items);
+
+        public Task<PantryItem?> GetByIdForOwnerAsync(Guid itemId, string ownerKey, CancellationToken ct = default) =>
+            Task.FromResult<PantryItem?>(null);
+
+        public Task<PantryItem> UpsertAsync(PantryItem item, CancellationToken ct = default) =>
+            Task.FromResult(item);
+
+        public Task<bool> UpdateQuantityAsync(Guid itemId, string ownerKey, decimal quantity, CancellationToken ct = default) =>
+            Task.FromResult(false);
+
+        public Task<bool> RemoveAsync(Guid itemId, string ownerKey, CancellationToken ct = default) =>
+            Task.FromResult(false);
     }
 }

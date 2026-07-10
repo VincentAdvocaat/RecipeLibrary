@@ -1,0 +1,246 @@
+@page "/pantry"
+@rendermode InteractiveServer
+
+@using System.Net.Http.Json
+@using RecipeLibrary.Application.Contracts
+@using RecipeLibrary.Components.Molecules
+@using RecipeLibrary.Domain.ValueObjects
+
+@inject ICommandBus CommandBus
+@inject IQueryBus QueryBus
+@inject PantrySessionService PantrySession
+@inject ShoppingListSessionService ShoppingSession
+@inject HttpClient Http
+
+<PageTitle>@L["Pantry.PageTitle"]</PageTitle>
+
+<div class="min-h-screen bg-gray-100" data-testid="@UiTestIds.PantryReady">
+    <div class="container mx-auto p-4 max-w-4xl">
+        <RecipeOverviewHeader Title="@L["Pantry.PageTitle"]" ShoppingBadgeCount="@_badgeCount" />
+
+        @if (_loading)
+        {
+            <p class="text-gray-600">@L["RecipeDetail.Loading"]</p>
+        }
+        else
+        {
+            <div class="bg-white rounded-lg shadow p-6 space-y-4">
+                <p class="text-sm text-gray-600">@L["Pantry.Intro.Message"]</p>
+
+                <div class="rounded border border-gray-200 bg-gray-50 p-4 space-y-3" data-testid="@UiTestIds.PantryAddForm">
+                    <Heading Level="3" CssClass="m-0 text-sm font-semibold text-gray-800">@L["Pantry.AddItem.SectionLabel"]</Heading>
+                    <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_6rem_8rem_auto] gap-x-3 gap-y-2">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">@L["RecipeCreate.Ingredient.Name.Label"]</label>
+                            <input class="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                   data-testid="@UiTestIds.PantryAddName"
+                                   placeholder="@L["RecipeCreate.Ingredient.Name.Placeholder"]"
+                                   value="@_addItemName"
+                                   @oninput="OnAddItemNameInput" />
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">@L["RecipeCreate.Ingredient.Quantity.Label"]</label>
+                            <IngredientQuantityInput CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                                     @bind-Quantity="_addItemQuantity" />
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">@L["RecipeCreate.Ingredient.Unit.Label"]</label>
+                            <IngredientUnitSelect CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                                  @bind-UnitName="_addItemUnit" />
+                        </div>
+                        <div class="flex items-end">
+                            <button type="button"
+                                    data-testid="@UiTestIds.PantryAddSubmit"
+                                    class="px-3 py-2 rounded bg-gray-800 text-white text-sm disabled:opacity-50"
+                                    disabled="@string.IsNullOrWhiteSpace(_addItemName)"
+                                    @onclick="AddItemAsync">
+                                @L["Pantry.AddItem.Button"]
+                            </button>
+                        </div>
+                    </div>
+                    @if (_addItemSuggestions.Count > 0)
+                    {
+                        <div class="max-w-md rounded border border-gray-200 bg-white shadow-sm">
+                            @foreach (var suggestion in _addItemSuggestions)
+                            {
+                                <button type="button"
+                                        class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                                        @onclick="() => SelectAddItemSuggestion(suggestion)">
+                                    @suggestion.Name
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (_items.Count == 0)
+                {
+                    <p class="text-gray-600">@L["Pantry.Empty.Message"]</p>
+                }
+                else
+                {
+                    <ul class="space-y-2">
+                        @foreach (var item in _items)
+                        {
+                            <li class="flex flex-wrap items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+                                @if (_editingQuantityItemId == item.Id)
+                                {
+                                    <span data-testid="@UiTestIds.PantryQuantityInput(item.Id)">
+                                        <IngredientQuantityInput CssClass="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+                                                                 @bind-Quantity="_editQuantityDraft" />
+                                    </span>
+                                    <span class="text-sm text-gray-700">@GetUnitLabel(item.Unit)</span>
+                                    <span class="text-sm font-medium text-gray-900">@item.DisplayName</span>
+                                    <button type="button"
+                                            data-testid="@UiTestIds.PantryQuantitySave(item.Id)"
+                                            class="text-xs text-gray-800 underline"
+                                            @onclick="() => SaveQuantityAsync(item.Id)">
+                                        @L["Pantry.EditQuantity.SaveButton"]
+                                    </button>
+                                    <button type="button"
+                                            class="text-xs text-gray-600"
+                                            @onclick="CancelEditQuantity">
+                                        @L["ShoppingList.Split.CancelButton"]
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="text-sm tabular-nums text-gray-700">@FormatLine(item)</span>
+                                    <span class="text-sm font-medium text-gray-900">@item.DisplayName</span>
+                                    <button type="button"
+                                            data-testid="@UiTestIds.PantryQuantityEdit(item.Id)"
+                                            class="text-xs text-gray-600 hover:text-gray-900"
+                                            @onclick="() => StartEditQuantity(item)">
+                                        @L["Pantry.EditQuantity.Button"]
+                                    </button>
+                                    <button type="button"
+                                            data-testid="@UiTestIds.PantryItemRemove(item.Id)"
+                                            class="text-xs text-red-600 hover:text-red-800 ml-auto"
+                                            @onclick="() => RemoveItemAsync(item.Id)">
+                                        @L["ShoppingList.RemoveItem.Button"]
+                                    </button>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool _loading = true;
+    private int _badgeCount;
+    private string _ownerKey = string.Empty;
+    private IReadOnlyList<PantryItemDto> _items = [];
+    private Guid? _editingQuantityItemId;
+    private decimal _editQuantityDraft;
+    private string _addItemName = string.Empty;
+    private decimal _addItemQuantity = 1;
+    private string _addItemUnit = nameof(Unit.Gram);
+    private Guid? _addItemCanonicalId;
+    private List<IngredientLookupItem> _addItemSuggestions = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _ownerKey = await PantrySession.GetOwnerKeyAsync();
+        var group = await ShoppingSession.GetOrCreateGroupAsync();
+        _badgeCount = await ShoppingSession.GetUncheckedCountAsync(group.GroupId);
+        var result = await QueryBus.QueryAsync<GetPantryItemsQuery, GetPantryItemsResult>(
+            new GetPantryItemsQuery { OwnerKey = _ownerKey });
+        _items = result.Items;
+        _loading = false;
+    }
+
+    private async Task OnAddItemNameInput(ChangeEventArgs e)
+    {
+        _addItemName = e.Value?.ToString() ?? string.Empty;
+        _addItemCanonicalId = null;
+
+        if (_addItemName.Trim().Length < 2)
+        {
+            _addItemSuggestions = [];
+            return;
+        }
+
+        var encoded = Uri.EscapeDataString(_addItemName.Trim());
+        _addItemSuggestions = await Http.GetFromJsonAsync<List<IngredientLookupItem>>($"/ingredients/search?q={encoded}") ?? [];
+    }
+
+    private void SelectAddItemSuggestion(IngredientLookupItem suggestion)
+    {
+        _addItemName = suggestion.Name;
+        _addItemCanonicalId = suggestion.Id;
+        _addItemSuggestions = [];
+    }
+
+    private async Task AddItemAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_addItemName))
+        {
+            return;
+        }
+
+        await CommandBus.SendAsync<UpsertPantryItemCommand, UpsertPantryItemResult>(
+            new UpsertPantryItemCommand
+            {
+                OwnerKey = _ownerKey,
+                CanonicalIngredientId = _addItemCanonicalId,
+                DisplayName = _addItemName.Trim(),
+                Quantity = _addItemQuantity,
+                Unit = _addItemUnit,
+            });
+
+        _addItemName = string.Empty;
+        _addItemQuantity = 1;
+        _addItemUnit = nameof(Unit.Gram);
+        _addItemCanonicalId = null;
+        _addItemSuggestions = [];
+        await ReloadAsync();
+    }
+
+    private void StartEditQuantity(PantryItemDto item)
+    {
+        _editingQuantityItemId = item.Id;
+        _editQuantityDraft = item.Quantity;
+    }
+
+    private void CancelEditQuantity() => _editingQuantityItemId = null;
+
+    private async Task SaveQuantityAsync(Guid itemId)
+    {
+        await CommandBus.SendAsync<UpdatePantryItemQuantityCommand, UpdatePantryItemQuantityResult>(
+            new UpdatePantryItemQuantityCommand
+            {
+                OwnerKey = _ownerKey,
+                ItemId = itemId,
+                Quantity = _editQuantityDraft,
+            });
+
+        _editingQuantityItemId = null;
+        await ReloadAsync();
+    }
+
+    private async Task RemoveItemAsync(Guid itemId)
+    {
+        await CommandBus.SendAsync<RemovePantryItemCommand, RemovePantryItemResult>(
+            new RemovePantryItemCommand { OwnerKey = _ownerKey, ItemId = itemId });
+        await ReloadAsync();
+    }
+
+    private string FormatLine(PantryItemDto item) =>
+        $"{item.Quantity} {GetUnitLabel(item.Unit)}";
+
+    private string GetUnitLabel(string unit)
+    {
+        var key = $"Recipe.Unit.{unit}";
+        var localized = L[key];
+        return localized.ResourceNotFound ? unit : localized.Value;
+    }
+}

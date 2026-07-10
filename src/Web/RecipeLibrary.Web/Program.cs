@@ -111,6 +111,7 @@ var recipeImagesDefaultPath = Path.GetFullPath(Path.Combine(builder.Environment.
 builder.Services.AddRecipeFileStorage(builder.Configuration, recipeImagesDefaultPath);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ShoppingListSessionService>();
+builder.Services.AddScoped<PantrySessionService>();
 builder.Services.AddScoped<RecipeImportDraftService>();
 builder.Services.AddScoped(sp =>
 {

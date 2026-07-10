@@ -46,4 +46,6 @@ public interface IShoppingListRepository
     Task<bool> UpdateListNameAsync(Guid shoppingListId, string name, CancellationToken ct = default);
 
     Task<IReadOnlyList<string>> GetListNamesAsync(Guid? groupId = null, CancellationToken ct = default);
+
+    Task<bool> UpdateItemQuantityAsync(Guid itemId, decimal quantity, CancellationToken ct = default);
 }

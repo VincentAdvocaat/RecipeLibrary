@@ -19,6 +19,7 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
     public DbSet<ShoppingList> ShoppingLists => Set<ShoppingList>();
     public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
     public DbSet<ShoppingListItemSource> ShoppingListItemSources => Set<ShoppingListItemSource>();
+    public DbSet<PantryItem> PantryItems => Set<PantryItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -277,6 +278,37 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
             b.Property(x => x.RecipeTitle)
                 .HasMaxLength(200)
                 .IsRequired();
+        });
+
+        modelBuilder.Entity<PantryItem>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.OwnerUserId)
+                .HasMaxLength(256)
+                .IsRequired();
+
+            b.Property(x => x.DisplayName)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            b.Property(x => x.Quantity)
+                .HasConversion(quantityConverter)
+                .HasPrecision(18, 3);
+
+            b.Property(x => x.Unit)
+                .HasConversion<string>()
+                .HasMaxLength(32);
+
+            b.Property(x => x.CreatedAt).IsRequired();
+            b.Property(x => x.UpdatedAt).IsRequired();
+
+            b.HasIndex(x => x.OwnerUserId);
+
+            b.HasOne(x => x.Ingredient)
+                .WithMany()
+                .HasForeignKey(x => x.CanonicalIngredientId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
