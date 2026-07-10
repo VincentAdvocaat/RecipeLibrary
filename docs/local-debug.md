@@ -27,6 +27,31 @@ docker compose up -d sql
 
 Then wait until the container is healthy (e.g. check with `docker compose ps`).
 
+## Quick start (one command)
+
+Install global CLI commands once:
+
+```powershell
+./scripts/install-cli.ps1
+```
+
+Restart PowerShell, then from any directory:
+
+```powershell
+rlstart
+# or
+recipelibrary start
+```
+
+This starts SQL (Docker), runs the web app, waits until it responds, and prints:
+
+- `http://localhost:5197`
+- `https://localhost:5196`
+
+Press Ctrl+C to stop the web app. SQL keeps running until `docker compose stop sql`.
+
+Script details: `scripts/start-local.ps1`
+
 ## 2. Connection string (local)
 
 The app reads the connection string from configuration. For **local debug**:

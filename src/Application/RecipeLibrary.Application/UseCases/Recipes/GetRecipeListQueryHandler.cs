@@ -33,6 +33,8 @@ public sealed class GetRecipeListQueryHandler(IRecipeRepository recipeRepository
             PreparationMinutes = recipe.PreparationMinutes,
             CookingMinutes = recipe.CookingMinutes,
             Category = (int)recipe.Category,
+            Servings = recipe.Servings,
+            Difficulty = (int)recipe.Difficulty,
             IngredientNames = recipe.Ingredients
                 .OrderBy(i => i.Name)
                 .Select(i => IngredientListDisplay.FormatNameWithPreparation(i.Name, i.Preparation))

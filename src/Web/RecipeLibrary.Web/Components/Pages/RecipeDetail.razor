@@ -41,7 +41,7 @@ else if (_recipe is not null)
                         <span class="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
                             @GetCategoryLabel(_recipe.Category)
                         </span>
-                        <RecipeMeta PreparationMinutes="@_recipe.PreparationMinutes" CookingMinutes="@_recipe.CookingMinutes" />
+                        <RecipeMeta PreparationMinutes="@_recipe.PreparationMinutes" CookingMinutes="@_recipe.CookingMinutes" Servings="@_recipe.Servings" DifficultyLevel="@_recipe.Difficulty" />
                     </div>
 
                     @if (_recipe.Ingredients.Count > 0)

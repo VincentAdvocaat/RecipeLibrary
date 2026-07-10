@@ -113,6 +113,12 @@ When you build or run the web project (e.g. F5 in Visual Studio), Tailwind runs 
 
 See: `docs/local-debug.md`. Voor verbinden met een SQL-client (SSMS, Azure Data Studio, enz.) en tooling: `docs/database-connection.md`.
 
+**One-command local start** (after `./scripts/install-cli.ps1`):
+
+```powershell
+rlstart
+```
+
 **Against Azure SQL (password-less)**:
 
 - `az login`

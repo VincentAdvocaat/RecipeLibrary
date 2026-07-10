@@ -1,13 +1,39 @@
-@* Molecule: preparation + cooking time for a recipe card/row. *@
+@* Molecule: preparation + cooking time, optional servings and difficulty. *@
 @namespace RecipeLibrary.Components.Molecules
+@using RecipeLibrary.Domain.ValueObjects
+@using RecipeDifficulty = RecipeLibrary.Domain.ValueObjects.Difficulty
 
 <div class="flex flex-wrap gap-4 text-sm text-gray-600 @CssClass">
     <TimeInfo Label="@L["Recipe.Time.Prepare.Label"]" Minutes="@PreparationMinutes" UseClockIcon="true" />
     <TimeInfo Label="@L["Recipe.Time.Cook.Label"]" Minutes="@CookingMinutes" UseClockIcon="false" />
+    @if (Servings > 0)
+    {
+        <span class="inline-flex items-center gap-1">
+            <span class="font-medium text-gray-700">@L["Recipe.Servings.Label"]:</span>
+            @L["Recipe.Servings.Value", Servings]
+        </span>
+    }
+    @if (DifficultyLevel is not (int)RecipeDifficulty.Unknown)
+    {
+        <span class="inline-flex items-center gap-1">
+            <span class="font-medium text-gray-700">@L["Recipe.Difficulty.Label"]:</span>
+            @GetDifficultyLabel(DifficultyLevel)
+        </span>
+    }
 </div>
 
 @code {
     [Parameter] public int PreparationMinutes { get; set; }
     [Parameter] public int CookingMinutes { get; set; }
+    [Parameter] public int Servings { get; set; }
+    [Parameter] public int DifficultyLevel { get; set; }
     [Parameter] public string? CssClass { get; set; }
+
+    private string GetDifficultyLabel(int difficulty) => difficulty switch
+    {
+        (int)RecipeDifficulty.Easy => L["Recipe.Difficulty.Easy"],
+        (int)RecipeDifficulty.Medium => L["Recipe.Difficulty.Medium"],
+        (int)RecipeDifficulty.Hard => L["Recipe.Difficulty.Hard"],
+        _ => L["Recipe.Difficulty.Unknown"],
+    };
 }

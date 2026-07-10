@@ -29,6 +29,8 @@ public sealed class GetRecipeByIdQueryHandler(IRecipeRepository recipeRepository
             PreparationMinutes = recipe.PreparationMinutes,
             CookingMinutes = recipe.CookingMinutes,
             Category = (int)recipe.Category,
+            Servings = recipe.Servings,
+            Difficulty = (int)recipe.Difficulty,
             Ingredients = recipe.Ingredients
                 .OrderBy(i => i.Name)
                 .Select(i => new RecipeDetailIngredientItem

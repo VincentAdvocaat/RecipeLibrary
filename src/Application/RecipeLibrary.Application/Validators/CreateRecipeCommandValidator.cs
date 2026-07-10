@@ -26,6 +26,21 @@ public static class CreateRecipeCommandValidator
             throw new ArgumentException("Cooking time cannot be negative.", nameof(command));
         }
 
+        if (command.Servings < 0)
+        {
+            throw new ArgumentException("Servings cannot be negative.", nameof(command));
+        }
+
+        if (command.Servings > 100)
+        {
+            throw new ArgumentException("Servings cannot exceed 100.", nameof(command));
+        }
+
+        if (!Enum.IsDefined(typeof(Difficulty), command.Difficulty))
+        {
+            throw new ArgumentException("Difficulty is not a valid value.", nameof(command));
+        }
+
         if (command.Ingredients is null || command.Ingredients.Count == 0)
         {
             throw new ArgumentException("At least one ingredient is required.", nameof(command));

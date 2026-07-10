@@ -87,6 +87,15 @@
   <data name="RecipeCreate.TagsCategory.Label" xml:space="preserve"><value>Tags / Categorie</value></data>
   <data name="RecipeCreate.PreparationTime.Label" xml:space="preserve"><value>Voorbereidingstijd (min)</value></data>
   <data name="RecipeCreate.CookingTime.Label" xml:space="preserve"><value>Bereidingstijd (min)</value></data>
+  <data name="RecipeCreate.Servings.Label" xml:space="preserve"><value>Porties</value></data>
+  <data name="RecipeCreate.Difficulty.Label" xml:space="preserve"><value>Moeilijkheidsgraad</value></data>
+  <data name="Recipe.Servings.Label" xml:space="preserve"><value>Porties</value></data>
+  <data name="Recipe.Servings.Value" xml:space="preserve"><value>{0} porties</value></data>
+  <data name="Recipe.Difficulty.Label" xml:space="preserve"><value>Moeilijkheidsgraad</value></data>
+  <data name="Recipe.Difficulty.Unknown" xml:space="preserve"><value>Niet opgegeven</value></data>
+  <data name="Recipe.Difficulty.Easy" xml:space="preserve"><value>Makkelijk</value></data>
+  <data name="Recipe.Difficulty.Medium" xml:space="preserve"><value>Gemiddeld</value></data>
+  <data name="Recipe.Difficulty.Hard" xml:space="preserve"><value>Moeilijk</value></data>
   <data name="RecipeCreate.Equipment.SectionLabel" xml:space="preserve"><value>Benodigdheden</value></data>
   <data name="RecipeCreate.Equipment.Oven.Button" xml:space="preserve"><value>Oven Nodig</value></data>
   <data name="RecipeCreate.Equipment.Baking.Button" xml:space="preserve"><value>Bakken Nodig</value></data>

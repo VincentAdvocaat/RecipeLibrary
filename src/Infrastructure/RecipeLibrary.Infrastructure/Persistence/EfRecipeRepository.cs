@@ -108,6 +108,8 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
                     .SetProperty(r => r.PreparationMinutes, recipe.PreparationMinutes)
                     .SetProperty(r => r.CookingMinutes, recipe.CookingMinutes)
                     .SetProperty(r => r.Category, recipe.Category)
+                    .SetProperty(r => r.Servings, recipe.Servings)
+                    .SetProperty(r => r.Difficulty, recipe.Difficulty)
                     .SetProperty(r => r.UpdatedAt, recipe.UpdatedAt),
                 ct);
     }

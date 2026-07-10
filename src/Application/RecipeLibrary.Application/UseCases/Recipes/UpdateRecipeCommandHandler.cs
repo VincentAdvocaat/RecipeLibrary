@@ -25,6 +25,8 @@ public sealed class UpdateRecipeCommandHandler(
             PreparationTimeMinutes = command.PreparationTimeMinutes,
             CookingTimeMinutes = command.CookingTimeMinutes,
             Category = command.Category,
+            Servings = command.Servings,
+            Difficulty = command.Difficulty,
             Ingredients = command.Ingredients,
             InstructionSteps = command.InstructionSteps,
         };
@@ -37,6 +39,9 @@ public sealed class UpdateRecipeCommandHandler(
         var category = Enum.IsDefined(typeof(RecipeCategory), command.Category)
             ? (RecipeCategory)command.Category
             : RecipeCategory.Unknown;
+        var difficulty = Enum.IsDefined(typeof(Difficulty), command.Difficulty)
+            ? (Difficulty)command.Difficulty
+            : Difficulty.Unknown;
         var description = (command.Description ?? string.Empty).Trim();
         var imageUrl = (command.ImageUrl ?? string.Empty).Trim();
 
@@ -60,8 +65,8 @@ public sealed class UpdateRecipeCommandHandler(
             PreparationMinutes = command.PreparationTimeMinutes,
             CookingMinutes = command.CookingTimeMinutes,
             Category = category,
-            Difficulty = existing.Difficulty,
-            Servings = existing.Servings,
+            Difficulty = difficulty,
+            Servings = command.Servings,
             CreatedAt = existing.CreatedAt,
             UpdatedAt = DateTimeOffset.UtcNow,
             Ingredients = builtIngredients.ToList(),

@@ -32,6 +32,7 @@ var suffix = (nameSuffix == '') ? stableSuffix : toLower(nameSuffix)
 
 var webAppName = toLower('${projectName}-${environment}-${suffix}')
 var planName = toLower('asp-${projectName}-${environment}-${suffix}')
+var storageAccountName = toLower('st${substring(uniqueString(resourceGroup().id, projectName, environment, 'blob'), 0, 22)}')
 
 // SQL logical server names must be lowercase, alphanumeric, and hyphen; max 63.
 var sqlServerName = toLower('sql-${projectName}-${environment}-${suffix}')
@@ -73,6 +74,48 @@ resource webAppSettings 'Microsoft.Web/sites/config@2023-12-01' = {
   properties: {
     ASPNETCORE_ENVIRONMENT: 'test'
     WEBSITE_RUN_FROM_PACKAGE: '1'
+    RecipeFileStorage__Provider: 'AzureBlob'
+    RecipeFileStorage__AzureBlob__AccountName: storageAccount.name
+    RecipeFileStorage__AzureBlob__ContainerName: 'recipe-images'
+  }
+}
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  name: storageAccountName
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    minimumTlsVersion: 'TLS1_2'
+    allowBlobPublicAccess: false
+    supportsHttpsTrafficOnly: true
+  }
+}
+
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+  parent: storageAccount
+  name: 'default'
+}
+
+resource recipeImagesContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: 'recipe-images'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+
+resource webBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccount.id, web.id, storageBlobDataContributorRoleId)
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
+    principalId: web.identity.principalId
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -151,4 +194,6 @@ output sqlServerName string = sqlServer.name
 output sqlServerFqdn string = sqlFqdn
 output sqlDatabaseName string = sqlDb.name
 output webAppManagedIdentityPrincipalId string = web.identity.principalId
+output storageAccountName string = storageAccount.name
+output recipeImagesContainerName string = recipeImagesContainer.name
 

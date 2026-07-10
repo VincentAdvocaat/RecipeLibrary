@@ -10,6 +10,12 @@ public sealed class CreateRecipeCommand : ICommand<CreateRecipeResult>
 
     public int Category { get; init; } // RecipeCategory value
 
+    /// <summary>Number of servings; 0 means not specified.</summary>
+    public int Servings { get; init; }
+
+    /// <summary><see cref="Difficulty"/> enum value.</summary>
+    public int Difficulty { get; init; }
+
     public string? Description { get; init; }
 
     public string? ImageUrl { get; init; }
@@ -69,6 +75,9 @@ public sealed class RecipeOverviewItem
     public int CookingMinutes { get; init; }
     /// <summary>RecipeCategory enum value.</summary>
     public int Category { get; init; }
+    public int Servings { get; init; }
+    /// <summary><see cref="Difficulty"/> enum value.</summary>
+    public int Difficulty { get; init; }
     public IReadOnlyList<string> IngredientNames { get; init; } = [];
 }
 
@@ -108,6 +117,9 @@ public sealed class GetRecipeByIdResult
     public int PreparationMinutes { get; init; }
     public int CookingMinutes { get; init; }
     public int Category { get; init; }
+    public int Servings { get; init; }
+    /// <summary><see cref="Difficulty"/> enum value.</summary>
+    public int Difficulty { get; init; }
     public IReadOnlyList<RecipeDetailIngredientItem> Ingredients { get; init; } = [];
     public IReadOnlyList<RecipeDetailStepItem> Steps { get; init; } = [];
 }
@@ -135,6 +147,9 @@ public sealed class UpdateRecipeCommand : ICommand<UpdateRecipeResult>
     public int PreparationTimeMinutes { get; init; }
     public int CookingTimeMinutes { get; init; }
     public int Category { get; init; }
+    public int Servings { get; init; }
+    /// <summary><see cref="Difficulty"/> enum value.</summary>
+    public int Difficulty { get; init; }
     public string? Description { get; init; }
     public string? ImageUrl { get; init; }
     public List<CreateRecipeIngredientDto> Ingredients { get; init; } = [];

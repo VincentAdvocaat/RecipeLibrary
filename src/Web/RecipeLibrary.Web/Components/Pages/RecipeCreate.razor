@@ -8,6 +8,7 @@
 @using RecipeLibrary.Web.Models
 @using RecipeLibrary.Web.Services
 @using RecipeCategory = RecipeLibrary.Domain.ValueObjects.RecipeCategory
+@using RecipeDifficulty = RecipeLibrary.Domain.ValueObjects.Difficulty
 @inject ICommandBus CommandBus
 @inject NavigationManager Navigation
 @inject HttpClient Http
@@ -54,6 +55,22 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.CookingTime.Label"]</label>
                                 <InputNumber class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" @bind-Value="_vm.CookingTimeMinutes" />
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.Servings.Label"]</label>
+                                <InputNumber class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" @bind-Value="_vm.Servings" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.Difficulty.Label"]</label>
+                                <InputSelect class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" @bind-Value="_vm.DifficultyLevel">
+                                    @foreach (var option in _difficultyOptions)
+                                    {
+                                        <option value="@option.Value">@option.Label</option>
+                                    }
+                                </InputSelect>
                             </div>
                         </div>
 
@@ -168,6 +185,11 @@
         [Range(0, 24 * 60)]
         public int CookingTimeMinutes { get; set; } = 0;
 
+        [Range(0, 100)]
+        public int Servings { get; set; } = 4;
+
+        public int DifficultyLevel { get; set; } = (int)RecipeDifficulty.Easy;
+
         public int Category { get; set; } = (int)RecipeCategory.Vegetarian;
 
         public List<RecipeIngredientEditorItem> Ingredients { get; set; } = [new RecipeIngredientEditorItem()];
@@ -196,9 +218,18 @@
     private List<string> _ingredientTags = [];
     private bool _showMatchConfirmDialog;
     private List<RecipeIngredientEditorItem> _confirmDialogItems = [];
+    private List<(int Value, string Label)> _difficultyOptions = [];
 
     protected override void OnInitialized()
     {
+        _difficultyOptions =
+        [
+            ((int)RecipeDifficulty.Unknown, L["Recipe.Difficulty.Unknown"]),
+            ((int)RecipeDifficulty.Easy, L["Recipe.Difficulty.Easy"]),
+            ((int)RecipeDifficulty.Medium, L["Recipe.Difficulty.Medium"]),
+            ((int)RecipeDifficulty.Hard, L["Recipe.Difficulty.Hard"]),
+        ];
+
         if (!ImportDraft.TryConsumeDraft(out var draft) || draft is null)
         {
             return;
@@ -354,6 +385,8 @@
                 ImageUrl = string.IsNullOrWhiteSpace(_imageUrl) ? null : _imageUrl.Trim(),
                 PreparationTimeMinutes = _vm.PreparationTimeMinutes,
                 CookingTimeMinutes = _vm.CookingTimeMinutes,
+                Servings = _vm.Servings,
+                Difficulty = _vm.DifficultyLevel,
                 Category = _vm.Category,
                 Ingredients = RecipeIngredientSaveHelper.ToIngredientDtos(_vm.Ingredients),
                 InstructionSteps = _vm.Steps.Select(x => new CreateRecipeInstructionStepDto

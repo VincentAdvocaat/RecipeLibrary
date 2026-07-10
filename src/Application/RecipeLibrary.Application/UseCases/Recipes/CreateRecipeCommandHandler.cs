@@ -27,6 +27,10 @@ public sealed class CreateRecipeCommandHandler(
             ? (RecipeCategory)command.Category
             : RecipeCategory.Unknown;
 
+        var difficulty = Enum.IsDefined(typeof(Difficulty), command.Difficulty)
+            ? (Difficulty)command.Difficulty
+            : Difficulty.Unknown;
+
         var description = (command.Description ?? string.Empty).Trim();
         var imageUrl = (command.ImageUrl ?? string.Empty).Trim();
 
@@ -39,8 +43,8 @@ public sealed class CreateRecipeCommandHandler(
             PreparationMinutes = command.PreparationTimeMinutes,
             CookingMinutes = command.CookingTimeMinutes,
             Category = category,
-            Difficulty = Difficulty.Unknown,
-            Servings = 0,
+            Difficulty = difficulty,
+            Servings = command.Servings,
             CreatedAt = now,
             UpdatedAt = now,
         };

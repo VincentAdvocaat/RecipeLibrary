@@ -87,6 +87,15 @@
   <data name="RecipeCreate.TagsCategory.Label" xml:space="preserve"><value>Tags / Category</value></data>
   <data name="RecipeCreate.PreparationTime.Label" xml:space="preserve"><value>Preparation time (min)</value></data>
   <data name="RecipeCreate.CookingTime.Label" xml:space="preserve"><value>Cooking time (min)</value></data>
+  <data name="RecipeCreate.Servings.Label" xml:space="preserve"><value>Servings</value></data>
+  <data name="RecipeCreate.Difficulty.Label" xml:space="preserve"><value>Difficulty</value></data>
+  <data name="Recipe.Servings.Label" xml:space="preserve"><value>Servings</value></data>
+  <data name="Recipe.Servings.Value" xml:space="preserve"><value>{0} portions</value></data>
+  <data name="Recipe.Difficulty.Label" xml:space="preserve"><value>Difficulty</value></data>
+  <data name="Recipe.Difficulty.Unknown" xml:space="preserve"><value>Not specified</value></data>
+  <data name="Recipe.Difficulty.Easy" xml:space="preserve"><value>Easy</value></data>
+  <data name="Recipe.Difficulty.Medium" xml:space="preserve"><value>Medium</value></data>
+  <data name="Recipe.Difficulty.Hard" xml:space="preserve"><value>Hard</value></data>
   <data name="RecipeCreate.Equipment.SectionLabel" xml:space="preserve"><value>Equipment</value></data>
   <data name="RecipeCreate.Equipment.Oven.Button" xml:space="preserve"><value>Oven required</value></data>
   <data name="RecipeCreate.Equipment.Baking.Button" xml:space="preserve"><value>Baking required</value></data>
