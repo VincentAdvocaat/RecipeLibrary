@@ -12,22 +12,30 @@ environment after a successful build on `main`.
 
 Deploy stage steps:
 
-1. Create/update resource group (`infra/subscription.bicep`)
-2. Deploy App Service, SQL, storage (`infra/main.bicep`)
+1. Verify the target resource group already exists (pipeline does **not** deploy at subscription scope)
+2. Deploy App Service, SQL, storage (`infra/main.bicep`) into that group
 3. Zip-deploy the published Web app
 4. HTTP smoke check on the default hostname
 
 No passwords or connection strings are stored in the repo. Entra IDs and the
 Azure service connection are configured in Azure DevOps only.
 
+## 0) Resource group (manual, one-time)
+
+Create the resource group **before** the first pipeline deploy, for example:
+
+```bash
+az group create --name rg-recipelibrary-test-weu --location westeurope
+```
+
+Or use `infra/subscription.bicep` from your laptop (`az deployment sub create`).
+The pipeline only deploys `infra/main.bicep` at resource-group scope.
+
 ## 1) Azure service connection
 
 In **Project settings → Service connections**, create an **Azure Resource
 Manager** connection (workload identity federation or service principal) with
-rights to deploy resources in your subscription, for example:
-
-- Contributor on resource group `rg-recipelibrary-test-weu`, or
-- Contributor on the subscription (simpler for test)
+**Contributor on resource group** `rg-recipelibrary-test-weu` only.
 
 Name the connection **`RecipeLibrary-Azure`** (or override pipeline variable
 `azureServiceConnection`).
@@ -80,6 +88,8 @@ See also `docs/azure/test-runbook.md` for manual laptop deploy and local debug.
 
 ## Troubleshooting
 
+- **Resource group not found**: create `rg-recipelibrary-test-weu` manually; the
+  pipeline does not provision resource groups or subscription-scoped resources.
 - **Service connection not authorized**: approve the connection when prompted.
 - **Empty `AZURE_*` variables**: deploy fails at Bicep; set secrets in pipeline
   settings.

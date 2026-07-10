@@ -72,6 +72,9 @@ stages:
       runOnce:
         deploy:
           steps:
+          - checkout: self
+            displayName: Checkout repository
+
           - download: current
             artifact: webapp
             displayName: Download webapp artifact
@@ -82,15 +85,13 @@ stages:
               azureSubscription: $(azureServiceConnection)
               scriptType: bash
               scriptLocation: inlineScript
+              workingDirectory: $(Build.SourcesDirectory)
               inlineScript: |
                 set -euo pipefail
                 az bicep install
 
-                az deployment sub create \
-                  --name "rg-$(Build.BuildId)" \
-                  --location "$(azureLocation)" \
-                  --template-file infra/subscription.bicep \
-                  --parameters projectName="$(projectName)" environment="$(environmentName)"
+                echo "Verifying resource group exists (pipeline does not create RGs)..."
+                az group show --name "$(resourceGroupName)" >/dev/null
 
                 deployment_name="main-$(Build.BuildId)"
                 outputs="$(az deployment group create \

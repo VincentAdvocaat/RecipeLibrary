@@ -16,6 +16,8 @@ This folder contains Bicep templates to provision a **test** environment on Azur
 
 ### Pipeline deploy
 
-CI/CD on `main` deploys this stack via `azure-pipelines.yml`. Entra parameters
-come from Azure DevOps secret variables — see `docs/azure/pipeline-setup.md`.
+CI/CD on `main` deploys `main.bicep` into an existing resource group via
+`azure-pipelines.yml`. Create the group first (`subscription.bicep` is for
+manual/local use only). Entra parameters come from Azure DevOps variables — see
+`docs/azure/pipeline-setup.md`.
 

@@ -47,7 +47,7 @@ De pipeline **VincentAdvocaat.RecipeLibrary** leest `azure-pipelines.yml` uit Gi
 (branch `main`). Triggers:
 
 - **CI** bij pushes naar `main` en pull requests naar `main`
-- **CD (test)** na succesvolle build op `main`: Bicep-infra + zip-deploy naar App Service
+- **CD (test)** na succesvolle build op `main`: Bicep (`main.bicep`) + zip-deploy naar App Service in een bestaande resource group
 
 Eenmalige Azure DevOps-configuratie (service connection, geheime variabelen,
 environment `test`): zie **`pipeline-setup.md`**.
