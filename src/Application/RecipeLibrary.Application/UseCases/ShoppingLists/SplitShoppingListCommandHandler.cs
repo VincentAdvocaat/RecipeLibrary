@@ -7,6 +7,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class SplitShoppingListCommandHandler(
     IShoppingListRepository repository,
+    IShoppingListUserContext userContext,
     ShoppingListIngredientMerger merger)
     : ICommandHandler<SplitShoppingListCommand, SplitShoppingListResult>
 {
@@ -24,6 +25,12 @@ public sealed class SplitShoppingListCommandHandler(
         {
             throw new ArgumentException("At least one item must be selected.");
         }
+
+        await ShoppingListAccessGuard.EnsureGroupAccessAsync(
+            repository,
+            command.GroupId,
+            userContext.OwnerUserId,
+            ct);
 
         if (await repository.GroupHasSecondListAsync(command.GroupId, ct))
         {

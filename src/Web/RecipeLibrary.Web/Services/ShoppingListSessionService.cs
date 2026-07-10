@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Http;
 
 using Microsoft.Extensions.Localization;
 
+using RecipeLibrary.Application.Abstractions;
+
 using RecipeLibrary.Application.Contracts;
 
 using RecipeLibrary.Resources;
@@ -19,6 +21,8 @@ public sealed class ShoppingListSessionService(
     IHttpContextAccessor httpContextAccessor,
 
     IQueryBus queryBus,
+
+    IShoppingListUserContext userContext,
 
     IStringLocalizer<SharedResources> localizer,
 
@@ -149,6 +153,8 @@ public sealed class ShoppingListSessionService(
             {
 
                 GroupId = groupId,
+
+                OwnerUserId = userContext.OwnerUserId,
 
                 DefaultListNameFormat = localizer["ShoppingList.NumberedNameFormat"].Value,
 

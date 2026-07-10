@@ -17,7 +17,15 @@ public sealed class GetOrCreateShoppingListGroupQueryHandler(IShoppingListReposi
             throw new ArgumentException("Default list name format is required.");
         }
 
-        if (query.GroupId is { } groupId && groupId != Guid.Empty)
+        if (!string.IsNullOrWhiteSpace(query.OwnerUserId))
+        {
+            var ownedGroup = await repository.GetGroupByOwnerUserIdAsync(query.OwnerUserId, ct);
+            if (ownedGroup is not null)
+            {
+                return ShoppingListMapping.MapGroup(ownedGroup);
+            }
+        }
+        else if (query.GroupId is { } groupId && groupId != Guid.Empty)
         {
             var existing = await repository.GetGroupWithListsAsync(groupId, ct);
             if (existing is not null)
@@ -28,7 +36,7 @@ public sealed class GetOrCreateShoppingListGroupQueryHandler(IShoppingListReposi
 
         var existingNames = await repository.GetListNamesAsync(groupId: null, ct);
         var defaultName = ShoppingListDefaultNameBuilder.GetNextNumberedName(nameFormat, existingNames);
-        var created = await repository.CreateGroupWithPrimaryListAsync(defaultName, ct);
+        var created = await repository.CreateGroupWithPrimaryListAsync(defaultName, query.OwnerUserId, ct);
         var loaded = await repository.GetGroupWithListsAsync(created.Id, ct)
             ?? throw new InvalidOperationException("Failed to load created shopping list group.");
 

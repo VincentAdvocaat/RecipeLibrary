@@ -6,8 +6,15 @@ public interface IShoppingListRepository
 {
     Task<ShoppingListGroup?> GetGroupWithListsAsync(Guid groupId, CancellationToken ct = default);
 
+    Task<ShoppingListGroup?> GetGroupByOwnerUserIdAsync(string ownerUserId, CancellationToken ct = default);
+
+    Task<bool> IsGroupAccessibleAsync(Guid groupId, string? ownerUserId, CancellationToken ct = default);
+
+    Task<bool> IsListAccessibleAsync(Guid listId, string? ownerUserId, CancellationToken ct = default);
+
     Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(
         string primaryListName,
+        string? ownerUserId = null,
         CancellationToken ct = default);
 
     Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default);

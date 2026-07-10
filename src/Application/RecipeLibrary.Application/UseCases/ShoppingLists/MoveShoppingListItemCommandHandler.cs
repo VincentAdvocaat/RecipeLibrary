@@ -6,6 +6,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class MoveShoppingListItemCommandHandler(
     IShoppingListRepository repository,
+    IShoppingListUserContext userContext,
     ShoppingListIngredientMerger merger)
     : ICommandHandler<MoveShoppingListItemCommand, MoveShoppingListItemResult>
 {
@@ -13,6 +14,12 @@ public sealed class MoveShoppingListItemCommandHandler(
         MoveShoppingListItemCommand command,
         CancellationToken ct = default)
     {
+        await ShoppingListAccessGuard.EnsureItemAccessAsync(
+            repository,
+            command.ItemId,
+            userContext.OwnerUserId,
+            ct);
+
         var item = await repository.GetItemByIdAsync(command.ItemId, ct)
             ?? throw new InvalidOperationException("Shopping list item not found.");
 

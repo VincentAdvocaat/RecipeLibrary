@@ -13,7 +13,7 @@ public sealed class ToggleShoppingListItemCommandHandlerTests
     {
         var itemId = Guid.NewGuid();
         var repo = new FakeShoppingListRepository { ToggleResult = true };
-        var sut = new ToggleShoppingListItemCommandHandler(repo);
+        var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousShoppingListUserContext());
 
         var result = await sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true });
 
@@ -33,7 +33,10 @@ public sealed class ToggleShoppingListItemCommandHandlerTests
         }
 
         public Task<ShoppingListGroup?> GetGroupWithListsAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingListGroup?>(null);
-        public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<ShoppingListGroup?> GetGroupByOwnerUserIdAsync(string ownerUserId, CancellationToken ct = default) => Task.FromResult<ShoppingListGroup?>(null);
+        public Task<bool> IsGroupAccessibleAsync(Guid groupId, string? ownerUserId, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> IsListAccessibleAsync(Guid listId, string? ownerUserId, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, string? ownerUserId = null, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);

@@ -11,7 +11,7 @@ public sealed class UpdateShoppingListNameCommandHandlerTests
     [Fact]
     public async Task HandleAsync_Throws_WhenNameEmpty()
     {
-        var sut = new UpdateShoppingListNameCommandHandler(new FakeShoppingListRepository());
+        var sut = new UpdateShoppingListNameCommandHandler(new FakeShoppingListRepository(), new AnonymousShoppingListUserContext());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new UpdateShoppingListNameCommand { ShoppingListId = Guid.NewGuid(), Name = "  " }));
@@ -22,7 +22,7 @@ public sealed class UpdateShoppingListNameCommandHandlerTests
     {
         var listId = Guid.NewGuid();
         var repo = new FakeShoppingListRepository { UpdateNameResult = true };
-        var sut = new UpdateShoppingListNameCommandHandler(repo);
+        var sut = new UpdateShoppingListNameCommandHandler(repo, new AnonymousShoppingListUserContext());
 
         var result = await sut.HandleAsync(new UpdateShoppingListNameCommand { ShoppingListId = listId, Name = "Store 2" });
 
@@ -45,7 +45,10 @@ public sealed class UpdateShoppingListNameCommandHandlerTests
         }
 
         public Task<ShoppingListGroup?> GetGroupWithListsAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingListGroup?>(null);
-        public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<ShoppingListGroup?> GetGroupByOwnerUserIdAsync(string ownerUserId, CancellationToken ct = default) => Task.FromResult<ShoppingListGroup?>(null);
+        public Task<bool> IsGroupAccessibleAsync(Guid groupId, string? ownerUserId, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> IsListAccessibleAsync(Guid listId, string? ownerUserId, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, string? ownerUserId = null, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);

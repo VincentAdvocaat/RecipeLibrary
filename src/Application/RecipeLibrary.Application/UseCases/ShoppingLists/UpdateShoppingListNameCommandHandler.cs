@@ -1,9 +1,12 @@
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Application.ShoppingLists;
 
 namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
-public sealed class UpdateShoppingListNameCommandHandler(IShoppingListRepository repository)
+public sealed class UpdateShoppingListNameCommandHandler(
+    IShoppingListRepository repository,
+    IShoppingListUserContext userContext)
     : ICommandHandler<UpdateShoppingListNameCommand, UpdateShoppingListNameResult>
 {
     public async Task<UpdateShoppingListNameResult> HandleAsync(
@@ -20,6 +23,12 @@ public sealed class UpdateShoppingListNameCommandHandler(IShoppingListRepository
         {
             throw new ArgumentException("List name must be at most 100 characters.");
         }
+
+        await ShoppingListAccessGuard.EnsureListAccessAsync(
+            repository,
+            command.ShoppingListId,
+            userContext.OwnerUserId,
+            ct);
 
         var updated = await repository.UpdateListNameAsync(command.ShoppingListId, name, ct);
         return new UpdateShoppingListNameResult(updated);
