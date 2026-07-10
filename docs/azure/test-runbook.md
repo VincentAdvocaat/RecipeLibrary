@@ -61,7 +61,13 @@ Run the script in `docs/azure/sql-grants.sql`:
 - once for your own user (optional if you’re Entra admin + have rights)
 - once for the Web App Managed Identity display name (see portal -> Web App -> Identity)
 
-### 4) Deploy the app from your laptop
+### 4) Deploy via pipeline (preferred)
+
+After one-time setup in `docs/azure/pipeline-setup.md`, merges to `main` run the
+**Deploy test environment** stage automatically (Bicep + zip deploy). Use laptop
+deploy below only for ad-hoc debugging.
+
+### 5) Deploy the app from your laptop
 
 1. Publish:
    - `dotnet publish src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj -c Release -o ./.publish`
@@ -69,7 +75,7 @@ Run the script in `docs/azure/sql-grants.sql`:
 2. Zip deploy:
    - `az webapp deploy --resource-group rg-recipelibrary-test-weu --name <webAppName> --src-path ./.publish --type zip`
 
-### 5) Local dev against Azure SQL (no secrets)
+### 6) Local dev against Azure SQL (no secrets)
 
 Set a password-less connection string for your local run:
 

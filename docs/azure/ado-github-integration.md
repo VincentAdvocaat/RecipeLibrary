@@ -46,10 +46,13 @@ git commit -m "Add shopping list export AB#15"
 De pipeline **VincentAdvocaat.RecipeLibrary** leest `azure-pipelines.yml` uit GitHub
 (branch `main`). Triggers:
 
-- **CI** bij pushes naar `main`
-- **PR-validatie** bij pull requests naar `main`
+- **CI** bij pushes naar `main` en pull requests naar `main`
+- **CD (test)** na succesvolle build op `main`: Bicep-infra + zip-deploy naar App Service
 
-Recente builds draaien al succesvol vanaf GitHub (geen Azure Repos nodig).
+Eenmalige Azure DevOps-configuratie (service connection, geheime variabelen,
+environment `test`): zie **`pipeline-setup.md`**.
+
+Recente builds draaien vanaf GitHub (geen Azure Repos nodig).
 
 ## Wat is al geconfigureerd
 
