@@ -37,6 +37,10 @@ In **Project settings → Service connections**, create an **Azure Resource
 Manager** connection (workload identity federation or service principal) with
 **Contributor on resource group** `rg-recipelibrary-test-weu` only.
 
+Contributor is enough for Bicep deploy. Role assignments (blob access for the
+Web App managed identity) are **not** in Bicep — run once after the first deploy
+(see step 4).
+
 Name the connection **`RecipeLibrary-Azure`** (or override pipeline variable
 `azureServiceConnection`).
 
@@ -66,17 +70,31 @@ in `azure-pipelines.yml`).
 Optional: add an approval check on `test` so deploys to Azure require manual
 confirmation.
 
-## 4) One-time SQL grants (after first infra deploy)
+## 4) One-time grants (after first infra deploy)
 
-The pipeline does not run T-SQL. After the **first** successful infra deploy,
-grant the Web App managed identity access to the database:
+The pipeline does not run T-SQL or create Azure RBAC role assignments (the
+deploy service principal typically has Contributor only).
+
+### SQL (managed identity → database)
 
 1. Open the Web App → **Identity** → note the managed identity name (same as
    the web app name).
 2. Connect to Azure SQL with Entra ID (Azure Data Studio).
 3. Run `docs/azure/sql-grants.sql` for that principal.
 
-Subsequent deploys only update the app package; grants persist.
+### Blob storage (managed identity → storage account)
+
+From a shell with **User Access Administrator** or **Owner** on the resource
+group (your user account is fine):
+
+```bash
+./docs/azure/storage-blob-rbac.sh rg-recipelibrary-test-weu <webAppName>
+```
+
+`<webAppName>` is in the Bicep deploy output (`webAppName`) or the App Service
+name in the portal.
+
+Subsequent pipeline deploys only update the app package; grants persist.
 
 See also `docs/azure/test-runbook.md` for manual laptop deploy and local debug.
 
@@ -94,4 +112,7 @@ See also `docs/azure/test-runbook.md` for manual laptop deploy and local debug.
 - **Empty `AZURE_*` variables**: deploy fails at Bicep; set secrets in pipeline
   settings.
 - **App starts but DB errors**: run SQL grants for the managed identity.
-- **Free SQL paused**: wake the database from the portal or wait for auto-resume.
+- **InvalidTemplateDeployment / roleAssignments/write**: Bicep no longer creates
+  blob RBAC; run `docs/azure/storage-blob-rbac.sh` once with an account that can
+  assign roles. Alternatively grant the pipeline service principal **User Access
+  Administrator** on the resource group and restore role assignment in Bicep.

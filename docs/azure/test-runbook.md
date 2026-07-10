@@ -61,6 +61,12 @@ Run the script in `docs/azure/sql-grants.sql`:
 - once for your own user (optional if you’re Entra admin + have rights)
 - once for the Web App Managed Identity display name (see portal -> Web App -> Identity)
 
+Grant blob access for recipe images (one-time, requires role-assignment rights):
+
+```bash
+./docs/azure/storage-blob-rbac.sh rg-recipelibrary-test-weu <webAppName>
+```
+
 ### 4) Deploy via pipeline (preferred)
 
 After one-time setup in `docs/azure/pipeline-setup.md`, merges to `main` run the
