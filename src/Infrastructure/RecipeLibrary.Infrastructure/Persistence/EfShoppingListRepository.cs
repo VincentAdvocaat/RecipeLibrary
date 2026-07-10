@@ -16,8 +16,43 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
             .FirstOrDefaultAsync(g => g.Id == groupId, ct);
     }
 
+    public Task<ShoppingListGroup?> GetGroupByOwnerUserIdAsync(string ownerUserId, CancellationToken ct = default)
+    {
+        return dbContext.ShoppingListGroups
+            .AsNoTracking()
+            .Include(g => g.Lists.OrderBy(l => l.StoreOrder))
+            .ThenInclude(l => l.Items.OrderBy(i => i.SortOrder).ThenBy(i => i.DisplayName))
+            .ThenInclude(i => i.Sources)
+            .FirstOrDefaultAsync(g => g.OwnerUserId == ownerUserId, ct);
+    }
+
+    public Task<bool> IsGroupAccessibleAsync(Guid groupId, string? ownerUserId, CancellationToken ct = default)
+    {
+        if (ownerUserId is null)
+        {
+            return dbContext.ShoppingListGroups.AnyAsync(g => g.Id == groupId, ct);
+        }
+
+        return dbContext.ShoppingListGroups.AnyAsync(
+            g => g.Id == groupId && g.OwnerUserId == ownerUserId,
+            ct);
+    }
+
+    public Task<bool> IsListAccessibleAsync(Guid listId, string? ownerUserId, CancellationToken ct = default)
+    {
+        if (ownerUserId is null)
+        {
+            return dbContext.ShoppingLists.AnyAsync(l => l.Id == listId, ct);
+        }
+
+        return dbContext.ShoppingLists.AnyAsync(
+            l => l.Id == listId && l.Group!.OwnerUserId == ownerUserId,
+            ct);
+    }
+
     public async Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(
         string primaryListName,
+        string? ownerUserId = null,
         CancellationToken ct = default)
     {
         var now = DateTimeOffset.UtcNow;
@@ -27,6 +62,7 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
         var group = new ShoppingListGroup
         {
             Id = groupId,
+            OwnerUserId = ownerUserId,
             CreatedAt = now,
             UpdatedAt = now,
             Lists =

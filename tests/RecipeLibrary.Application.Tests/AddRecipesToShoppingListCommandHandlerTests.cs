@@ -62,7 +62,7 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
     private static AddRecipesToShoppingListCommandHandler CreateSut(
         FakeShoppingListRepository shoppingRepo,
         FakeRecipeRepository recipeRepo) =>
-        new(recipeRepo, shoppingRepo, new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+        new(recipeRepo, shoppingRepo, new AnonymousShoppingListUserContext(), new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
 
     private sealed class FakeRecipeRepository(Recipe recipe) : IRecipeRepository
     {
@@ -93,7 +93,10 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
         }
 
         public Task<ShoppingListGroup?> GetGroupWithListsAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingListGroup?>(null);
-        public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<ShoppingListGroup?> GetGroupByOwnerUserIdAsync(string ownerUserId, CancellationToken ct = default) => Task.FromResult<ShoppingListGroup?>(null);
+        public Task<bool> IsGroupAccessibleAsync(Guid groupId, string? ownerUserId, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> IsListAccessibleAsync(Guid listId, string? ownerUserId, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, string? ownerUserId = null, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);

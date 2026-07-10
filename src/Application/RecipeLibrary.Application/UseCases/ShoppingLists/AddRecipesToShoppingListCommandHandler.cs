@@ -8,6 +8,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 public sealed class AddRecipesToShoppingListCommandHandler(
     IRecipeRepository recipeRepository,
     IShoppingListRepository shoppingListRepository,
+    IShoppingListUserContext userContext,
     ShoppingListIngredientMerger merger)
     : ICommandHandler<AddRecipesToShoppingListCommand, AddRecipesToShoppingListResult>
 {
@@ -19,6 +20,12 @@ public sealed class AddRecipesToShoppingListCommandHandler(
         {
             throw new ArgumentException("At least one recipe id is required.");
         }
+
+        await ShoppingListAccessGuard.EnsureListAccessAsync(
+            shoppingListRepository,
+            command.ShoppingListId,
+            userContext.OwnerUserId,
+            ct);
 
         var list = await shoppingListRepository.GetListByIdAsync(command.ShoppingListId, ct)
             ?? throw new InvalidOperationException("Shopping list not found.");
