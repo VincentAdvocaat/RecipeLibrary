@@ -18,6 +18,23 @@ var builder = WebApplication.CreateBuilder(args);
 // In Development, load .env from repo root so MSSQL_SA_PASSWORD is available for local connection string fallback.
 if (builder.Environment.IsDevelopment())
 {
+    LoadDotEnvFromAncestors(builder.Environment.ContentRootPath);
+}
+
+static void LoadDotEnvFromAncestors(string startPath)
+{
+    for (var dir = new DirectoryInfo(startPath); dir is not null; dir = dir.Parent)
+    {
+        var envFile = Path.Combine(dir.FullName, ".env");
+        if (!File.Exists(envFile))
+        {
+            continue;
+        }
+
+        DotNetEnv.Env.Load(envFile);
+        return;
+    }
+
     DotNetEnv.Env.TraversePath().Load();
 }
 
@@ -65,7 +82,10 @@ if (string.IsNullOrWhiteSpace(recipeDbConnectionString) && builder.Environment.I
 }
 if (string.IsNullOrWhiteSpace(recipeDbConnectionString))
 {
-    throw new InvalidOperationException("Missing connection string 'RecipeDb'. Set ConnectionStrings__RecipeDb (local) or configure it in App Service connection strings.");
+    throw new InvalidOperationException(
+        "Missing connection string 'RecipeDb'. For local development: set ASPNETCORE_ENVIRONMENT=Development, " +
+        "add MSSQL_SA_PASSWORD to .env at the repository root, and start the SQL container (e.g. rlstart). " +
+        "Or set ConnectionStrings__RecipeDb explicitly.");
 }
 
 builder.Services.AddPersistence(recipeDbConnectionString);

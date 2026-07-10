@@ -139,7 +139,8 @@ $dotnetArgs = @(
   'run',
   '--project', $webProject,
   '--urls', $urls,
-  '--no-launch-profile'
+  '--no-launch-profile',
+  '--environment', 'Development'
 )
 if ($NoBuild) {
   $dotnetArgs += '--no-build'
