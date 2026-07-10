@@ -1,30 +1,138 @@
 trigger:
 - main
 
+pr:
+- main
+
 pool:
   vmImage: ubuntu-latest
 
 variables:
   buildConfiguration: Release
+  azureLocation: westeurope
+  resourceGroupName: rg-recipelibrary-test-weu
+  projectName: recipelibrary
+  environmentName: test
+  # Set in Pipeline > Edit > Variables, or link variable group RecipeLibrary-Test (see docs/azure/pipeline-setup.md).
+  azureServiceConnection: RecipeLibrary-Azure
 
-steps:
-- task: UseDotNet@2
-  displayName: Use .NET 10 SDK
-  inputs:
-    packageType: sdk
-    version: 10.x
+stages:
+- stage: Build
+  displayName: Build and test
+  jobs:
+  - job: BuildAndTest
+    displayName: Build, test, publish
+    steps:
+    - task: UseDotNet@2
+      displayName: Use .NET 10 SDK
+      inputs:
+        packageType: sdk
+        version: 10.x
 
-- script: dotnet restore RecipeLibrary.slnx
-  displayName: Restore
+    - script: dotnet restore RecipeLibrary.slnx
+      displayName: Restore
 
-- script: dotnet build RecipeLibrary.slnx --configuration $(buildConfiguration) --no-restore
-  displayName: Build
+    - script: dotnet build RecipeLibrary.slnx --configuration $(buildConfiguration) --no-restore
+      displayName: Build
 
-- script: dotnet test tests/RecipeLibrary.Application.Tests --configuration $(buildConfiguration) --no-build --verbosity normal
-  displayName: Unit tests
+    - script: dotnet test tests/RecipeLibrary.Application.Tests --configuration $(buildConfiguration) --no-build --verbosity normal
+      displayName: Unit tests
 
-- script: dotnet test tests/RecipeLibrary.Web.ComponentTests --configuration $(buildConfiguration) --no-build --verbosity normal
-  displayName: Component tests
+    - script: dotnet test tests/RecipeLibrary.Web.ComponentTests --configuration $(buildConfiguration) --no-build --verbosity normal
+      displayName: Component tests
 
-- script: dotnet test tests/RecipeLibrary.Web.IntegrationTests --configuration $(buildConfiguration) --no-build --verbosity normal
-  displayName: Integration tests
+    - script: dotnet test tests/RecipeLibrary.Web.IntegrationTests --configuration $(buildConfiguration) --no-build --verbosity normal
+      displayName: Integration tests
+
+    - script: dotnet publish src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)/publish
+      displayName: Publish web app
+
+    - task: ArchiveFiles@2
+      displayName: Zip publish output
+      inputs:
+        rootFolderOrFile: $(Build.ArtifactStagingDirectory)/publish
+        includeRootFolder: false
+        archiveType: zip
+        archiveFile: $(Build.ArtifactStagingDirectory)/webapp.zip
+        replaceExistingArchive: true
+
+    - publish: $(Build.ArtifactStagingDirectory)/webapp.zip
+      artifact: webapp
+      displayName: Publish webapp artifact
+
+- stage: DeployTest
+  displayName: Deploy test environment
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
+  jobs:
+  - deployment: DeployTest
+    displayName: Bicep + Web App deploy
+    environment: test
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            displayName: Checkout repository
+
+          - download: current
+            artifact: webapp
+            displayName: Download webapp artifact
+
+          - task: AzureCLI@2
+            displayName: Deploy Bicep infrastructure
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              workingDirectory: $(Build.SourcesDirectory)
+              inlineScript: |
+                set -euo pipefail
+                az bicep install
+
+                echo "Verifying resource group exists (pipeline does not create RGs)..."
+                az group show --name "$(resourceGroupName)" >/dev/null
+
+                deployment_name="main-$(Build.BuildId)"
+                outputs="$(az deployment group create \
+                  --name "$deployment_name" \
+                  --resource-group "$(resourceGroupName)" \
+                  --template-file infra/main.bicep \
+                  --parameters \
+                    location="$(azureLocation)" \
+                    projectName="$(projectName)" \
+                    environment="$(environmentName)" \
+                    tenantId="$(AZURE_TENANT_ID)" \
+                    entraAdminLogin="$(AZURE_ENTRA_ADMIN_LOGIN)" \
+                    entraAdminObjectId="$(AZURE_ENTRA_ADMIN_OBJECT_ID)" \
+                  --query properties.outputs -o json)"
+
+                web_app_name="$(echo "$outputs" | jq -r '.webAppName.value')"
+                echo "Deployed web app: $web_app_name"
+                echo "##vso[task.setvariable variable=webAppName]$web_app_name"
+
+          - task: AzureCLI@2
+            displayName: Deploy Web App package
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                az webapp deploy \
+                  --resource-group "$(resourceGroupName)" \
+                  --name "$(webAppName)" \
+                  --src-path "$(Pipeline.Workspace)/webapp/webapp.zip" \
+                  --type zip
+
+          - task: AzureCLI@2
+            displayName: Smoke check
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                hostname="$(az webapp show --resource-group "$(resourceGroupName)" --name "$(webAppName)" --query defaultHostName -o tsv)"
+                echo "Test URL: https://$hostname"
+                curl --fail --retry 5 --retry-delay 10 --retry-all-errors -sS -o /dev/null -w "%{http_code}" "https://$hostname"

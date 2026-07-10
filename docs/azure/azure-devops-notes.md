@@ -3,8 +3,9 @@
 De GitHub ↔ Azure DevOps integratie is actief. Zie **`ado-github-integration.md`**
 voor de dagelijkse workflow (clone vanaf GitHub, `AB#` in commits, pipeline-links).
 
-De pipeline draait vanaf `azure-pipelines.yml` in GitHub; onderstaand schema is nog
-relevant voor infra/deploy-stappen.
+De pipeline draait vanaf `azure-pipelines.yml` in GitHub met stages **Build** en
+**DeployTest**. Eenmalige ADO-setup: `pipeline-setup.md`. Onderstaand schema
+beschrijft dezelfde stappen voor referentie.
 
 ### Minimal pipeline sketch
 
