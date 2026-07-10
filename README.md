@@ -137,8 +137,14 @@ Policy reference: `.cursor/rules/worktrees-and-branches.mdc`
 - Azure SQL Free Offer is configured to **auto-pause until next month** when the free limit is exhausted.
 - Set a budget/alert on the resource group/subscription to avoid surprises.
 
+## Azure DevOps (boards & CI)
+
+Code staat op **GitHub**; backlog en pipelines in **Azure DevOps**. Geen aparte
+repo-sync nodig. Zie `docs/azure/ado-github-integration.md`.
+
 ## Docs index
 
+- `docs/azure/ado-github-integration.md` — GitHub + Azure DevOps workflow
 - `docs/local-debug.md` — local debug with Docker SQL
 - `docs/database-connection.md` — verbinden met de lokale Docker-database en tooling (SSMS, Azure Data Studio, VS Code)
 - `infra/README.md`
