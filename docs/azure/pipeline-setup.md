@@ -35,11 +35,27 @@ The pipeline only deploys `infra/main.bicep` at resource-group scope.
 
 In **Project settings → Service connections**, create an **Azure Resource
 Manager** connection (workload identity federation or service principal) with
-**Contributor on resource group** `rg-recipelibrary-test-weu` only.
+**Contributor on resource group** `rg-recipelibrary-test-weu`.
 
-Contributor is enough for Bicep deploy. Role assignments (blob access for the
-Web App managed identity) are **not** in Bicep — run once after the first deploy
-(see step 4).
+Contributor alone cannot create `Microsoft.Authorization/roleAssignments`
+(Bicep grants the Web App managed identity **Storage Blob Data Contributor** on
+the storage account). Grant the service principal **Role Based Access Control
+Administrator** on the same resource group, with a condition that allows only
+that role (one-time, outside the pipeline):
+
+```bash
+az role assignment create \
+  --assignee-object-id <service-principal-object-id> \
+  --assignee-principal-type ServicePrincipal \
+  --role "Role Based Access Control Administrator" \
+  --scope "/subscriptions/<subscription-id>/resourceGroups/rg-recipelibrary-test-weu" \
+  --condition "((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe}))" \
+  --condition-version "2.0"
+```
+
+Use the service principal **object id** from the service connection (not the
+application/client id). The Bicep role assignment uses a stable `guid()` name and
+is idempotent on redeploy.
 
 Name the connection **`RecipeLibrary-Azure`** (or override pipeline variable
 `azureServiceConnection`).
@@ -70,31 +86,18 @@ in `azure-pipelines.yml`).
 Optional: add an approval check on `test` so deploys to Azure require manual
 confirmation.
 
-## 4) One-time grants (after first infra deploy)
+## 4) One-time SQL grants (after first infra deploy)
 
-The pipeline does not run T-SQL or create Azure RBAC role assignments (the
-deploy service principal typically has Contributor only).
-
-### SQL (managed identity → database)
+The pipeline does not run T-SQL. Blob RBAC for recipe images is created by
+`infra/main.bicep` during deploy (idempotent). After the **first** successful
+infra deploy, grant the Web App managed identity access to the database:
 
 1. Open the Web App → **Identity** → note the managed identity name (same as
    the web app name).
 2. Connect to Azure SQL with Entra ID (Azure Data Studio).
 3. Run `docs/azure/sql-grants.sql` for that principal.
 
-### Blob storage (managed identity → storage account)
-
-From a shell with **User Access Administrator** or **Owner** on the resource
-group (your user account is fine):
-
-```bash
-./docs/azure/storage-blob-rbac.sh rg-recipelibrary-test-weu <webAppName>
-```
-
-`<webAppName>` is in the Bicep deploy output (`webAppName`) or the App Service
-name in the portal.
-
-Subsequent pipeline deploys only update the app package; grants persist.
+Subsequent pipeline deploys only update the app package; SQL grants persist.
 
 See also `docs/azure/test-runbook.md` for manual laptop deploy and local debug.
 
@@ -112,7 +115,9 @@ See also `docs/azure/test-runbook.md` for manual laptop deploy and local debug.
 - **Empty `AZURE_*` variables**: deploy fails at Bicep; set secrets in pipeline
   settings.
 - **App starts but DB errors**: run SQL grants for the managed identity.
-- **InvalidTemplateDeployment / roleAssignments/write**: Bicep no longer creates
-  blob RBAC; run `docs/azure/storage-blob-rbac.sh` once with an account that can
-  assign roles. Alternatively grant the pipeline service principal **User Access
-  Administrator** on the resource group and restore role assignment in Bicep.
+- **InvalidTemplateDeployment / roleAssignments/write**: grant the pipeline
+  service principal **Role Based Access Control Administrator** on the resource
+  group with the Storage Blob Data Contributor condition (see step 1). Do not use
+  **User Access Administrator** unless you accept broader role-assignment rights.
+- **Blob upload errors**: confirm the Web App managed identity has **Storage Blob
+  Data Contributor** on the storage account (created by Bicep on deploy).
