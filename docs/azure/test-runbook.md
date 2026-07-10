@@ -61,6 +61,10 @@ Run the script in `docs/azure/sql-grants.sql`:
 - once for your own user (optional if you’re Entra admin + have rights)
 - once for the Web App Managed Identity display name (see portal -> Web App -> Identity)
 
+Blob access for recipe images is granted by `infra/main.bicep` (Storage Blob Data
+Contributor on the storage account for the Web App managed identity). Redeploying
+the template is idempotent.
+
 ### 4) Deploy via pipeline (preferred)
 
 After one-time setup in `docs/azure/pipeline-setup.md`, merges to `main` run the
