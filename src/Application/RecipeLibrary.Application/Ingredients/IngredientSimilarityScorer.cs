@@ -1,0 +1,143 @@
+namespace RecipeLibrary.Application.Ingredients;
+
+public sealed class IngredientSimilarityScorer
+{
+    public const decimal SharedExactTokenBoost = 0.72m;
+    public const decimal CandidateSubsetBoost = 0.78m;
+
+    public decimal Score(string normalizedInput, string normalizedCandidate)
+    {
+        if (normalizedInput.Length == 0 || normalizedCandidate.Length == 0)
+        {
+            return 0m;
+        }
+
+        if (normalizedInput == normalizedCandidate)
+        {
+            return 1m;
+        }
+
+        var scores = new List<decimal> { StringSimilarity(normalizedInput, normalizedCandidate) };
+
+        var inputTokens = IngredientNameTokenizer.SplitTokens(normalizedInput);
+        var candidateTokens = IngredientNameTokenizer.SplitTokens(normalizedCandidate);
+
+        foreach (var inputToken in inputTokens)
+        {
+            foreach (var candidateToken in candidateTokens)
+            {
+                scores.Add(StringSimilarity(inputToken, candidateToken));
+            }
+        }
+
+        if (inputTokens.Count == 1)
+        {
+            foreach (var candidateToken in candidateTokens)
+            {
+                scores.Add(StringSimilarity(normalizedInput, candidateToken));
+            }
+        }
+
+        if (HasSharedExactToken(inputTokens, candidateTokens))
+        {
+            scores.Add(SharedExactTokenBoost);
+        }
+
+        if (IsCandidateTokenSubset(candidateTokens, inputTokens))
+        {
+            scores.Add(CandidateSubsetBoost);
+        }
+
+        return scores.Max();
+    }
+
+    public static decimal StringSimilarity(string a, string b) =>
+        Math.Max(LevenshteinSimilarity(a, b), JaroWinklerSimilarity(a, b));
+
+    private static bool HasSharedExactToken(IReadOnlyList<string> inputTokens, IReadOnlyList<string> candidateTokens) =>
+        inputTokens.Any(inputToken => candidateTokens.Contains(inputToken));
+
+    private static bool IsCandidateTokenSubset(IReadOnlyList<string> candidateTokens, IReadOnlyList<string> inputTokens) =>
+        candidateTokens.Count > 0 && candidateTokens.All(candidateToken => inputTokens.Contains(candidateToken));
+
+    private static decimal LevenshteinSimilarity(string a, string b)
+    {
+        if (a.Length == 0 && b.Length == 0) return 1m;
+        var maxLength = Math.Max(a.Length, b.Length);
+        var distance = LevenshteinDistance(a, b);
+        return maxLength == 0 ? 1m : 1m - (decimal)distance / maxLength;
+    }
+
+    private static int LevenshteinDistance(string a, string b)
+    {
+        var rows = a.Length + 1;
+        var cols = b.Length + 1;
+        var matrix = new int[rows, cols];
+
+        for (var i = 0; i < rows; i++) matrix[i, 0] = i;
+        for (var j = 0; j < cols; j++) matrix[0, j] = j;
+
+        for (var i = 1; i < rows; i++)
+        {
+            for (var j = 1; j < cols; j++)
+            {
+                var cost = a[i - 1] == b[j - 1] ? 0 : 1;
+                matrix[i, j] = Math.Min(
+                    Math.Min(matrix[i - 1, j] + 1, matrix[i, j - 1] + 1),
+                    matrix[i - 1, j - 1] + cost);
+            }
+        }
+
+        return matrix[a.Length, b.Length];
+    }
+
+    private static decimal JaroWinklerSimilarity(string s1, string s2)
+    {
+        if (s1 == s2) return 1m;
+        if (s1.Length == 0 || s2.Length == 0) return 0m;
+
+        var matchDistance = Math.Max(s1.Length, s2.Length) / 2 - 1;
+        var s1Matches = new bool[s1.Length];
+        var s2Matches = new bool[s2.Length];
+        var matches = 0;
+
+        for (var i = 0; i < s1.Length; i++)
+        {
+            var start = Math.Max(0, i - matchDistance);
+            var end = Math.Min(i + matchDistance + 1, s2.Length);
+            for (var j = start; j < end; j++)
+            {
+                if (s2Matches[j] || s1[i] != s2[j]) continue;
+                s1Matches[i] = true;
+                s2Matches[j] = true;
+                matches++;
+                break;
+            }
+        }
+
+        if (matches == 0) return 0m;
+
+        decimal transpositions = 0;
+        var k = 0;
+        for (var i = 0; i < s1.Length; i++)
+        {
+            if (!s1Matches[i]) continue;
+            while (!s2Matches[k]) k++;
+            if (s1[i] != s2[k]) transpositions++;
+            k++;
+        }
+
+        transpositions /= 2m;
+        var m = (decimal)matches;
+        var jaro = ((m / s1.Length) + (m / s2.Length) + ((m - transpositions) / m)) / 3m;
+
+        var prefix = 0;
+        for (var i = 0; i < Math.Min(4, Math.Min(s1.Length, s2.Length)); i++)
+        {
+            if (s1[i] == s2[i]) prefix++;
+            else break;
+        }
+
+        return jaro + (prefix * 0.1m * (1m - jaro));
+    }
+}

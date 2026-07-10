@@ -27,7 +27,10 @@ public sealed class EfIngredientRepository(RecipeDbContext dbContext) : IIngredi
         var query = dbContext.Ingredients.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(normalizedQuery))
         {
-            query = query.Where(x => x.NormalizedName.Contains(normalizedQuery));
+            var tokens = SplitQueryTokens(normalizedQuery);
+            query = query.Where(x =>
+                x.NormalizedName.Contains(normalizedQuery)
+                || tokens.Any(token => x.NormalizedName.Contains(token)));
             return await query
                 .OrderByDescending(x => x.NormalizedName.StartsWith(normalizedQuery))
                 .ThenBy(x => x.CanonicalName)
@@ -43,9 +46,13 @@ public sealed class EfIngredientRepository(RecipeDbContext dbContext) : IIngredi
 
     public async Task<IReadOnlyList<CanonicalIngredient>> GetFuzzyCandidatesAsync(string normalizedQuery, int take, CancellationToken ct = default)
     {
+        var tokens = SplitQueryTokens(normalizedQuery);
         return await dbContext.Ingredients
             .AsNoTracking()
-            .Where(x => x.NormalizedName.Contains(normalizedQuery) || normalizedQuery.Contains(x.NormalizedName))
+            .Where(x =>
+                x.NormalizedName.Contains(normalizedQuery)
+                || normalizedQuery.Contains(x.NormalizedName)
+                || tokens.Any(token => x.NormalizedName.Contains(token)))
             .OrderBy(x => x.CanonicalName)
             .Take(take)
             .ToListAsync(ct);
@@ -132,4 +139,7 @@ public sealed class EfIngredientRepository(RecipeDbContext dbContext) : IIngredi
 
         await dbContext.SaveChangesAsync(ct);
     }
+
+    private static string[] SplitQueryTokens(string normalizedQuery) =>
+        normalizedQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }
