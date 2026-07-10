@@ -1,0 +1,87 @@
+using Microsoft.Extensions.Options;
+using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Application.Ingredients;
+using RecipeLibrary.Application.RecipeImport;
+using RecipeLibrary.Application.UseCases.RecipeImport;
+using Xunit;
+
+namespace RecipeLibrary.Application.Tests.RecipeImport;
+
+public sealed class ImportRecipeQueryHandlerTests
+{
+    [Fact]
+    public async Task ImportRecipeContentQueryHandler_DelegatesToImportService()
+    {
+        var html = await File.ReadAllTextAsync(GetFixturePath("jsonld-pasta.html"));
+        var service = CreateService();
+        var sut = new ImportRecipeContentQueryHandler(service);
+
+        var result = await sut.HandleAsync(new ImportRecipeContentQuery { Content = html, ContentKind = ImportContentKind.Html });
+
+        Assert.Equal("Snelle pasta", result.Title);
+        Assert.Equal(ImportSource.JsonLd, result.Source);
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromUrlQueryHandler_FetchesAndImports()
+    {
+        var html = await File.ReadAllTextAsync(GetFixturePath("jsonld-pasta.html"));
+        var fetcher = new FakeContentFetcher(html);
+        var sut = new ImportRecipeFromUrlQueryHandler(fetcher, CreateService());
+
+        var result = await sut.HandleAsync(new ImportRecipeFromUrlQuery { Url = "https://example.com/recipe" });
+
+        Assert.Equal("Snelle pasta", result.Title);
+        Assert.Equal("https://example.com/recipe", fetcher.LastUrl);
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromUrlQueryHandler_Throws_ForInvalidUrl()
+    {
+        var sut = new ImportRecipeFromUrlQueryHandler(new FakeContentFetcher(""), CreateService());
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new ImportRecipeFromUrlQuery { Url = "not-a-url" }));
+    }
+
+    private static RecipeImportService CreateService() =>
+        new(
+            new StructuredRecipeExtractor(),
+            new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser())),
+            new IngredientMatcher(new EmptyIngredientRepository(), new IngredientTextNormalizer(), new IngredientSimilarityScorer()),
+            new NullIngredientLineAiParser(),
+            Options.Create(new RecipeImportOptions()));
+
+    private static string GetFixturePath(string fileName) =>
+        Path.Combine(AppContext.BaseDirectory, "Fixtures", "recipe-import", fileName);
+
+    private sealed class NullIngredientLineAiParser : IIngredientLineAiParser
+    {
+        public Task<IReadOnlyList<AiParsedIngredientLine>> ParseLinesAsync(IReadOnlyList<string> rawLines, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AiParsedIngredientLine>>([]);
+    }
+
+    private sealed class EmptyIngredientRepository : IIngredientRepository
+    {
+        public Task AddMatchLogAsync(Domain.Entities.IngredientMatchLog log, CancellationToken ct = default) => Task.CompletedTask;
+        public Task AddTagsAsync(Guid ingredientId, IReadOnlyList<(string Name, string NormalizedName)> tags, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<Domain.Entities.CanonicalIngredient> CreateIngredientWithAliasAsync(string canonicalName, string normalizedName, string alias, string normalizedAlias, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyList<Domain.Entities.CanonicalIngredient>> GetFuzzyCandidatesAsync(string normalizedQuery, int take, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Domain.Entities.CanonicalIngredient>>([]);
+        public Task<Domain.Entities.CanonicalIngredient?> GetByNormalizedAliasAsync(string normalizedAlias, CancellationToken ct = default) => Task.FromResult<Domain.Entities.CanonicalIngredient?>(null);
+        public Task<Domain.Entities.CanonicalIngredient?> GetByNormalizedNameAsync(string normalizedName, CancellationToken ct = default) => Task.FromResult<Domain.Entities.CanonicalIngredient?>(null);
+        public Task<IReadOnlyList<Domain.Entities.CanonicalIngredient>> SearchAsync(string normalizedQuery, int take, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Domain.Entities.CanonicalIngredient>>([]);
+        public Task<IReadOnlyList<Domain.Entities.Tag>> SearchTagsAsync(string normalizedQuery, int take, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Domain.Entities.Tag>>([]);
+    }
+
+    private sealed class FakeContentFetcher(string html) : IRecipeImportContentFetcher
+    {
+        public string? LastUrl { get; private set; }
+
+        public Task<string> FetchHtmlAsync(string url, CancellationToken ct = default)
+        {
+            LastUrl = url;
+            return Task.FromResult(html);
+        }
+    }
+}
