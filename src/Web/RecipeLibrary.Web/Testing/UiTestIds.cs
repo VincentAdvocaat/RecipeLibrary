@@ -1,0 +1,62 @@
+namespace RecipeLibrary.Web.Testing;
+
+/// <summary>Stable data-testid values for UI and E2E tests (language-independent).</summary>
+public static class UiTestIds
+{
+    public const string NavRecipes = "nav-recipes";
+    public const string NavCreate = "nav-create";
+    public const string NavShoppingList = "nav-shopping-list";
+    public const string NavBadge = "nav-badge";
+
+    public const string SearchInput = "search-input";
+    public const string CategoryAll = "category-all";
+    public const string CategoryMeat = "category-meat";
+    public const string ViewToggleList = "view-toggle-list";
+    public const string ViewToggleCards = "view-toggle-cards";
+    public const string SelectModeStart = "select-mode-start";
+    public const string AddSelectedToList = "add-selected-to-list";
+
+    public const string RecipeTitle = "recipe-title";
+    public const string RecipeDescription = "recipe-description";
+    public const string RecipeSave = "recipe-save";
+    public const string RecipeCancel = "recipe-cancel";
+    public const string IngredientAddRow = "ingredient-add-row";
+    public const string StepAdd = "step-add";
+    public const string TagInput = "tag-input";
+    public const string TagAdd = "tag-add";
+
+    public const string RecipeEdit = "recipe-edit";
+    public const string RecipeDelete = "recipe-delete";
+    public const string DeleteConfirmYes = "delete-confirm-yes";
+    public const string DeleteConfirmNo = "delete-confirm-no";
+    public const string AddToShoppingList = "add-to-shopping-list";
+
+    public const string ListRename = "list-rename";
+    public const string ListRenameSave = "list-rename-save";
+    public const string SplitStart = "split-start";
+    public const string SplitCreateFromSelection = "split-create-from-selection";
+    public const string SplitConfirm = "split-confirm";
+    public const string ListClear = "list-clear";
+    public const string ListDelete = "list-delete";
+    public const string ConfirmYes = "confirm-yes";
+    public const string ConfirmNo = "confirm-no";
+
+    public const string LanguageSwitcher = "language-switcher";
+    public const string LanguageEn = "language-en";
+    public const string LanguageNl = "language-nl";
+
+    public const string OverviewReady = "overview-ready";
+    public const string ShoppingListReady = "shopping-list-ready";
+
+    public static string RecipeCard(Guid recipeId) => $"recipe-card-{recipeId:D}";
+    public static string RecipeListItem(Guid recipeId) => $"recipe-list-item-{recipeId:D}";
+    public static string SelectRecipe(Guid recipeId) => $"select-recipe-{recipeId:D}";
+    public static string IngredientRowName(int index) => $"ingredient-row-{index}-name";
+    public static string IngredientRowPreparation(int index) => $"ingredient-row-{index}-preparation";
+    public static string IngredientRowRemove(int index) => $"ingredient-row-{index}-remove";
+    public static string StepInput(int index) => $"step-{index}";
+    public static string ListTab(Guid listId) => $"list-tab-{listId:D}";
+    public static string ItemCheckbox(Guid itemId) => $"item-{itemId:D}-checkbox";
+    public static string ItemMove(Guid itemId) => $"item-{itemId:D}-move";
+    public static string ItemRemove(Guid itemId) => $"item-{itemId:D}-remove";
+}

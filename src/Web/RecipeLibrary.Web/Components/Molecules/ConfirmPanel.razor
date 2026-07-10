@@ -5,11 +5,13 @@
     <p class="text-sm text-amber-900">@Message</p>
     <div class="flex gap-3">
         <button type="button"
+                data-testid="@UiTestIds.ConfirmYes"
                 class="px-3 py-1.5 rounded bg-gray-800 text-white text-sm font-medium"
                 @onclick="OnYes">
             @L["ShoppingList.Confirm.Yes"]
         </button>
         <button type="button"
+                data-testid="@UiTestIds.ConfirmNo"
                 class="px-3 py-1.5 rounded border border-gray-300 bg-white text-sm text-gray-700"
                 @onclick="OnNo">
             @L["ShoppingList.Confirm.No"]

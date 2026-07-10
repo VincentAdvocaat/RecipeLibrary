@@ -1,7 +1,7 @@
 @* Atom: button with optional text and icon. *@
 @namespace RecipeLibrary.Components.Atoms
 
-<button type="button" class="@ButtonClass" disabled="@Disabled" @onclick="OnClick">
+<button type="button" class="@ButtonClass" disabled="@Disabled" @onclick="OnClick" @attributes="AdditionalAttributes">
     @if (Icon != null)
     {
         <Icon Name="Icon!.Value" CssClass="@IconCssClass" />
@@ -20,6 +20,7 @@
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string IconCssClass => "inline-block w-4 h-4 " + (string.IsNullOrEmpty(Text) ? "" : "mr-1.5");
 

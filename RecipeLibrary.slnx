@@ -1,5 +1,12 @@
 <Solution>
   <Folder Name="/src/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/RecipeLibrary.Application.Tests/RecipeLibrary.Application.Tests.csproj" />
+    <Project Path="tests/RecipeLibrary.Testing/RecipeLibrary.Testing.csproj" />
+    <Project Path="tests/RecipeLibrary.Web.IntegrationTests/RecipeLibrary.Web.IntegrationTests.csproj" />
+    <Project Path="tests/RecipeLibrary.Web.ComponentTests/RecipeLibrary.Web.ComponentTests.csproj" />
+    <Project Path="tests/RecipeLibrary.Web.E2E.Tests/RecipeLibrary.Web.E2E.Tests.csproj" />
+  </Folder>
   <Folder Name="/docker/">
     <Project Path="docker-compose.dcproj">
       <Build />

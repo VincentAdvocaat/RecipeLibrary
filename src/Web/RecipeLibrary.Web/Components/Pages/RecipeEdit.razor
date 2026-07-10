@@ -32,7 +32,7 @@
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.Title.Label"]</label>
-                            <InputText class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" placeholder="@L["RecipeCreate.Title.Placeholder"]" @bind-Value="_vm.Title" />
+                            <InputText class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" placeholder="@L["RecipeCreate.Title.Placeholder"]" @bind-Value="_vm.Title" data-testid="@UiTestIds.RecipeTitle" />
                         </div>
 
                         <div>
@@ -93,6 +93,7 @@
                         var index = i;
                         var item = _vm.Ingredients[index];
                         <RecipeIngredientEditorRow Item="@item"
+                                                 RowIndex="@index"
                                                  ItemChanged="@(_ => OnIngredientRowChanged())"
                                                  Suggestions="@GetIngredientSuggestions(index)"
                                                  MatchMessage="@GetIngredientMatchMessage(index)"
@@ -135,7 +136,7 @@
                         {
                             <span class="text-sm @(_saveSucceeded ? "text-green-600" : "text-red-600")">@_statusMessage</span>
                         }
-                        <button type="submit" class="inline-flex items-center px-4 py-2 rounded bg-gray-800 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:pointer-events-none" disabled="@_isSaving">
+                        <button type="submit" data-testid="@UiTestIds.RecipeSave" class="inline-flex items-center px-4 py-2 rounded bg-gray-800 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:pointer-events-none" disabled="@_isSaving">
                             @L["RecipeEdit.SaveButton"]
                         </button>
                     </div>

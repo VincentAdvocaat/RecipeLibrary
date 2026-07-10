@@ -7,7 +7,8 @@
     </span>
     <TextInput @bind-Value="Value"
                Placeholder="@(Placeholder ?? L["Search.Recipes.Placeholder"])"
-               CssClass="pl-10" />
+               CssClass="pl-10"
+               data-testid="@UiTestIds.SearchInput" />
 </div>
 
 @code {

@@ -14,6 +14,7 @@
     }
     <button type="button"
             id="language-select"
+            data-testid="@UiTestIds.LanguageSwitcher"
             class="relative z-20 inline-flex items-center gap-2 rounded border border-gray-300 bg-white py-1.5 pl-2.5 pr-8 text-sm text-gray-700 hover:bg-gray-50 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
             aria-haspopup="listbox"
             aria-expanded="@_isOpen"
@@ -36,6 +37,7 @@
             {
                 <li role="presentation">
                     <button type="button"
+                            data-testid="@(lang.Culture == EnglishCulture ? UiTestIds.LanguageEn : UiTestIds.LanguageNl)"
                             class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm @(lang.Culture == CurrentCulture ? "bg-gray-100 font-medium text-gray-900" : "text-gray-700 hover:bg-gray-50")"
                             role="option"
                             aria-selected="@(lang.Culture == CurrentCulture)"

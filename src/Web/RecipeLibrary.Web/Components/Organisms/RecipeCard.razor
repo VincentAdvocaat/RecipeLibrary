@@ -1,11 +1,12 @@
 @* Organism: one recipe card for grid view (image + title + description + meta + ingredients). *@
 @namespace RecipeLibrary.Components.Organisms
 
-<div class="flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden hover:border-gray-300 @CssClass">
+<div class="flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden hover:border-gray-300 @CssClass" data-testid="@UiTestIds.RecipeCard(Item.Id)">
     @if (SelectMode)
     {
         <div class="px-4 pt-3">
             <input type="checkbox"
+                   data-testid="@UiTestIds.SelectRecipe(Item.Id)"
                    class="rounded border-gray-300"
                    checked="@IsSelected"
                    @onchange="OnSelectionChanged" />
