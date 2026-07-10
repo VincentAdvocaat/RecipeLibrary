@@ -32,7 +32,8 @@ var suffix = (nameSuffix == '') ? stableSuffix : toLower(nameSuffix)
 
 var webAppName = toLower('${projectName}-${environment}-${suffix}')
 var planName = toLower('asp-${projectName}-${environment}-${suffix}')
-var storageAccountName = toLower('st${substring(uniqueString(resourceGroup().id, projectName, environment, 'blob'), 0, 22)}')
+// Storage account names: 3-24 chars, lowercase alphanumeric. Bicep substring length is capped at 13.
+var storageAccountName = toLower('st${substring(uniqueString(resourceGroup().id, projectName, environment, 'blob'), 0, 13)}')
 
 // SQL logical server names must be lowercase, alphanumeric, and hyphen; max 63.
 var sqlServerName = toLower('sql-${projectName}-${environment}-${suffix}')
