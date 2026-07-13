@@ -9,8 +9,8 @@ pool:
 
 variables:
   buildConfiguration: Release
-  azureLocation: westeurope
-  resourceGroupName: rg-recipelibrary-test-weu
+  azureLocation: northeurope
+  resourceGroupName: rg-recipelibrary-test-neu
   projectName: recipelibrary
   environmentName: test
   # Set in Pipeline > Edit > Variables, or link variable group RecipeLibrary-Test (see docs/azure/pipeline-setup.md).
