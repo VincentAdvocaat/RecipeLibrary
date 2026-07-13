@@ -77,7 +77,7 @@ This repo uses a layered structure (`Domain`/`Application`/`Infrastructure`/`Web
 
 ## Infrastructure (Azure, Bicep)
 
-This repo provisions a **test** environment in Azure (region: `westeurope`) using Bicep:
+This repo provisions a **test** environment in Azure (region: `northeurope`) using Bicep:
 
 - **App Service Plan**: Free tier (F1)
 - **Web App**: System Assigned Managed Identity enabled

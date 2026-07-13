@@ -25,7 +25,7 @@ Azure service connection are configured in Azure DevOps only.
 Create the resource group **before** the first pipeline deploy, for example:
 
 ```bash
-az group create --name rg-recipelibrary-test-weu --location westeurope
+az group create --name rg-recipelibrary-test-neu --location northeurope
 ```
 
 Or use `infra/subscription.bicep` from your laptop (`az deployment sub create`).
@@ -35,7 +35,7 @@ The pipeline only deploys `infra/main.bicep` at resource-group scope.
 
 In **Project settings → Service connections**, create an **Azure Resource
 Manager** connection (workload identity federation or service principal) with
-**Contributor on resource group** `rg-recipelibrary-test-weu`.
+**Contributor on resource group** `rg-recipelibrary-test-neu`.
 
 Contributor alone cannot create `Microsoft.Authorization/roleAssignments`
 (Bicep grants the Web App managed identity **Storage Blob Data Contributor** on
@@ -48,7 +48,7 @@ az role assignment create \
   --assignee-object-id <service-principal-object-id> \
   --assignee-principal-type ServicePrincipal \
   --role "Role Based Access Control Administrator" \
-  --scope "/subscriptions/<subscription-id>/resourceGroups/rg-recipelibrary-test-weu" \
+  --scope "/subscriptions/<subscription-id>/resourceGroups/rg-recipelibrary-test-neu" \
   --condition "((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe}))" \
   --condition-version "2.0"
 ```
@@ -109,7 +109,7 @@ See also `docs/azure/test-runbook.md` for manual laptop deploy and local debug.
 
 ## Troubleshooting
 
-- **Resource group not found**: create `rg-recipelibrary-test-weu` manually; the
+- **Resource group not found**: create `rg-recipelibrary-test-neu` manually; the
   pipeline does not provision resource groups or subscription-scoped resources.
 - **Service connection not authorized**: approve the connection when prompted.
 - **Empty `AZURE_*` variables**: deploy fails at Bicep; set secrets in pipeline
@@ -121,3 +121,7 @@ See also `docs/azure/test-runbook.md` for manual laptop deploy and local debug.
   **User Access Administrator** unless you accept broader role-assignment rights.
 - **Blob upload errors**: confirm the Web App managed identity has **Storage Blob
   Data Contributor** on the storage account (created by Bicep on deploy).
+- **RequestDisallowedByAzure / locationineligible**: the subscription cannot
+  provision new resources in the selected region (e.g. `westeurope`). Create the
+  resource group in an eligible region (this repo uses `northeurope`) and update
+  `azureLocation` / `resourceGroupName` in `azure-pipelines.yml` to match.

@@ -2,7 +2,7 @@
 
 ### Goals
 
-- Deploy **test** infra in `westeurope` using Bicep
+- Deploy **test** infra in `northeurope` using Bicep
 - Run the Blazor Server app on **App Service F1**
 - Use **Azure SQL Database Free Offer** with:
   - `useFreeLimit: true`
@@ -37,11 +37,11 @@ Optional (for laptop SQL firewall):
 From repo root:
 
 1. Create RG (subscription scope):
-   - `az deployment sub create --location westeurope --template-file infra/subscription.bicep --parameters projectName=recipelibrary environment=test`
+   - `az deployment sub create --location northeurope --template-file infra/subscription.bicep --parameters projectName=recipelibrary environment=test`
 
 2. Deploy resources into RG (resource-group scope):
    - Update `infra/params/test.bicepparam` with your real tenant/user values
-   - `az deployment group create -g rg-recipelibrary-test-weu --template-file infra/main.bicep --parameters infra/params/test.bicepparam`
+   - `az deployment group create -g rg-recipelibrary-test-neu --template-file infra/main.bicep --parameters infra/params/test.bicepparam`
 
 Record outputs:
 - `webAppName`
@@ -77,7 +77,7 @@ deploy below only for ad-hoc debugging.
    - `dotnet publish src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj -c Release -o ./.publish`
 
 2. Zip deploy:
-   - `az webapp deploy --resource-group rg-recipelibrary-test-weu --name <webAppName> --src-path ./.publish --type zip`
+   - `az webapp deploy --resource-group rg-recipelibrary-test-neu --name <webAppName> --src-path ./.publish --type zip`
 
 ### 6) Local dev against Azure SQL (no secrets)
 
