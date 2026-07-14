@@ -27,6 +27,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      SQL_WAIT: "true"
       SQL_HOST: sql
       SQL_PORT: "1433"
       ConnectionStrings__RecipeDb: "Server=sql,1433;Database=RecipeLibrary;User Id=sa;Password=${MSSQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True"

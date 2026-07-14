@@ -6,7 +6,7 @@
 -- Replace the placeholders:
 --   <principal_display_name> with:
 --     - your Entra user display name/UPN, or
---     - the Web App Managed Identity name (same as the Web App name by default)
+--     - the user-assigned managed identity name (managedIdentityName output from infra/main.bicep)
 
 -- Create user mapped to Entra principal (user/group/managed identity)
 CREATE USER [<principal_display_name>] FROM EXTERNAL PROVIDER;
