@@ -76,7 +76,7 @@ environment costs may remain. Use `azure-pipelines-control.yml` to start manuall
 4. Run `docs/azure/sql-grants.sql` for `managedIdentityName`
 5. Re-run pipeline on `main`
 6. Deploy `cost-guard.bicep` with Owner account
-7. Register `azure-pipelines-control.yml` and environment `test-emergency`
+7. Register `azure-pipelines-control.yml` (uses environment `test` for start)
 
 Remove legacy App Service resources manually after ACA is validated; SQL and Blob
 data are preserved.

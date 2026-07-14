@@ -146,7 +146,7 @@ Policy reference: `.cursor/rules/worktrees-and-branches.mdc`
 - Azure SQL Free Offer is configured to **auto-pause until next month** when the free limit is exhausted.
 - Container Apps Consumption scales to **zero** when idle (`minReplicas: 0`).
 - Deploy `infra/cost-guard.bicep` for a €5 monthly budget with automatic stop at 80% actual spend.
-- Use `azure-pipelines-control.yml` for manual stop/start/status; `start` requires `test-emergency` approval.
+- Use `azure-pipelines-control.yml` for manual stop/start/status (`start` uses environment `test`).
 
 ## Azure DevOps (boards & CI)
 

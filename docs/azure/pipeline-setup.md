@@ -99,10 +99,9 @@ Create **Pipelines → Environments**:
 
 | Environment | Used by | Purpose |
 |-------------|---------|---------|
-| `test` | `azure-pipelines.yml` deploy stage | Normal test deploy |
-| `test-emergency` | `azure-pipelines-control.yml` start action | Manual approval before starting a stopped app |
+| `test` | `azure-pipelines.yml` deploy stage; `azure-pipelines-control.yml` start action | Test deploy and manual start after stop |
 
-Optional: add an approval check on `test` so deploys to Azure require manual
+Optional: add an approval check on `test` so deploys or manual starts require
 confirmation.
 
 ## 4) Two-stage first deployment and SQL grants
@@ -140,8 +139,8 @@ See `infra/README.md` for parameters and operational notes.
 ## 6) Emergency control pipeline
 
 Register **`azure-pipelines-control.yml`** as a separate pipeline with
-**no CI trigger**. Default action is `status`; `start` requires approval on
-environment `test-emergency`.
+**no CI trigger**. Default action is `status`; `start` uses the same `test`
+environment as the main deploy pipeline.
 
 ## 7) Verify
 

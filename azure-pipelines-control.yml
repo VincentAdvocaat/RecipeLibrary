@@ -99,7 +99,7 @@ stages:
     displayName: Start
     dependsOn: ResolveContainerApp
     condition: and(succeeded(), eq('${{ parameters.action }}', 'start'))
-    environment: test-emergency
+    environment: test
     variables:
       containerAppName: $[ dependencies.ResolveContainerApp.outputs['ResolveApp.containerAppName'] ]
     strategy:
@@ -107,7 +107,7 @@ stages:
         deploy:
           steps:
           - task: AzureCLI@2
-            displayName: Start Container App (emergency)
+            displayName: Start Container App
             inputs:
               azureSubscription: $(azureServiceConnection)
               scriptType: bash

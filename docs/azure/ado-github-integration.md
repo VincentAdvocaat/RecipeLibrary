@@ -55,8 +55,8 @@ GHCR, environment `test`): zie **`pipeline-setup.md`**.
 ### Emergency control pipeline
 
 Registreer **`azure-pipelines-control.yml`** als aparte pipeline (geen trigger).
-Acties: `status` (default), `stop`, `start`. Alleen `start` vereist goedkeuring via
-environment **`test-emergency`**.
+Acties: `status` (default), `stop`, `start`. `start` gebruikt environment **`test`**
+(zelfde als de deploy-pipeline).
 
 ### Cost guard
 

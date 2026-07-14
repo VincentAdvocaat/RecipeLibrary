@@ -123,7 +123,7 @@ Notes:
 ### 8) Cost guard and emergency stop/start
 
 - Deploy `infra/cost-guard.bicep` once with an Owner account (see `infra/README.md`).
-- Use `azure-pipelines-control.yml` for manual **status**, **stop**, and **start** (`start` requires `test-emergency` approval).
+- Use `azure-pipelines-control.yml` for manual **status**, **stop**, and **start** (`start` uses environment `test`).
 
 Cost ingestion is delayed; the €5 budget is an alert threshold, not a hard cap.
 Stopping the Container App halts compute; SQL auto-pauses afterward; small Blob /
