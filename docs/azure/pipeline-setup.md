@@ -33,29 +33,70 @@ Register required resource providers (once per subscription):
 az provider register --namespace Microsoft.App
 az provider register --namespace Microsoft.Sql
 az provider register --namespace Microsoft.Storage
+az provider register --namespace Microsoft.ManagedIdentity
 az provider register --namespace Microsoft.OperationalInsights
 ```
+
+Registering extra providers (for example `Microsoft.DBforPostgreSQL` or
+`Microsoft.DBforMySQL`) is **harmless**: it only enables those services on the
+subscription. You are **not billed** until you actually create resources. Safe to
+leave registered.
 
 Or use `infra/subscription.bicep` from your laptop (`az deployment sub create`).
 See also `docs/azure/subscription-bootstrap.md`.
 
 The pipeline only deploys `infra/main.bicep` at resource-group scope.
 
-## 1) Azure service connection
+## 1) Azure service connections (one per region)
 
-In **Project settings → Service connections**, create an **Azure Resource
-Manager** connection (workload identity federation or service principal) with
-**Contributor on resource group** `rg-recipelibrary-test-sec`.
+Use **separate, clearly named** service connections so you can deploy to North
+Europe or Sweden Central independently. Both can target the same subscription.
 
-Contributor alone cannot create `Microsoft.Authorization/roleAssignments`
-(Bicep grants the Container App user-assigned identity **Storage Blob Data
-Contributor** on the storage account). Grant the service principal **Role Based
-Access Control Administrator** on the same resource group, with a condition that
-allows only that role (one-time, outside the pipeline):
+| ADO connection name | Resource group | Region | Used by |
+|---------------------|----------------|--------|---------|
+| `RecipeLibrary-Azure-SEC` | `rg-recipelibrary-test-sec` | `swedencentral` | Main + control pipelines (default) |
+| `RecipeLibrary-Azure-NEU` | `rg-recipelibrary-test-neu` | `northeurope` | Manual / fallback if NEU quota opens |
+
+### Rename the existing connection (NEU)
+
+1. **Project settings → Service connections**
+2. Open the current connection (for example `RecipeLibrary-Azure`)
+3. **Edit** → rename to **`RecipeLibrary-Azure-NEU`**
+4. Confirm scope still includes `rg-recipelibrary-test-neu` (or subscription)
+
+Keep this connection even when the main pipeline uses SEC — it preserves the
+option to deploy to NEU later.
+
+### Create the SEC connection
+
+1. **New service connection → Azure Resource Manager**
+2. **Workload identity federation (automatic)** (recommended)
+3. Subscription: **Draconis-labs subscription**
+4. Resource group scope: **`rg-recipelibrary-test-sec`**
+5. Name: **`RecipeLibrary-Azure-SEC`**
+6. Grant access to all pipelines (or authorize on first run)
+
+Note the new service principal **object id** from the connection details page.
+
+### RBAC per resource group (Owner account, one-time per SP + RG)
+
+Each pipeline service principal needs on **its** resource group:
+
+- **Contributor**
+- **Role Based Access Control Administrator** with a condition that allows only
+  **Storage Blob Data Contributor** assignments (for Bicep blob RBAC)
+
+Example for SEC (replace `<sp-object-id>`):
 
 ```bash
 az role assignment create \
-  --assignee-object-id <service-principal-object-id> \
+  --assignee-object-id <sp-object-id> \
+  --assignee-principal-type ServicePrincipal \
+  --role "Contributor" \
+  --scope "/subscriptions/<subscription-id>/resourceGroups/rg-recipelibrary-test-sec"
+
+az role assignment create \
+  --assignee-object-id <sp-object-id> \
   --assignee-principal-type ServicePrincipal \
   --role "Role Based Access Control Administrator" \
   --scope "/subscriptions/<subscription-id>/resourceGroups/rg-recipelibrary-test-sec" \
@@ -63,15 +104,15 @@ az role assignment create \
   --condition-version "2.0"
 ```
 
-Use the service principal **object id** from the service connection (not the
-application/client id). The Bicep role assignment uses a stable `guid()` name and
-is idempotent on redeploy.
+Repeat with `rg-recipelibrary-test-neu` for the NEU service principal.
 
-Name the connection **`RecipeLibrary-Azure`** (or override pipeline variable
-`azureServiceConnection`).
+You can use **one shared service principal** for both regions (grant both RGs)
+or **separate SPs** per connection — separate SPs are clearer for isolation.
 
-Grant the connection access to all pipelines (or authorize when the first
-deploy runs).
+The pipeline variable `azureServiceConnection` selects which connection runs
+(default: `RecipeLibrary-Azure-SEC`). To deploy to NEU manually, override
+`azureServiceConnection`, `azureLocation`, and `resourceGroupName` when queuing
+a run.
 
 ## 2) Pipeline variables (secrets)
 

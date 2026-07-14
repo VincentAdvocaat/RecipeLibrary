@@ -15,7 +15,7 @@ variables:
   environmentName: test
   ghcrImageRepository: ghcr.io/vincentadvocaat/recipelibrary
   # Set in Pipeline > Edit > Variables, or link variable group RecipeLibrary-Test (see docs/azure/pipeline-setup.md).
-  azureServiceConnection: RecipeLibrary-Azure
+  azureServiceConnection: RecipeLibrary-Azure-SEC
 
 stages:
 - stage: Build

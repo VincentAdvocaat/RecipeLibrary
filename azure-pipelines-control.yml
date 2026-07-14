@@ -21,7 +21,7 @@ variables:
   projectName: recipelibrary
   environmentName: test
   budgetNamePrefix: budget-recipelibrary-test
-  azureServiceConnection: RecipeLibrary-Azure
+  azureServiceConnection: RecipeLibrary-Azure-SEC
 
 stages:
 - stage: Control
