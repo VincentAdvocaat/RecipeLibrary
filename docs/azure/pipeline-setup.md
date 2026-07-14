@@ -24,7 +24,7 @@ credentials, and the Azure service connection are configured in Azure DevOps onl
 Create the resource group **before** the first pipeline deploy, for example:
 
 ```bash
-az group create --name rg-recipelibrary-test-neu --location northeurope
+az group create --name rg-recipelibrary-test-sec --location swedencentral
 ```
 
 Register required resource providers (once per subscription):
@@ -45,7 +45,7 @@ The pipeline only deploys `infra/main.bicep` at resource-group scope.
 
 In **Project settings → Service connections**, create an **Azure Resource
 Manager** connection (workload identity federation or service principal) with
-**Contributor on resource group** `rg-recipelibrary-test-neu`.
+**Contributor on resource group** `rg-recipelibrary-test-sec`.
 
 Contributor alone cannot create `Microsoft.Authorization/roleAssignments`
 (Bicep grants the Container App user-assigned identity **Storage Blob Data
@@ -58,7 +58,7 @@ az role assignment create \
   --assignee-object-id <service-principal-object-id> \
   --assignee-principal-type ServicePrincipal \
   --role "Role Based Access Control Administrator" \
-  --scope "/subscriptions/<subscription-id>/resourceGroups/rg-recipelibrary-test-neu" \
+  --scope "/subscriptions/<subscription-id>/resourceGroups/rg-recipelibrary-test-sec" \
   --condition "((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe}))" \
   --condition-version "2.0"
 ```
@@ -150,7 +150,7 @@ environment as the main deploy pipeline.
 
 ## Troubleshooting
 
-- **Resource group not found**: create `rg-recipelibrary-test-neu` manually; the
+- **Resource group not found**: create `rg-recipelibrary-test-sec` manually; the
   pipeline does not provision resource groups or subscription-scoped resources.
 - **Provider not registered**: run `az provider register --namespace Microsoft.App`.
 - **Service connection not authorized**: approve the connection when prompted.
@@ -164,4 +164,4 @@ environment as the main deploy pipeline.
 - **Blob upload or auth cookie errors**: confirm the managed identity has **Storage
   Blob Data Contributor** on the storage account (created by Bicep on deploy).
 - **RequestDisallowedByAzure / locationineligible**: create the resource group in
-  an eligible region (this repo uses `northeurope`).
+  an eligible region (this repo uses `swedencentral`).

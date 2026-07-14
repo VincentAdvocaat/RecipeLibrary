@@ -40,7 +40,7 @@ az provider register --namespace Microsoft.OperationalInsights
 Also register `Microsoft.Sql` and `Microsoft.Storage` (see
 `docs/azure/subscription-bootstrap.md`).
 
-Verify Container Apps quota in `northeurope` if deploy fails with quota errors.
+Verify Container Apps quota in `swedencentral` if deploy fails with quota errors.
 
 ### Cost guard deploy
 
@@ -49,7 +49,7 @@ principal):
 
 ```bash
 az deployment group create \
-  -g rg-recipelibrary-test-neu \
+  -g rg-recipelibrary-test-sec \
   --template-file infra/cost-guard.bicep \
   --parameters infra/params/cost-guard.bicepparam
 ```

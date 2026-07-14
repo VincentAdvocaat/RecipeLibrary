@@ -9,8 +9,8 @@ pool:
 
 variables:
   buildConfiguration: Release
-  azureLocation: northeurope
-  resourceGroupName: rg-recipelibrary-test-neu
+  azureLocation: swedencentral
+  resourceGroupName: rg-recipelibrary-test-sec
   projectName: recipelibrary
   environmentName: test
   ghcrImageRepository: ghcr.io/vincentadvocaat/recipelibrary
