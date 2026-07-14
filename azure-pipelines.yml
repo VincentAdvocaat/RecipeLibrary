@@ -13,6 +13,7 @@ variables:
   resourceGroupName: rg-recipelibrary-test-neu
   projectName: recipelibrary
   environmentName: test
+  ghcrImageRepository: ghcr.io/vincentadvocaat/recipelibrary
   # Set in Pipeline > Edit > Variables, or link variable group RecipeLibrary-Test (see docs/azure/pipeline-setup.md).
   azureServiceConnection: RecipeLibrary-Azure
 
@@ -21,7 +22,7 @@ stages:
   displayName: Build and test
   jobs:
   - job: BuildAndTest
-    displayName: Build, test, publish
+    displayName: Build, test, container image
     steps:
     - task: UseDotNet@2
       displayName: Use .NET 10 SDK
@@ -44,29 +45,33 @@ stages:
     - script: dotnet test tests/RecipeLibrary.Web.IntegrationTests --configuration $(buildConfiguration) --no-build --verbosity normal
       displayName: Integration tests
 
-    - script: dotnet publish src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)/publish
-      displayName: Publish web app
+    - script: |
+        set -euo pipefail
+        docker build -f src/Web/RecipeLibrary.Web/Dockerfile -t "$(ghcrImageRepository):build-$(Build.BuildId)" .
+      displayName: Build container image (validation)
 
-    - task: ArchiveFiles@2
-      displayName: Zip publish output
-      inputs:
-        rootFolderOrFile: $(Build.ArtifactStagingDirectory)/publish
-        includeRootFolder: false
-        archiveType: zip
-        archiveFile: $(Build.ArtifactStagingDirectory)/webapp.zip
-        replaceExistingArchive: true
-
-    - publish: $(Build.ArtifactStagingDirectory)/webapp.zip
-      artifact: webapp
-      displayName: Publish webapp artifact
+    - script: |
+        set -euo pipefail
+        echo "$(GHCR_TOKEN)" | docker login ghcr.io -u "$(GHCR_USERNAME)" --password-stdin
+        image_tag="$(ghcrImageRepository):$(Build.SourceVersion)"
+        docker build -f src/Web/RecipeLibrary.Web/Dockerfile -t "$image_tag" .
+        docker push "$image_tag"
+        digest="$(docker inspect --format='{{index .RepoDigests 0}}' "$image_tag" | cut -d@ -f2)"
+        echo "Published immutable digest: $digest"
+        echo "##vso[task.setvariable variable=containerImageDigest;isOutput=true]$digest"
+      name: PublishImage
+      displayName: Publish container image to GHCR
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
 
 - stage: DeployTest
   displayName: Deploy test environment
   dependsOn: Build
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
+  variables:
+    containerImageDigest: $[ stageDependencies.Build.BuildAndTest.outputs['PublishImage.containerImageDigest'] ]
   jobs:
   - deployment: DeployTest
-    displayName: Bicep + Web App deploy
+    displayName: Bicep + Container App deploy
     environment: test
     strategy:
       runOnce:
@@ -74,10 +79,6 @@ stages:
           steps:
           - checkout: self
             displayName: Checkout repository
-
-          - download: current
-            artifact: webapp
-            displayName: Download webapp artifact
 
           - task: AzureCLI@2
             displayName: Deploy Bicep infrastructure
@@ -89,6 +90,11 @@ stages:
               inlineScript: |
                 set -euo pipefail
                 az bicep install
+
+                if [ -z "$(containerImageDigest)" ]; then
+                  echo "containerImageDigest is empty. Ensure the GHCR publish step ran on main."
+                  exit 1
+                fi
 
                 echo "Verifying resource group exists (pipeline does not create RGs)..."
                 az group show --name "$(resourceGroupName)" >/dev/null
@@ -105,34 +111,51 @@ stages:
                     tenantId="$(AZURE_TENANT_ID)" \
                     entraAdminLogin="$(AZURE_ENTRA_ADMIN_LOGIN)" \
                     entraAdminObjectId="$(AZURE_ENTRA_ADMIN_OBJECT_ID)" \
+                    ghcrImageRepository="$(ghcrImageRepository)" \
+                    containerImageDigest="$(containerImageDigest)" \
                   --query properties.outputs -o json)"
 
-                web_app_name="$(echo "$outputs" | jq -r '.webAppName.value')"
-                echo "Deployed web app: $web_app_name"
-                echo "##vso[task.setvariable variable=webAppName]$web_app_name"
+                container_app_name="$(echo "$outputs" | jq -r '.containerAppName.value')"
+                container_app_fqdn="$(echo "$outputs" | jq -r '.containerAppFqdn.value')"
+                echo "Deployed Container App: $container_app_name"
+                echo "Container App FQDN: $container_app_fqdn"
+                echo "##vso[task.setvariable variable=containerAppName]$container_app_name"
+                echo "##vso[task.setvariable variable=containerAppFqdn]$container_app_fqdn"
 
           - task: AzureCLI@2
-            displayName: Deploy Web App package
+            displayName: Smoke check (cold start tolerant)
             inputs:
               azureSubscription: $(azureServiceConnection)
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
                 set -euo pipefail
-                az webapp deploy \
-                  --resource-group "$(resourceGroupName)" \
-                  --name "$(webAppName)" \
-                  --src-path "$(Pipeline.Workspace)/webapp/webapp.zip" \
-                  --type zip
+                fqdn="$(containerAppFqdn)"
+                if [ -z "$fqdn" ] || [ "$fqdn" = "null" ]; then
+                  fqdn="$(az containerapp show --resource-group "$(resourceGroupName)" --name "$(containerAppName)" --query properties.configuration.ingress.fqdn -o tsv)"
+                fi
 
-          - task: AzureCLI@2
-            displayName: Smoke check
-            inputs:
-              azureSubscription: $(azureServiceConnection)
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                set -euo pipefail
-                hostname="$(az webapp show --resource-group "$(resourceGroupName)" --name "$(webAppName)" --query defaultHostName -o tsv)"
-                echo "Test URL: https://$hostname"
-                curl --fail --retry 5 --retry-delay 10 --retry-all-errors -sS -o /dev/null -w "%{http_code}" "https://$hostname"
+                health_url="https://${fqdn}/health"
+                home_url="https://${fqdn}/"
+                echo "Health URL: $health_url"
+                echo "Home URL: $home_url"
+
+                max_attempts=30
+                sleep_seconds=20
+                for attempt in $(seq 1 "$max_attempts"); do
+                  health_code="$(curl --silent --show-error --max-time 60 -o /dev/null -w "%{http_code}" "$health_url" || echo "000")"
+                  echo "Attempt ${attempt}/${max_attempts}: GET /health -> HTTP ${health_code}"
+                  if [ "$health_code" = "200" ]; then
+                    home_code="$(curl --fail --silent --show-error --max-time 60 -o /dev/null -w "%{http_code}" "$home_url")"
+                    echo "GET / -> HTTP ${home_code}"
+                    if [ "$home_code" = "200" ]; then
+                      echo "Smoke check passed."
+                      exit 0
+                    fi
+                  fi
+                  sleep "$sleep_seconds"
+                done
+
+                echo "Smoke check failed after ${max_attempts} attempts."
+                echo "If this is the first deploy, run docs/azure/sql-grants.sql for the managed identity and redeploy."
+                exit 1

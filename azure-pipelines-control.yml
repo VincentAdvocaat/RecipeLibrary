@@ -1,0 +1,136 @@
+trigger: none
+
+pr: none
+
+parameters:
+- name: action
+  displayName: Action
+  type: string
+  default: status
+  values:
+  - status
+  - stop
+  - start
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  azureLocation: northeurope
+  resourceGroupName: rg-recipelibrary-test-neu
+  projectName: recipelibrary
+  environmentName: test
+  budgetNamePrefix: budget-recipelibrary-test
+  azureServiceConnection: RecipeLibrary-Azure
+
+stages:
+- stage: Control
+  displayName: Container App control
+  jobs:
+  - job: ResolveContainerApp
+    displayName: Resolve Container App
+    steps:
+    - task: AzureCLI@2
+      name: ResolveApp
+      displayName: Resolve Container App name
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+          app_name="$(az containerapp list \
+            --resource-group "$(resourceGroupName)" \
+            --query "[?starts_with(name, 'ca-$(projectName)-$(environmentName)-')].name | [0]" \
+            -o tsv)"
+          if [ -z "$app_name" ]; then
+            echo "No Container App found in $(resourceGroupName)."
+            exit 1
+          fi
+          echo "Target Container App: $app_name"
+          echo "##vso[task.setvariable variable=containerAppName;isOutput=true]$app_name"
+
+  - job: Status
+    displayName: Status
+    dependsOn: ResolveContainerApp
+    condition: and(succeeded(), eq('${{ parameters.action }}', 'status'))
+    variables:
+      containerAppName: $[ dependencies.ResolveContainerApp.outputs['ResolveApp.containerAppName'] ]
+    steps:
+    - task: AzureCLI@2
+      displayName: Show Container App status
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+          az containerapp show \
+            --resource-group "$(resourceGroupName)" \
+            --name "$(containerAppName)" \
+            --query "{name:name, provisioningState:properties.provisioningState, runningStatus:properties.runningStatus, fqdn:properties.configuration.ingress.fqdn, minReplicas:properties.template.scale.minReplicas, maxReplicas:properties.template.scale.maxReplicas}" \
+            -o jsonc
+
+  - job: Stop
+    displayName: Stop
+    dependsOn: ResolveContainerApp
+    condition: and(succeeded(), eq('${{ parameters.action }}', 'stop'))
+    variables:
+      containerAppName: $[ dependencies.ResolveContainerApp.outputs['ResolveApp.containerAppName'] ]
+    steps:
+    - task: AzureCLI@2
+      displayName: Stop Container App
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+          az containerapp stop \
+            --resource-group "$(resourceGroupName)" \
+            --name "$(containerAppName)"
+          az containerapp show \
+            --resource-group "$(resourceGroupName)" \
+            --name "$(containerAppName)" \
+            --query "{name:name, runningStatus:properties.runningStatus, fqdn:properties.configuration.ingress.fqdn}" \
+            -o jsonc
+
+  - deployment: Start
+    displayName: Start
+    dependsOn: ResolveContainerApp
+    condition: and(succeeded(), eq('${{ parameters.action }}', 'start'))
+    environment: test-emergency
+    variables:
+      containerAppName: $[ dependencies.ResolveContainerApp.outputs['ResolveApp.containerAppName'] ]
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            displayName: Start Container App (emergency)
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                subscription_id="$(az account show --query id -o tsv)"
+                budget_scope="/subscriptions/${subscription_id}/resourceGroups/$(resourceGroupName)"
+                budget_name="$(az consumption budget list --scope "$budget_scope" --query "[?starts_with(name, '$(budgetNamePrefix)')].name | [0]" -o tsv || true)"
+                if [ -n "$budget_name" ]; then
+                  spent="$(az consumption budget show --budget-name "$budget_name" --scope "$budget_scope" --query "properties.currentSpend.amount" -o tsv 2>/dev/null || echo "")"
+                  amount="$(az consumption budget show --budget-name "$budget_name" --scope "$budget_scope" --query "properties.amount" -o tsv 2>/dev/null || echo "")"
+                  if [ -n "$spent" ] && [ -n "$amount" ]; then
+                    echo "WARNING: Budget ${budget_name} current spend is ${spent} of ${amount}. Cost ingestion is delayed; starting may exceed your monthly guard."
+                  fi
+                fi
+
+                az containerapp start \
+                  --resource-group "$(resourceGroupName)" \
+                  --name "$(containerAppName)"
+
+                fqdn="$(az containerapp show \
+                  --resource-group "$(resourceGroupName)" \
+                  --name "$(containerAppName)" \
+                  --query properties.configuration.ingress.fqdn -o tsv)"
+                echo "Container App started. FQDN: https://${fqdn}"

@@ -14,7 +14,7 @@ COPY ["src/Domain/RecipeLibrary.Domain/RecipeLibrary.Domain.csproj", "src/Domain
 RUN dotnet restore "src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj"
 
 COPY . .
-RUN dotnet publish "src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj" -c Debug -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
@@ -27,4 +27,3 @@ COPY ["src/Web/RecipeLibrary.Web/docker-entrypoint.sh", "./docker-entrypoint.sh"
 RUN sed -i 's/\r$//' ./docker-entrypoint.sh && chmod +x ./docker-entrypoint.sh
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
-

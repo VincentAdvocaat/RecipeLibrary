@@ -48,8 +48,9 @@ used by the Bicep template before the first deployment:
 
 ```bash
 az provider register --namespace Microsoft.Sql --subscription "<subscription-id>"
-az provider register --namespace Microsoft.Web --subscription "<subscription-id>"
+az provider register --namespace Microsoft.App --subscription "<subscription-id>"
 az provider register --namespace Microsoft.Storage --subscription "<subscription-id>"
+az provider register --namespace Microsoft.OperationalInsights --subscription "<subscription-id>"
 ```
 
 Registration is asynchronous and can take several minutes. Wait until every
@@ -57,8 +58,9 @@ provider reports `Registered`:
 
 ```bash
 az provider show --namespace Microsoft.Sql --subscription "<subscription-id>" --query registrationState -o tsv
-az provider show --namespace Microsoft.Web --subscription "<subscription-id>" --query registrationState -o tsv
+az provider show --namespace Microsoft.App --subscription "<subscription-id>" --query registrationState -o tsv
 az provider show --namespace Microsoft.Storage --subscription "<subscription-id>" --query registrationState -o tsv
+az provider show --namespace Microsoft.OperationalInsights --subscription "<subscription-id>" --query registrationState -o tsv
 ```
 
 The deployment may also use the already registered platform namespaces
@@ -194,20 +196,20 @@ Typical values include:
 - Azure service connection name
 - Resource group name
 - Azure region
+- GHCR username and token (for pipeline image publish)
 
 Mark sensitive values as secret. Prefer workload identity federation over a
 service principal client secret.
 
 ## 9. Run and verify the first deployment
 
-1. Run the pipeline.
+1. Run the pipeline on `main`.
 2. Confirm the Azure service connection logs into the expected subscription.
-3. Confirm the Bicep deployment succeeds.
-4. Confirm the Web App deployment and smoke check succeed.
-5. Verify that the Web App managed identity received Storage Blob Data
-   Contributor on the storage account.
-6. Apply any required database-internal grants separately; Azure RBAC does not
-   create users or permissions inside Azure SQL databases.
+3. Confirm the Bicep deployment succeeds (Container App, SQL, storage).
+4. Apply database-internal grants for the user-assigned managed identity (`docs/azure/sql-grants.sql`).
+5. Re-run the pipeline and confirm the smoke check returns HTTP `200` for `/health` and `/`.
+6. Verify the managed identity received Storage Blob Data Contributor on the storage account.
+7. Deploy `infra/cost-guard.bicep` separately with an Owner account (optional but recommended).
 
 ## Troubleshooting
 
