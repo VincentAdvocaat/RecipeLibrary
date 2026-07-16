@@ -120,17 +120,22 @@ Notes:
 - The app runs migrations on startup (`Database.Migrate()`), so your user needs DDL rights during dev/test.
 - Disconnect query tools when done, otherwise the serverless DB may not auto-pause and will burn free vCore seconds faster.
 
-### 8) Cost guard and emergency stop/start
+### 8) Cost guard and cost control pipeline
 
 - Deploy `infra/cost-guard.bicep` once with an Owner account (see `infra/README.md`).
-- Use `azure-pipelines-control.yml` for manual **status**, **stop**, and **start** (`start` uses environment `test`).
+- Use `azure-pipelines-control.yml` to **hibernate** (default) or **status only**.
+  Hibernate uses environments `test-sec` / `test-neu`.
+
+| Goal | What to run |
+|------|-------------|
+| Costs nearly off, keep data | Control pipeline (default hibernate) |
+| App back on | Main deploy pipeline (`azure-pipelines.yml`) |
 
 Cost ingestion is delayed; the €5 budget is an alert threshold, not a hard cap.
-Stopping the Container App halts compute; SQL auto-pauses afterward; small Blob /
-Logic App / environment costs may remain.
+After hibernate, SQL is paused and Blob data remains; tiny storage costs may remain.
 
 ### 9) Verify scale-to-zero and auth cookies
 
-1. Wait for idle period or stop the app via the control pipeline.
+1. Wait for idle period (scale-to-zero) or hibernate via the control pipeline, then redeploy.
 2. Browse the FQDN — expect a cold start delay.
 3. Sign in (when Entra is configured) and confirm the session survives a second cold start (Data Protection keys in Blob Storage).

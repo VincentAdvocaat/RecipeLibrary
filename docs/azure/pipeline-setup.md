@@ -134,16 +134,17 @@ The public image repository defaults to `ghcr.io/vincentadvocaat/recipelibrary`
 (pipeline variable `ghcrImageRepository`). After the first push, keep the package
 **public** so Container Apps can pull anonymously (no registry secret at runtime).
 
-## 3) Deployment environment
+## 3) Deployment environments
 
 Create **Pipelines → Environments**:
 
 | Environment | Used by | Purpose |
 |-------------|---------|---------|
-| `test` | `azure-pipelines.yml` deploy stage; `azure-pipelines-control.yml` start action | Test deploy and manual start after stop |
+| `test-sec` | `azure-pipelines.yml` SEC deploy; control pipeline hibernate for SEC | Sweden Central test |
+| `test-neu` | `azure-pipelines.yml` NEU deploy; control pipeline hibernate for NEU | North Europe test (optional) |
 
-Optional: add an approval check on `test` so deploys or manual starts require
-confirmation.
+Optional: add an approval check on these environments so deploys or hibernate
+runs require confirmation.
 
 ## 4) Two-stage first deployment and SQL grants
 
@@ -177,11 +178,31 @@ email warnings, and a Logic App that stops the Container App at 80% actual spend
 
 See `infra/README.md` for parameters and operational notes.
 
-## 6) Emergency control pipeline
+## 6) Cost control pipeline
 
 Register **`azure-pipelines-control.yml`** as a separate pipeline with
-**no CI trigger**. Default action is `status`; `start` uses the same `test`
-environment as the main deploy pipeline.
+**no CI trigger**.
+
+**Usage**
+
+| Goal | What to run |
+|------|-------------|
+| Costs nearly off (keep data) | Control pipeline → pick region → Run (default) |
+| Inspect only | Control pipeline → enable **Status only** → Run |
+| App back on | Main pipeline (`azure-pipelines.yml`) for that region |
+
+Default run **hibernates**: deletes Container App + Managed Environment, pauses SQL.
+SQL databases, Blob storage, and the managed identity stay. Residual costs are
+mainly storage (free-offer limits still apply).
+
+Hibernate uses environments `test-sec` / `test-neu`. If you use `cost-guard.bicep`,
+redeploy it once after the Container App exists again (RBAC on the app is removed
+with hibernate).
+
+| Parameter | Values | Default |
+|-----------|--------|---------|
+| `target` | `sec`, `neu`, `all` | `sec` |
+| `statusOnly` | checkbox | off (hibernate) |
 
 ## 7) Verify
 

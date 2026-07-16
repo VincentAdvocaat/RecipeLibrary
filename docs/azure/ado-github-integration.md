@@ -49,14 +49,14 @@ De pipeline **VincentAdvocaat.RecipeLibrary** leest `azure-pipelines.yml` uit Gi
 - **CI** bij pushes naar `main` en pull requests naar `main` (inclusief Docker build-validatie op PR's)
 - **CD (test)** na succesvolle build op `main`: Bicep (`main.bicep`) + immutable GHCR digest naar Container Apps
 
-Eenmalige Azure DevOps-configuratie (service connection, geheime variabelen incl.
-GHCR, environment `test`): zie **`pipeline-setup.md`**.
+Eenmalige Azure DevOps-configuratie (service connections SEC/NEU, geheime variabelen
+incl. GHCR, environments `test-sec` / `test-neu`): zie **`pipeline-setup.md`**.
 
-### Emergency control pipeline
+### Cost control pipeline
 
 Registreer **`azure-pipelines-control.yml`** als aparte pipeline (geen trigger).
-Acties: `status` (default), `stop`, `start`. `start` gebruikt environment **`test`**
-(zelfde als de deploy-pipeline).
+Standaardrun = **hibernate** (compute weg, SQL + Blob blijven). Optioneel
+**Status only**. Target: `sec` / `neu` / `all`. Weer aanzetten: main deploy-pipeline.
 
 ### Cost guard
 
