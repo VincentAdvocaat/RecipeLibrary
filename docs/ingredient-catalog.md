@@ -124,7 +124,7 @@ The JSON is linked into Infrastructure as an **embedded resource** (`RecipeLibra
     "howToExtend": "...",
     "availableInSource": ["en", "fr", "nl", "..."]
   },
-  "count": 643,
+  "count": 675,
   "ingredients": [
     {
       "id": "tomato",
@@ -168,8 +168,20 @@ App start
 Behaviour:
 
 - **Idempotent**: existing `NormalizedName` / `NormalizedAlias` rows are skipped; safe on every startup.
+- **Shared matching domain**: a normalized string may belong to **either** a canonical `NormalizedName` **or** a single `NormalizedAlias`, never both. The generator enforces this when writing JSON; the seeder also skips a new canonical when that form is already an alias (and attaches further aliases to the existing owner).
 - **Not an EF `HasData` migration**: catalog updates stay in JSON; no Designer/snapshot churn for hundreds of rows.
 - Hook: `PersistenceServiceRegistration.EnsurePersistenceMigrated` in Infrastructure (called from `Program.cs`).
+
+### Generator uniqueness and culinary overrides
+
+After OFF selection + manual staples, `generate-curated-ingredients.ps1`:
+
+1. Puts **manual names first** when merging onto an OFF row (so Dutch kitchen preferred forms win).
+2. Strips known-bad aliases (e.g. `ketjap` off soy sauce; `witlof` off andijvie; outdated labels; scientific binomials).
+3. Drops an explicit non-culinary id list (industrial sugars, processing fats, prepared sauces like marinade/vinaigrette, etc.).
+4. **`Resolve-UniqueCatalog`**: merges entries that share an NL primary; drops aliases already claimed elsewhere; **keeps EN display names even when they normalize equal to the NL primary** (fixes empty `en: []`); **throws** if any normalized name would still be owned by two ids.
+
+Examples kept intentionally separate: `andijvie` vs `witlof`, `ketjap` vs `sojasaus`, `clementine` vs `mandarijn`.
 
 ## Language keys (multi-language later)
 
