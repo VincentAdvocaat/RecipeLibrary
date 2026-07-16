@@ -9,7 +9,7 @@
 @inject HttpClient Http
 
 <div class="space-y-1">
-    <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem_8rem_auto] gap-x-3 gap-y-0.5">
+    <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(9rem,11rem)_8rem_auto] gap-x-3 gap-y-0.5">
         <label class="text-xs text-gray-500 mb-0.5 sm:mb-0">@L["RecipeCreate.Ingredient.Name.Label"]</label>
         <label class="text-xs text-gray-500 mb-0.5 sm:mb-0">@L["RecipeCreate.Ingredient.Preparation.Label"]</label>
         <label class="text-xs text-gray-500 mb-0.5 sm:mb-0">@L["RecipeCreate.Ingredient.Quantity.Label"]</label>
@@ -28,6 +28,7 @@
                value="@Item.Preparation"
                @oninput="OnPreparationInput" />
         <IngredientQuantityInput CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                 UnitName="@Item.UnitName"
                                  @bind-Quantity="Item.Quantity"
                                  QuantityChangedAfter="OnQuantityOrUnitChanged" />
         <IngredientUnitSelect CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"

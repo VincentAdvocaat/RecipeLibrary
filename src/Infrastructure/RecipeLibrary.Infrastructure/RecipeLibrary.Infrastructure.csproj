@@ -22,6 +22,12 @@
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.2" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.24.0" />
     <PackageReference Include="Azure.Identity" Version="1.14.2" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="RecipeImport\tessdata\eng.traineddata" Link="tessdata\eng.traineddata" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="RecipeImport\tessdata\nld.traineddata" Link="tessdata\nld.traineddata" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

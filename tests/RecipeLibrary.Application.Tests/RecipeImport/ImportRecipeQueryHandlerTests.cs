@@ -45,6 +45,122 @@ public sealed class ImportRecipeQueryHandlerTests
             sut.HandleAsync(new ImportRecipeFromUrlQuery { Url = "not-a-url" }));
     }
 
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_ExtractsTextAndImports()
+    {
+        var plain = await File.ReadAllTextAsync(GetFixturePath("plain-pasta.txt"));
+        var extractor = new FakeImageTextExtractor(plain);
+        var sut = new ImportRecipeFromImageQueryHandler(
+            extractor,
+            CreateService(),
+            Options.Create(new RecipeImportOptions()));
+
+        var result = await sut.HandleAsync(new ImportRecipeFromImageQuery
+        {
+            ImageBytes = [1, 2, 3],
+            ContentType = "image/png",
+            Language = "nl",
+        });
+
+        Assert.NotNull(result);
+        Assert.Equal("nld", extractor.LastLanguage);
+        Assert.True(result.Ingredients.Count > 0 || !string.IsNullOrWhiteSpace(result.Title) || result.Steps.Count > 0);
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_Throws_ForEmptyImage()
+    {
+        var sut = new ImportRecipeFromImageQueryHandler(
+            new FakeImageTextExtractor("x"),
+            CreateService(),
+            Options.Create(new RecipeImportOptions()));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new ImportRecipeFromImageQuery
+            {
+                ImageBytes = [],
+                ContentType = "image/png",
+                Language = "eng",
+            }));
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_Throws_ForUnsupportedType()
+    {
+        var sut = new ImportRecipeFromImageQueryHandler(
+            new FakeImageTextExtractor("x"),
+            CreateService(),
+            Options.Create(new RecipeImportOptions()));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new ImportRecipeFromImageQuery
+            {
+                ImageBytes = [1],
+                ContentType = "application/pdf",
+                Language = "eng",
+            }));
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_Throws_ForOversizedImage()
+    {
+        var options = Options.Create(new RecipeImportOptions
+        {
+            Ocr = new RecipeImportOcrOptions { MaxImageBytes = 4 },
+        });
+        var sut = new ImportRecipeFromImageQueryHandler(
+            new FakeImageTextExtractor("x"),
+            CreateService(),
+            options);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new ImportRecipeFromImageQuery
+            {
+                ImageBytes = [1, 2, 3, 4, 5],
+                ContentType = "image/png",
+                Language = "eng",
+            }));
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_InfersTypeFromFileName_WhenContentTypeEmpty()
+    {
+        var plain = await File.ReadAllTextAsync(GetFixturePath("plain-pasta.txt"));
+        var extractor = new FakeImageTextExtractor(plain);
+        var sut = new ImportRecipeFromImageQueryHandler(
+            extractor,
+            CreateService(),
+            Options.Create(new RecipeImportOptions()));
+
+        var result = await sut.HandleAsync(new ImportRecipeFromImageQuery
+        {
+            ImageBytes = [1, 2, 3],
+            ContentType = string.Empty,
+            FileName = "recipe.png",
+            Language = "eng",
+        });
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_Throws_WhenContentTypeAndExtensionMissing()
+    {
+        var sut = new ImportRecipeFromImageQueryHandler(
+            new FakeImageTextExtractor("x"),
+            CreateService(),
+            Options.Create(new RecipeImportOptions()));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new ImportRecipeFromImageQuery
+            {
+                ImageBytes = [1],
+                ContentType = string.Empty,
+                FileName = "recipe.bin",
+                Language = "eng",
+            }));
+    }
+
     private static RecipeImportService CreateService() =>
         new(
             new StructuredRecipeExtractor(),
@@ -82,6 +198,17 @@ public sealed class ImportRecipeQueryHandlerTests
         {
             LastUrl = url;
             return Task.FromResult(html);
+        }
+    }
+
+    private sealed class FakeImageTextExtractor(string text) : IRecipeImageTextExtractor
+    {
+        public string? LastLanguage { get; private set; }
+
+        public Task<string> ExtractTextAsync(Stream imageStream, string language, CancellationToken ct = default)
+        {
+            LastLanguage = language;
+            return Task.FromResult(text);
         }
     }
 }

@@ -3,6 +3,7 @@
 
 @using System.Net.Http.Json
 @using RecipeLibrary.Application.Contracts
+@using RecipeLibrary.Application.Ingredients
 @using RecipeLibrary.Components.Molecules
 @using RecipeLibrary.Domain.ValueObjects
 
@@ -125,12 +126,15 @@
                                 <div>
                                     <label class="block text-xs text-gray-500 mb-1">@L["RecipeCreate.Ingredient.Quantity.Label"]</label>
                                     <IngredientQuantityInput CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                                                             @bind-Quantity="_addItemQuantity" />
+                                                             UnitName="@_addItemUnit"
+                                                             @bind-Quantity="_addItemQuantity"
+                                                             QuantityChangedAfter="OnAddQuantityOrUnitChanged" />
                                 </div>
                                 <div>
                                     <label class="block text-xs text-gray-500 mb-1">@L["RecipeCreate.Ingredient.Unit.Label"]</label>
                                     <IngredientUnitSelect CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                                                          @bind-UnitName="_addItemUnit" />
+                                                          @bind-UnitName="_addItemUnit"
+                                                          UnitNameChangedAfter="OnAddQuantityOrUnitChanged" />
                                 </div>
                                 <div class="flex items-end">
                                     <button type="button"
@@ -190,6 +194,7 @@
                                             <div class="flex flex-wrap items-center gap-2 text-sm">
                                                 <span data-testid="@UiTestIds.ItemQuantityInput(item.Id)">
                                                     <IngredientQuantityInput CssClass="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+                                                                             UnitName="@item.Unit"
                                                                              @bind-Quantity="_editQuantityDraft" />
                                                 </span>
                                                 <span class="text-gray-700">@GetUnitLabel(item.Unit)</span>
@@ -666,6 +671,14 @@
         _addItemUnit = nameof(Unit.Gram);
         _addItemCanonicalId = null;
         _addItemSuggestions = [];
+    }
+
+    private void OnAddQuantityOrUnitChanged()
+    {
+        if (UnitRules.TryParse(_addItemUnit, out var unit))
+        {
+            _addItemQuantity = IngredientQuantityFormatter.Normalize(_addItemQuantity, unit);
+        }
     }
 
     private string FormatLine(ShoppingListItemDto item) =>

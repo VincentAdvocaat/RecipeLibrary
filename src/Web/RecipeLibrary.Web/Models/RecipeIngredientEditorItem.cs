@@ -25,4 +25,7 @@ public sealed class RecipeIngredientEditorItem
     public List<IngredientSuggestionItem> MatchSuggestions { get; set; } = [];
 
     public string? LastMatchType { get; set; }
+
+    /// <summary>True when import confidence was low; show a friendly review hint in the UI.</summary>
+    public bool NeedsReview { get; set; }
 }
