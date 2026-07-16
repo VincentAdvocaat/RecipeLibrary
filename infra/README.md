@@ -66,7 +66,23 @@ The template provisions:
 - **Container Apps Contributor** on the single Container App for the Logic App only
 
 Cost ingestion is delayed; stopping ACA halts compute while tiny Blob / Logic App /
-environment costs may remain. Use `azure-pipelines-control.yml` to start manually.
+environment costs may remain.
+
+### Cost control pipeline (manual)
+
+Register `azure-pipelines-control.yml` (no CI trigger).
+
+- **Default run** → hibernate (delete Container App + Managed Environment, pause SQL;
+  keep SQL + Blob + identity).
+- **Status only** checkbox → inspect without changes.
+- **target**: `sec` | `neu` | `all`
+
+Bring the app back with the main deploy pipeline. Prefer hibernate whenever you
+want almost no compute cost until the next deploy.
+
+After hibernate + main deploy, re-run `cost-guard.bicep` once if you use the
+budget auto-stop (the Logic App role assignment on the Container App is removed
+with the app).
 
 ### First deployment checklist
 
@@ -76,7 +92,7 @@ environment costs may remain. Use `azure-pipelines-control.yml` to start manuall
 4. Run `docs/azure/sql-grants.sql` for `managedIdentityName`
 5. Re-run pipeline on `main`
 6. Deploy `cost-guard.bicep` with Owner account
-7. Register `azure-pipelines-control.yml` (uses environment `test` for start)
+7. Register `azure-pipelines-control.yml` (hibernate uses `test-sec` / `test-neu`)
 
 Remove legacy App Service resources manually after ACA is validated; SQL and Blob
 data are preserved.
