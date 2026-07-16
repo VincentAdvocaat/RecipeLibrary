@@ -57,4 +57,4 @@ Stable `data-testid` values are defined in `src/Web/RecipeLibrary.Web/Testing/Ui
 
 ## CI
 
-Azure Pipelines runs `dotnet build` and unit, component, and integration tests on push to `main`. Integration tests require a Docker-capable agent (`ubuntu-latest`). E2E tests are run locally only until the Playwright flows are stable.
+Azure Pipelines runs unit tests with Cobertura coverage (visible on the **Code Coverage** tab), plus component and integration tests. Integration tests require Docker (`ubuntu-latest`).

@@ -38,8 +38,16 @@ stages:
     - script: dotnet build RecipeLibrary.slnx --configuration $(buildConfiguration) --no-restore
       displayName: Build
 
-    - script: dotnet test tests/RecipeLibrary.Application.Tests --configuration $(buildConfiguration) --no-build --verbosity normal
-      displayName: Unit tests
+    - script: dotnet test tests/RecipeLibrary.Application.Tests --configuration $(buildConfiguration) --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory $(Agent.TempDirectory)/TestResults/Coverage --settings tests/coverlet.runsettings
+      displayName: Unit tests with coverage
+
+    - task: PublishCodeCoverageResults@2
+      displayName: Publish code coverage
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: '$(Agent.TempDirectory)/TestResults/Coverage/**/coverage.cobertura.xml'
+        pathToSources: '$(Build.SourcesDirectory)/src'
+        failIfCoverageEmpty: true
 
     - script: dotnet test tests/RecipeLibrary.Web.ComponentTests --configuration $(buildConfiguration) --no-build --verbosity normal
       displayName: Component tests
