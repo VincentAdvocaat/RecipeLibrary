@@ -1,7 +1,7 @@
 targetScope = 'subscription'
 
 @description('Azure region for the resource group.')
-param location string = 'northeurope'
+param location string = 'swedencentral'
 
 @description('Project name used for naming (lowercase recommended).')
 param projectName string = 'recipelibrary'
@@ -9,8 +9,8 @@ param projectName string = 'recipelibrary'
 @description('Environment name, e.g. test.')
 param environment string = 'test'
 
-@description('Resource group name. Defaults to rg-<project>-<env>-neu.')
-param resourceGroupName string = 'rg-${projectName}-${environment}-neu'
+@description('Resource group name. Defaults to rg-<project>-<env>-sec.')
+param resourceGroupName string = 'rg-${projectName}-${environment}-sec'
 
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName

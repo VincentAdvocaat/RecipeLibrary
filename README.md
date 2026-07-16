@@ -79,7 +79,7 @@ This repo uses a layered structure (`Domain`/`Application`/`Infrastructure`/`Web
 
 ## Infrastructure (Azure, Bicep)
 
-This repo provisions a **test** environment in Azure (region: `northeurope`) using Bicep:
+This repo provisions a **test** environment in Azure (region: `swedencentral`) using Bicep:
 
 - **Container Apps Consumption**: scale-to-zero, max 1 replica, public GHCR image
 - **User-assigned managed identity**: SQL and Blob access

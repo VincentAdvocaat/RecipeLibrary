@@ -2,7 +2,7 @@
 
 ### Goals
 
-- Deploy **test** infra in `northeurope` using Bicep
+- Deploy **test** infra in `swedencentral` using Bicep
 - Run the Blazor Server app on **Azure Container Apps Consumption** (scale-to-zero, max 1 replica)
 - Pull an immutable **public GHCR** image (`ghcr.io/<owner>/recipelibrary@sha256:...`)
 - Use **Azure SQL Database Free Offer** with:
@@ -47,13 +47,13 @@ Optional (for laptop SQL firewall):
 From repo root:
 
 1. Create RG (subscription scope):
-   - `az deployment sub create --location northeurope --template-file infra/subscription.bicep --parameters projectName=recipelibrary environment=test`
+   - `az deployment sub create --location swedencentral --template-file infra/subscription.bicep --parameters projectName=recipelibrary environment=test`
 
 2. Build and push a GHCR image (or use the pipeline on `main`), then note the digest.
 
 3. Deploy resources into RG (resource-group scope):
    - Update `infra/params/test.bicepparam` with your real tenant/user values and `containerImageDigest`
-   - `az deployment group create -g rg-recipelibrary-test-neu --template-file infra/main.bicep --parameters infra/params/test.bicepparam`
+   - `az deployment group create -g rg-recipelibrary-test-sec --template-file infra/main.bicep --parameters infra/params/test.bicepparam`
 
 Record outputs:
 

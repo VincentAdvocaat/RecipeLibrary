@@ -1,6 +1,6 @@
 using '../main.bicep'
 
-param location = 'northeurope'
+param location = 'swedencentral'
 param projectName = 'recipelibrary'
 param environment = 'test'
 

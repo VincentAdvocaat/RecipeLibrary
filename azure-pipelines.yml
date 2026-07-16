@@ -9,13 +9,13 @@ pool:
 
 variables:
   buildConfiguration: Release
-  azureLocation: northeurope
-  resourceGroupName: rg-recipelibrary-test-neu
+  azureLocation: swedencentral
+  resourceGroupName: rg-recipelibrary-test-sec
   projectName: recipelibrary
   environmentName: test
   ghcrImageRepository: ghcr.io/vincentadvocaat/recipelibrary
   # Set in Pipeline > Edit > Variables, or link variable group RecipeLibrary-Test (see docs/azure/pipeline-setup.md).
-  azureServiceConnection: RecipeLibrary-Azure
+  azureServiceConnection: RecipeLibrary-Azure-SEC
 
 stages:
 - stage: Build
