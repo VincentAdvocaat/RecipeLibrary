@@ -113,6 +113,8 @@ stages:
                     entraAdminObjectId="$(AZURE_ENTRA_ADMIN_OBJECT_ID)" \
                     ghcrImageRepository="$(ghcrImageRepository)" \
                     containerImageDigest="$(containerImageDigest)" \
+                    ghcrUsername="$(GHCR_USERNAME)" \
+                    ghcrPassword="$(GHCR_TOKEN)" \
                   --query properties.outputs -o json)"
 
                 container_app_name="$(echo "$outputs" | jq -r '.containerAppName.value')"
@@ -207,6 +209,8 @@ stages:
                     entraAdminObjectId="$(AZURE_ENTRA_ADMIN_OBJECT_ID)" \
                     ghcrImageRepository="$(ghcrImageRepository)" \
                     containerImageDigest="$(containerImageDigest)" \
+                    ghcrUsername="$(GHCR_USERNAME)" \
+                    ghcrPassword="$(GHCR_TOKEN)" \
                   --query properties.outputs -o json)"
 
                 container_app_name="$(echo "$outputs" | jq -r '.containerAppName.value')"
