@@ -1,6 +1,7 @@
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.ShoppingLists;
+using RecipeLibrary.Application.Pantry;
 using RecipeLibrary.Domain.Entities;
 
 namespace RecipeLibrary.Application.UseCases.ShoppingLists;
@@ -8,8 +9,10 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 public sealed class AddRecipesToShoppingListCommandHandler(
     IRecipeRepository recipeRepository,
     IShoppingListRepository shoppingListRepository,
+    IPantryRepository pantryRepository,
     IShoppingListUserContext userContext,
-    ShoppingListIngredientMerger merger)
+    ShoppingListIngredientMerger merger,
+    PantrySubtractor pantrySubtractor)
     : ICommandHandler<AddRecipesToShoppingListCommand, AddRecipesToShoppingListResult>
 {
     public async Task<AddRecipesToShoppingListResult> HandleAsync(
@@ -48,6 +51,13 @@ public sealed class AddRecipesToShoppingListCommandHandler(
                     RecipeTitle = recipe.Title.Value,
                 });
             }
+        }
+
+        var ownerKey = PantryOwnerKey.Resolve(userContext.OwnerUserId, list.GroupId);
+        var pantryItems = await pantryRepository.GetByOwnerKeyAsync(ownerKey, ct);
+        if (pantryItems.Count > 0)
+        {
+            lines = pantrySubtractor.SubtractFromLines(lines, pantryItems).ToList();
         }
 
         var merged = merger.MergeIntoList(list.Items.ToList(), lines, list.Id);

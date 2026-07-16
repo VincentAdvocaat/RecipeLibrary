@@ -1,9 +1,16 @@
 @page "/shopping-list"
 @rendermode InteractiveServer
 
+@using System.Net.Http.Json
+@using RecipeLibrary.Application.Contracts
+@using RecipeLibrary.Components.Molecules
+@using RecipeLibrary.Domain.ValueObjects
+
 @inject ICommandBus CommandBus
 @inject ShoppingListSessionService ShoppingSession
+@inject PantrySessionService PantrySession
 @inject NavigationManager Navigation
+@inject HttpClient Http
 
 <PageTitle>@L["ShoppingList.PageTitle"]</PageTitle>
 
@@ -96,6 +103,62 @@
                         </button>
                     }
 
+                    @if (!_splitMode)
+                    {
+                        <div class="rounded border border-gray-200 bg-gray-50 p-4 space-y-3" data-testid="@UiTestIds.AddItemForm">
+                            <Heading Level="3" CssClass="m-0 text-sm font-semibold text-gray-800">@L["ShoppingList.AddItem.SectionLabel"]</Heading>
+                            <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem_8rem_auto] gap-x-3 gap-y-2">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">@L["RecipeCreate.Ingredient.Name.Label"]</label>
+                                    <input class="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                           data-testid="@UiTestIds.AddItemName"
+                                           placeholder="@L["RecipeCreate.Ingredient.Name.Placeholder"]"
+                                           value="@_addItemName"
+                                           @oninput="OnAddItemNameInput" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">@L["RecipeCreate.Ingredient.Preparation.Label"]</label>
+                                    <input class="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                           data-testid="@UiTestIds.AddItemPreparation"
+                                           placeholder="@L["RecipeCreate.Ingredient.Preparation.Placeholder"]"
+                                           @bind="_addItemPreparation" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">@L["RecipeCreate.Ingredient.Quantity.Label"]</label>
+                                    <IngredientQuantityInput CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                                             @bind-Quantity="_addItemQuantity" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">@L["RecipeCreate.Ingredient.Unit.Label"]</label>
+                                    <IngredientUnitSelect CssClass="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                                          @bind-UnitName="_addItemUnit" />
+                                </div>
+                                <div class="flex items-end">
+                                    <button type="button"
+                                            data-testid="@UiTestIds.AddItemSubmit"
+                                            class="px-3 py-2 rounded bg-gray-800 text-white text-sm disabled:opacity-50"
+                                            disabled="@string.IsNullOrWhiteSpace(_addItemName)"
+                                            @onclick="AddManualItemAsync">
+                                        @L["ShoppingList.AddItem.Button"]
+                                    </button>
+                                </div>
+                            </div>
+                            @if (_addItemSuggestions.Count > 0)
+                            {
+                                <div class="max-w-md rounded border border-gray-200 bg-white shadow-sm">
+                                    @foreach (var suggestion in _addItemSuggestions)
+                                    {
+                                        <button type="button"
+                                                class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                                                @onclick="() => SelectAddItemSuggestion(suggestion)">
+                                            @suggestion.Name
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+
                     @if (_activeList.Items.Count == 0)
                     {
                         <p class="text-gray-600">@L["ShoppingList.Empty.Message"]</p>
@@ -123,15 +186,49 @@
                                                @onchange="e => ToggleCheckedAsync(item.Id, e)" />
                                     }
                                     <div class="flex-1 min-w-0">
-                                        <div class="flex flex-wrap gap-x-2 text-sm">
-                                            <span class="tabular-nums text-gray-700">@FormatLine(item)</span>
-                                            <span class="font-medium text-gray-900">
-                                                @item.DisplayName@if (!string.IsNullOrWhiteSpace(item.Preparation))
+                                        @if (_editingQuantityItemId == item.Id)
+                                        {
+                                            <div class="flex flex-wrap items-center gap-2 text-sm">
+                                                <span data-testid="@UiTestIds.ItemQuantityInput(item.Id)">
+                                                    <IngredientQuantityInput CssClass="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+                                                                             @bind-Quantity="_editQuantityDraft" />
+                                                </span>
+                                                <span class="text-gray-700">@GetUnitLabel(item.Unit)</span>
+                                                <span class="font-medium text-gray-900">@item.DisplayName</span>
+                                                <button type="button"
+                                                        data-testid="@UiTestIds.ItemQuantitySave(item.Id)"
+                                                        class="text-xs text-gray-800 underline"
+                                                        @onclick="() => SaveQuantityAsync(item.Id)">
+                                                    @L["ShoppingList.EditQuantity.SaveButton"]
+                                                </button>
+                                                <button type="button"
+                                                        class="text-xs text-gray-600"
+                                                        @onclick="CancelEditQuantity">
+                                                    @L["ShoppingList.Split.CancelButton"]
+                                                </button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="flex flex-wrap gap-x-2 text-sm">
+                                                <span class="tabular-nums text-gray-700">@FormatLine(item)</span>
+                                                <span class="font-medium text-gray-900">
+                                                    @item.DisplayName@if (!string.IsNullOrWhiteSpace(item.Preparation))
+                                                    {
+                                                        <span class="text-gray-500"> (@item.Preparation)</span>
+                                                    }
+                                                </span>
+                                                @if (!_splitMode)
                                                 {
-                                                    <span class="text-gray-500"> (@item.Preparation)</span>
+                                                    <button type="button"
+                                                            data-testid="@UiTestIds.ItemQuantityEdit(item.Id)"
+                                                            class="text-xs text-gray-600 hover:text-gray-900"
+                                                            @onclick="() => StartEditQuantity(item)">
+                                                        @L["ShoppingList.EditQuantity.Button"]
+                                                    </button>
                                                 }
-                                            </span>
-                                        </div>
+                                            </div>
+                                        }
                                         @if (item.Sources.Count > 0)
                                         {
                                             <p class="text-xs text-gray-500 mt-0.5">@L["ShoppingList.FromRecipes.Label", FormatSources(item)]</p>
@@ -163,6 +260,12 @@
                     <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
                         @if (!_splitMode)
                         {
+                            <button type="button"
+                                    data-testid="@UiTestIds.ApplyPantry"
+                                    class="text-sm font-medium text-gray-700 hover:text-gray-900"
+                                    @onclick="ApplyPantryAsync">
+                                @L["ShoppingList.ApplyPantry.Button"]
+                            </button>
                             <button type="button"
                                     data-testid="@UiTestIds.ListClear"
                                     class="text-sm text-gray-700 hover:text-gray-900"
@@ -251,6 +354,14 @@
     private bool _confirmClear;
     private bool _confirmDeleteList;
     private bool _confirmDeleteGroup;
+    private Guid? _editingQuantityItemId;
+    private decimal _editQuantityDraft;
+    private string _addItemName = string.Empty;
+    private string? _addItemPreparation;
+    private decimal _addItemQuantity = 1;
+    private string _addItemUnit = nameof(Unit.Gram);
+    private Guid? _addItemCanonicalId;
+    private List<IngredientLookupItem> _addItemSuggestions = [];
 
     private ShoppingListDto? _activeList =>
         _group?.Lists.FirstOrDefault(l => l.Id == _activeListId);
@@ -452,6 +563,99 @@
 
         _editingName = false;
         await ReloadAsync();
+    }
+
+    private void StartEditQuantity(ShoppingListItemDto item)
+    {
+        _editingQuantityItemId = item.Id;
+        _editQuantityDraft = item.Quantity;
+    }
+
+    private void CancelEditQuantity() => _editingQuantityItemId = null;
+
+    private async Task SaveQuantityAsync(Guid itemId)
+    {
+        await CommandBus.SendAsync<UpdateShoppingListItemQuantityCommand, UpdateShoppingListItemQuantityResult>(
+            new UpdateShoppingListItemQuantityCommand
+            {
+                ItemId = itemId,
+                Quantity = _editQuantityDraft,
+            });
+
+        _editingQuantityItemId = null;
+        await ReloadAsync();
+    }
+
+    private async Task OnAddItemNameInput(ChangeEventArgs e)
+    {
+        _addItemName = e.Value?.ToString() ?? string.Empty;
+        _addItemCanonicalId = null;
+
+        if (_addItemName.Trim().Length < 2)
+        {
+            _addItemSuggestions = [];
+            return;
+        }
+
+        var encoded = Uri.EscapeDataString(_addItemName.Trim());
+        _addItemSuggestions = await Http.GetFromJsonAsync<List<IngredientLookupItem>>($"/ingredients/search?q={encoded}") ?? [];
+    }
+
+    private void SelectAddItemSuggestion(IngredientLookupItem suggestion)
+    {
+        _addItemName = suggestion.Name;
+        _addItemCanonicalId = suggestion.Id;
+        _addItemSuggestions = [];
+    }
+
+    private async Task AddManualItemAsync()
+    {
+        if (_activeList is null || string.IsNullOrWhiteSpace(_addItemName))
+        {
+            return;
+        }
+
+        await CommandBus.SendAsync<AddManualShoppingListItemCommand, AddManualShoppingListItemResult>(
+            new AddManualShoppingListItemCommand
+            {
+                ShoppingListId = _activeList.Id,
+                CanonicalIngredientId = _addItemCanonicalId,
+                DisplayName = _addItemName.Trim(),
+                Preparation = _addItemPreparation,
+                Quantity = _addItemQuantity,
+                Unit = _addItemUnit,
+            });
+
+        ResetAddItemForm();
+        await ReloadAsync();
+    }
+
+    private async Task ApplyPantryAsync()
+    {
+        if (_activeList is null)
+        {
+            return;
+        }
+
+        var ownerKey = await PantrySession.GetOwnerKeyAsync();
+        await CommandBus.SendAsync<ApplyPantryToShoppingListCommand, ApplyPantryToShoppingListResult>(
+            new ApplyPantryToShoppingListCommand
+            {
+                OwnerKey = ownerKey,
+                ShoppingListId = _activeList.Id,
+            });
+
+        await ReloadAsync();
+    }
+
+    private void ResetAddItemForm()
+    {
+        _addItemName = string.Empty;
+        _addItemPreparation = null;
+        _addItemQuantity = 1;
+        _addItemUnit = nameof(Unit.Gram);
+        _addItemCanonicalId = null;
+        _addItemSuggestions = [];
     }
 
     private string FormatLine(ShoppingListItemDto item) =>

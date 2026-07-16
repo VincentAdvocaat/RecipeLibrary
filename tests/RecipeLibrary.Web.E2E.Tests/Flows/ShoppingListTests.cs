@@ -132,6 +132,58 @@ public sealed class ShoppingListTests(E2eFixture fixture)
     }
 
     [Fact]
+    public async Task EditQuantity_UpdatesDisplayedAmount()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        page.UseBlazorDefaults();
+        await page.GotoAsync($"{fixture.BaseUrl}/recipes/{fixture.Seed.RecipeId}");
+        await page.GetByTestId(UiTestIds.AddToShoppingList).ClickAsync();
+        await page.GotoAsync($"{fixture.BaseUrl}/shopping-list");
+        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
+
+        var editButton = page.Locator("[data-testid$='-quantity-edit']").First;
+        await editButton.ClickAsync();
+        var quantityInput = page.Locator("[data-testid$='-quantity-input'] input").First;
+        await quantityInput.FillAsync("9");
+        await page.Locator("[data-testid$='-quantity-save']").First.ClickAsync();
+
+        await Assertions.Expect(page.GetByText("9")).ToBeVisibleAsync();
+    }
+
+    [Fact]
+    public async Task AddManualItem_ShowsOnList()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        page.UseBlazorDefaults();
+        await page.GotoAsync($"{fixture.BaseUrl}/shopping-list");
+        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
+
+        var itemName = $"Handmatig {Guid.NewGuid():N}";
+        await page.GetByTestId(UiTestIds.AddItemName).FillBlazorInputAsync(itemName);
+        await page.GetByTestId(UiTestIds.AddItemSubmit).ClickAsync();
+
+        await Assertions.Expect(page.GetByText(itemName)).ToBeVisibleAsync();
+    }
+
+    [Fact]
+    public async Task PantryPage_AddItem_ShowsOnList()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        page.UseBlazorDefaults();
+        await page.GotoAsync($"{fixture.BaseUrl}/pantry");
+        await page.GetByTestId(UiTestIds.PantryReady).WaitForAsync();
+
+        var itemName = $"Voorraad {Guid.NewGuid():N}";
+        await page.GetByTestId(UiTestIds.PantryAddName).FillBlazorInputAsync(itemName);
+        await page.GetByTestId(UiTestIds.PantryAddSubmit).ClickAsync();
+
+        await Assertions.Expect(page.GetByText(itemName)).ToBeVisibleAsync();
+    }
+
+    [Fact]
     public async Task EmptyList_LinkBackToRecipes_Works()
     {
         await using var context = await fixture.Browser.NewContextAsync();

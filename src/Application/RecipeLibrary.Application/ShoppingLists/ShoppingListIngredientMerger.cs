@@ -67,6 +67,51 @@ public sealed class ShoppingListIngredientMerger(IIngredientTextNormalizer norma
         return items;
     }
 
+    public IReadOnlyList<ShoppingListItem> MergeManualLineIntoList(
+        IReadOnlyList<ShoppingListItem> existingItems,
+        Guid? canonicalIngredientId,
+        string displayName,
+        string? preparation,
+        decimal quantity,
+        Unit unit,
+        Guid shoppingListId)
+    {
+        var items = existingItems.Select(CloneItem).ToList();
+        var key = new ShoppingListMergeKey(
+            canonicalIngredientId,
+            normalizer.Normalize(displayName),
+            unit,
+            NormalizePreparation(preparation));
+
+        var existing = FindMatch(items, key);
+        var normalizedQuantity = IngredientQuantityFormatter.Normalize(quantity, unit);
+
+        if (existing is not null)
+        {
+            existing.Quantity = new Quantity(
+                IngredientQuantityFormatter.Normalize(
+                    existing.Quantity.Value + normalizedQuantity,
+                    existing.Unit));
+            return items;
+        }
+
+        var sortOrder = items.Count > 0 ? items.Max(i => i.SortOrder) + 1 : 0;
+        items.Add(new ShoppingListItem
+        {
+            Id = Guid.NewGuid(),
+            ShoppingListId = shoppingListId,
+            CanonicalIngredientId = canonicalIngredientId,
+            DisplayName = displayName.Trim(),
+            Preparation = NormalizePreparation(preparation),
+            Quantity = new Quantity(normalizedQuantity),
+            Unit = unit,
+            IsChecked = false,
+            SortOrder = sortOrder,
+        });
+
+        return items;
+    }
+
     private ShoppingListMergeKey BuildKey(ShoppingListItem item) =>
         new(
             item.CanonicalIngredientId,

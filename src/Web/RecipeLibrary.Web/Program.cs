@@ -119,6 +119,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ShoppingListSessionService>();
+builder.Services.AddScoped<PantrySessionService>();
 builder.Services.AddScoped<RecipeImportDraftService>();
 
 ConfigureDataProtection(builder);

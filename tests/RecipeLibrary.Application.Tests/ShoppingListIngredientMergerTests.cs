@@ -132,4 +132,50 @@ public sealed class ShoppingListIngredientMergerTests
         Assert.Equal(1, result[0].Quantity.Value);
         Assert.Single(result[0].Sources);
     }
+
+    [Fact]
+    public void MergeManualLineIntoList_AddsItemWithoutSources()
+    {
+        var listId = Guid.NewGuid();
+        var result = _merger.MergeManualLineIntoList(
+            [],
+            null,
+            "Melk",
+            null,
+            2,
+            Unit.Piece,
+            listId);
+
+        Assert.Single(result);
+        Assert.Equal("Melk", result[0].DisplayName);
+        Assert.Equal(2, result[0].Quantity.Value);
+        Assert.Empty(result[0].Sources);
+    }
+
+    [Fact]
+    public void MergeManualLineIntoList_MergesQuantityOnMatchingLine()
+    {
+        var listId = Guid.NewGuid();
+        var existing = new ShoppingListItem
+        {
+            Id = Guid.NewGuid(),
+            ShoppingListId = listId,
+            DisplayName = "Melk",
+            Quantity = new Quantity(1),
+            Unit = Unit.Piece,
+            Sources = [],
+        };
+
+        var result = _merger.MergeManualLineIntoList(
+            [existing],
+            null,
+            "Melk",
+            null,
+            2,
+            Unit.Piece,
+            listId);
+
+        Assert.Single(result);
+        Assert.Equal(3, result[0].Quantity.Value);
+    }
 }

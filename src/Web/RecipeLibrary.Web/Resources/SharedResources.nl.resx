@@ -188,6 +188,7 @@
   <data name="Auth.SignOut" xml:space="preserve"><value>Uitloggen</value></data>
   <data name="Auth.SignedInAs" xml:space="preserve"><value>Ingelogd als {0}</value></data>
   <data name="Nav.ShoppingList" xml:space="preserve"><value>Boodschappenlijst</value></data>
+  <data name="Nav.Pantry" xml:space="preserve"><value>Voorraadkast</value></data>
   <data name="ShoppingList.NumberedNameFormat" xml:space="preserve"><value>Boodschappenlijst {0}</value></data>
   <data name="ShoppingList.PageTitle" xml:space="preserve"><value>Boodschappenlijst</value></data>
   <data name="ShoppingList.Empty.Message" xml:space="preserve"><value>Je boodschappenlijst is leeg. Voeg recepten toe om te beginnen.</value></data>
@@ -212,6 +213,18 @@
   <data name="ShoppingList.MoveTo.Button" xml:space="preserve"><value>Verplaatsen naar {0}</value></data>
   <data name="ShoppingList.RemoveItem.Button" xml:space="preserve"><value>Verwijderen</value></data>
   <data name="ShoppingList.FromRecipes.Label" xml:space="preserve"><value>Van: {0}</value></data>
+  <data name="ShoppingList.EditQuantity.Button" xml:space="preserve"><value>Hoeveelheid wijzigen</value></data>
+  <data name="ShoppingList.EditQuantity.SaveButton" xml:space="preserve"><value>Opslaan</value></data>
+  <data name="ShoppingList.AddItem.SectionLabel" xml:space="preserve"><value>Handmatig item toevoegen</value></data>
+  <data name="ShoppingList.AddItem.Button" xml:space="preserve"><value>Toevoegen</value></data>
+  <data name="ShoppingList.ApplyPantry.Button" xml:space="preserve"><value>Voorraad toepassen</value></data>
+  <data name="Pantry.PageTitle" xml:space="preserve"><value>Voorraadkast</value></data>
+  <data name="Pantry.Intro.Message" xml:space="preserve"><value>Houd bij wat je al in huis hebt. Afgevinkte items op de boodschappenlijst worden hier automatisch bijgewerkt.</value></data>
+  <data name="Pantry.Empty.Message" xml:space="preserve"><value>Je voorraadkast is leeg. Voeg basisproducten toe of vink items af op je boodschappenlijst.</value></data>
+  <data name="Pantry.AddItem.SectionLabel" xml:space="preserve"><value>Toevoegen aan voorraad</value></data>
+  <data name="Pantry.AddItem.Button" xml:space="preserve"><value>Toevoegen</value></data>
+  <data name="Pantry.EditQuantity.Button" xml:space="preserve"><value>Hoeveelheid wijzigen</value></data>
+  <data name="Pantry.EditQuantity.SaveButton" xml:space="preserve"><value>Opslaan</value></data>
   <data name="RecipeDetail.AddToShoppingListButton" xml:space="preserve"><value>Toevoegen aan boodschappenlijst</value></data>
   <data name="RecipeDetail.AddedToShoppingList.Message" xml:space="preserve"><value>Toegevoegd aan boodschappenlijst.</value></data>
   <data name="RecipeDetail.AddToShoppingList.TargetLabel" xml:space="preserve"><value>Toevoegen aan</value></data>

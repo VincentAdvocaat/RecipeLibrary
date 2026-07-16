@@ -144,3 +144,29 @@ public sealed class UpdateShoppingListNameCommand : ICommand<UpdateShoppingListN
 }
 
 public sealed record UpdateShoppingListNameResult(bool Updated);
+
+public sealed class UpdateShoppingListItemQuantityCommand : ICommand<UpdateShoppingListItemQuantityResult>
+{
+    public Guid ItemId { get; init; }
+
+    public decimal Quantity { get; init; }
+}
+
+public sealed record UpdateShoppingListItemQuantityResult(bool Updated, decimal Quantity);
+
+public sealed class AddManualShoppingListItemCommand : ICommand<AddManualShoppingListItemResult>
+{
+    public Guid ShoppingListId { get; init; }
+
+    public Guid? CanonicalIngredientId { get; init; }
+
+    public string DisplayName { get; init; } = string.Empty;
+
+    public string? Preparation { get; init; }
+
+    public decimal Quantity { get; init; }
+
+    public string Unit { get; init; } = string.Empty;
+}
+
+public sealed record AddManualShoppingListItemResult(bool Added, Guid? ItemId);

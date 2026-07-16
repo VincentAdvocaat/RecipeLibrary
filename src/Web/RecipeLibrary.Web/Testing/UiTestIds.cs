@@ -59,4 +59,24 @@ public static class UiTestIds
     public static string ItemCheckbox(Guid itemId) => $"item-{itemId:D}-checkbox";
     public static string ItemMove(Guid itemId) => $"item-{itemId:D}-move";
     public static string ItemRemove(Guid itemId) => $"item-{itemId:D}-remove";
+    public static string ItemQuantityEdit(Guid itemId) => $"item-{itemId:D}-quantity-edit";
+    public static string ItemQuantityInput(Guid itemId) => $"item-{itemId:D}-quantity-input";
+    public static string ItemQuantitySave(Guid itemId) => $"item-{itemId:D}-quantity-save";
+
+    public const string AddItemForm = "add-item-form";
+    public const string AddItemName = "add-item-name";
+    public const string AddItemPreparation = "add-item-preparation";
+    public const string AddItemSubmit = "add-item-submit";
+    public const string ApplyPantry = "apply-pantry";
+
+    public const string PantryReady = "pantry-ready";
+    public const string PantryAddForm = "pantry-add-form";
+    public const string PantryAddName = "pantry-add-name";
+    public const string PantryAddSubmit = "pantry-add-submit";
+    public const string NavPantry = "nav-pantry";
+
+    public static string PantryQuantityEdit(Guid itemId) => $"pantry-{itemId:D}-quantity-edit";
+    public static string PantryQuantityInput(Guid itemId) => $"pantry-{itemId:D}-quantity-input";
+    public static string PantryQuantitySave(Guid itemId) => $"pantry-{itemId:D}-quantity-save";
+    public static string PantryItemRemove(Guid itemId) => $"pantry-{itemId:D}-remove";
 }

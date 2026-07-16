@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Domain.Entities;
+using RecipeLibrary.Domain.ValueObjects;
 
 namespace RecipeLibrary.Infrastructure.Persistence;
 
@@ -299,6 +300,35 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
                     .SetProperty(l => l.Name, name)
                     .SetProperty(l => l.UpdatedAt, DateTimeOffset.UtcNow),
                 ct);
+
+        return updated > 0;
+    }
+
+    public async Task<bool> UpdateItemQuantityAsync(Guid itemId, decimal quantity, CancellationToken ct = default)
+    {
+        var item = await dbContext.ShoppingListItems
+            .AsNoTracking()
+            .FirstOrDefaultAsync(i => i.Id == itemId, ct);
+
+        if (item is null)
+        {
+            return false;
+        }
+
+        var updated = await dbContext.ShoppingListItems
+            .Where(i => i.Id == itemId)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(i => i.Quantity, new Quantity(quantity)),
+                ct);
+
+        if (updated > 0)
+        {
+            await dbContext.ShoppingLists
+                .Where(l => l.Id == item.ShoppingListId)
+                .ExecuteUpdateAsync(
+                    s => s.SetProperty(l => l.UpdatedAt, DateTimeOffset.UtcNow),
+                    ct);
+        }
 
         return updated > 0;
     }
