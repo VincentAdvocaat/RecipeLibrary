@@ -19,6 +19,14 @@ RUN dotnet publish "src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj" -c Relea
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
+# charlesw/Tesseract NuGet ships Windows natives only; Linux needs system libs.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libgomp1 \
+        libtesseract5 \
+        liblept5 \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 

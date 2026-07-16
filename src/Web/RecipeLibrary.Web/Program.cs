@@ -4,6 +4,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Identity.Web;
@@ -111,6 +112,14 @@ builder.Services.AddPersistence(recipeDbConnectionString);
 builder.Services.AddRecipeImport(builder.Configuration);
 builder.Services.AddApplication();
 
+var ocrMaxImageBytes = builder.Configuration.GetValue<int?>($"{RecipeImportOptions.SectionName}:Ocr:MaxImageBytes")
+    ?? new RecipeImportOcrOptions().MaxImageBytes;
+builder.Services.Configure<FormOptions>(options =>
+{
+    // Allow multipart overhead (field names + language) above the OCR image cap.
+    options.MultipartBodyLengthLimit = ocrMaxImageBytes + (256 * 1024);
+});
+
 var recipeImagesDefaultPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "RecipeLibraryUploads"));
 builder.Services.AddRecipeFileStorage(builder.Configuration, recipeImagesDefaultPath);
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -120,7 +129,6 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ShoppingListSessionService>();
 builder.Services.AddScoped<PantrySessionService>();
-builder.Services.AddScoped<RecipeImportDraftService>();
 
 ConfigureDataProtection(builder);
 
@@ -254,7 +262,11 @@ app.MapPost("/recipes/import-url", async (ImportRecipeFromUrlQuery query, IQuery
     }
 }).DisableAntiforgery().ApplyAuth(authEnabled);
 
-app.MapPost("/recipes/import-image", async (HttpRequest request, IQueryBus queryBus, CancellationToken ct) =>
+app.MapPost("/recipes/import-image", async (
+    HttpRequest request,
+    IQueryBus queryBus,
+    Microsoft.Extensions.Options.IOptions<RecipeImportOptions> importOptions,
+    CancellationToken ct) =>
 {
     try
     {
@@ -263,6 +275,7 @@ app.MapPost("/recipes/import-image", async (HttpRequest request, IQueryBus query
             return Results.BadRequest("Expected multipart form data.");
         }
 
+        var maxBytes = importOptions.Value.Ocr.MaxImageBytes;
         var form = await request.ReadFormAsync(ct);
         var file = form.Files.GetFile("file");
         if (file is null || file.Length == 0)
@@ -270,8 +283,13 @@ app.MapPost("/recipes/import-image", async (HttpRequest request, IQueryBus query
             return Results.BadRequest("Image file is required.");
         }
 
+        if (file.Length > maxBytes)
+        {
+            return Results.BadRequest($"Image exceeds maximum size of {maxBytes} bytes.");
+        }
+
         await using var stream = file.OpenReadStream();
-        using var memory = new MemoryStream();
+        using var memory = new MemoryStream(capacity: (int)Math.Min(file.Length, maxBytes));
         await stream.CopyToAsync(memory, ct);
 
         var language = form["language"].ToString();
@@ -280,6 +298,7 @@ app.MapPost("/recipes/import-image", async (HttpRequest request, IQueryBus query
             {
                 ImageBytes = memory.ToArray(),
                 ContentType = file.ContentType ?? string.Empty,
+                FileName = file.FileName ?? string.Empty,
                 Language = string.IsNullOrWhiteSpace(language) ? "nld" : language,
             },
             ct);

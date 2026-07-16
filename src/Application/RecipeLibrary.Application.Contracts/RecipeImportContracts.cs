@@ -40,6 +40,9 @@ public sealed class ImportRecipeFromImageQuery : IQuery<ImportRecipeResult>
 
     public string ContentType { get; init; } = string.Empty;
 
+    /// <summary>Original file name; used to infer content type when the client sends a generic type.</summary>
+    public string FileName { get; init; } = string.Empty;
+
     /// <summary>Tesseract language code: nld or eng.</summary>
     public string Language { get; init; } = "nld";
 }

@@ -101,6 +101,66 @@ public sealed class ImportRecipeQueryHandlerTests
             }));
     }
 
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_Throws_ForOversizedImage()
+    {
+        var options = Options.Create(new RecipeImportOptions
+        {
+            Ocr = new RecipeImportOcrOptions { MaxImageBytes = 4 },
+        });
+        var sut = new ImportRecipeFromImageQueryHandler(
+            new FakeImageTextExtractor("x"),
+            CreateService(),
+            options);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new ImportRecipeFromImageQuery
+            {
+                ImageBytes = [1, 2, 3, 4, 5],
+                ContentType = "image/png",
+                Language = "eng",
+            }));
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_InfersTypeFromFileName_WhenContentTypeEmpty()
+    {
+        var plain = await File.ReadAllTextAsync(GetFixturePath("plain-pasta.txt"));
+        var extractor = new FakeImageTextExtractor(plain);
+        var sut = new ImportRecipeFromImageQueryHandler(
+            extractor,
+            CreateService(),
+            Options.Create(new RecipeImportOptions()));
+
+        var result = await sut.HandleAsync(new ImportRecipeFromImageQuery
+        {
+            ImageBytes = [1, 2, 3],
+            ContentType = string.Empty,
+            FileName = "recipe.png",
+            Language = "eng",
+        });
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_Throws_WhenContentTypeAndExtensionMissing()
+    {
+        var sut = new ImportRecipeFromImageQueryHandler(
+            new FakeImageTextExtractor("x"),
+            CreateService(),
+            Options.Create(new RecipeImportOptions()));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new ImportRecipeFromImageQuery
+            {
+                ImageBytes = [1],
+                ContentType = string.Empty,
+                FileName = "recipe.bin",
+                Language = "eng",
+            }));
+    }
+
     private static RecipeImportService CreateService() =>
         new(
             new StructuredRecipeExtractor(),

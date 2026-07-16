@@ -70,11 +70,7 @@ public sealed class ImportRecipeFromImageQueryHandler(
             throw new ArgumentException($"Image exceeds maximum size of {maxBytes} bytes.");
         }
 
-        var contentType = (query.ContentType ?? string.Empty).Trim();
-        if (contentType.Length > 0 && !AllowedContentTypes.Contains(contentType))
-        {
-            throw new ArgumentException("Unsupported image type. Use jpg, png, or webp.");
-        }
+        ResolveContentType(query.ContentType, query.FileName);
 
         var language = NormalizeLanguage(query.Language);
         await using var stream = new MemoryStream(query.ImageBytes, writable: false);
@@ -92,6 +88,52 @@ public sealed class ImportRecipeFromImageQueryHandler(
             },
             ct);
     }
+
+    internal static string ResolveContentType(string? contentType, string? fileName)
+    {
+        var type = (contentType ?? string.Empty).Trim();
+        if (AllowedContentTypes.Contains(type))
+        {
+            return NormalizeJpegAlias(type);
+        }
+
+        if (type.Length > 0
+            && !string.Equals(type, "application/octet-stream", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Unsupported image type. Use jpg, png, or webp.");
+        }
+
+        var inferred = InferContentTypeFromFileName(fileName);
+        if (inferred is null)
+        {
+            throw new ArgumentException("Unsupported image type. Use jpg, png, or webp.");
+        }
+
+        return inferred;
+    }
+
+    private static string? InferContentTypeFromFileName(string? fileName)
+    {
+        var name = (fileName ?? string.Empty).Trim();
+        if (name.Length == 0)
+        {
+            return null;
+        }
+
+        var extension = Path.GetExtension(name).ToLowerInvariant();
+        return extension switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            _ => null,
+        };
+    }
+
+    private static string NormalizeJpegAlias(string contentType) =>
+        string.Equals(contentType, "image/jpg", StringComparison.OrdinalIgnoreCase)
+            ? "image/jpeg"
+            : contentType;
 
     private static string NormalizeLanguage(string? language)
     {

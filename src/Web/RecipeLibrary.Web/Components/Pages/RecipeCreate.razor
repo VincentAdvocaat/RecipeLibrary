@@ -3,17 +3,18 @@
 @using System.Net.Http.Headers
 @using System.Net.Http.Json
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Options
+@using RecipeLibrary.Application.Abstractions
 @using RecipeLibrary.Application.Contracts
 @using RecipeLibrary.Domain.ValueObjects
 @using RecipeLibrary.Resources
 @using RecipeLibrary.Web.Models
-@using RecipeLibrary.Web.Services
 @using RecipeCategory = RecipeLibrary.Domain.ValueObjects.RecipeCategory
 @using RecipeDifficulty = RecipeLibrary.Domain.ValueObjects.Difficulty
 @inject ICommandBus CommandBus
 @inject NavigationManager Navigation
 @inject HttpClient Http
-@inject RecipeImportDraftService ImportDraft
+@inject IOptions<RecipeImportOptions> ImportOptions
 
 <PageTitle>@L["RecipeCreate.PageTitle"]</PageTitle>
 
@@ -106,6 +107,7 @@
     private bool _isProcessing;
     private string? _importError;
     private bool _showImportReviewBanner;
+    private List<string> _importWarningMessages = [];
 
     [SupplyParameterFromQuery(Name = "mode")]
     public string? ModeQuery { get; set; }
@@ -130,15 +132,6 @@
                 _ => RecipeCreateMode.Manual,
             };
         }
-
-        if (!ImportDraft.TryConsumeDraft(out var draft) || draft is null)
-        {
-            return;
-        }
-
-        ApplyDraftToVm(draft);
-        _mode = RecipeCreateMode.Manual;
-        _showImportReviewBanner = true;
     }
 
     private void OnModeChanged(RecipeCreateMode mode)
@@ -245,8 +238,17 @@
             <div class="bg-white rounded-lg shadow p-6 space-y-6">
                 @if (_showImportReviewBanner)
                 {
-                    <div class="rounded border border-amber-200 bg-amber-50 p-3">
+                    <div class="rounded border border-amber-200 bg-amber-50 p-3 space-y-2">
                         <p class="text-sm text-amber-900">@L["RecipeCreate.Import.ReviewBanner"]</p>
+                        @if (_importWarningMessages.Count > 0)
+                        {
+                            <ul class="list-disc list-inside space-y-1">
+                                @foreach (var warning in _importWarningMessages)
+                                {
+                                    <li class="text-sm text-amber-800">@warning</li>
+                                }
+                            </ul>
+                        }
                     </div>
                 }
 
@@ -454,7 +456,7 @@
         _isProcessing = true;
         try
         {
-            await using var fileStream = _photoFile.OpenReadStream(maxAllowedSize: 8 * 1024 * 1024);
+            await using var fileStream = _photoFile.OpenReadStream(maxAllowedSize: ImportOptions.Value.Ocr.MaxImageBytes);
             using var content = new MultipartFormDataContent();
             var streamContent = new StreamContent(fileStream);
             streamContent.Headers.ContentType = new MediaTypeHeaderValue(_photoFile.ContentType);
@@ -570,6 +572,13 @@
             _vm.Steps.Add(new StepVm { StepNumber = 1 });
         }
 
+        _importWarningMessages = draft.Warnings
+            .Select(MapImportWarning)
+            .Where(static x => x is not null)
+            .Cast<string>()
+            .Distinct()
+            .ToList();
+
         _ingredientSuggestions.Clear();
         _ingredientMatchMessages.Clear();
         for (var i = 0; i < draft.Ingredients.Count; i++)
@@ -590,6 +599,16 @@
             };
         }
     }
+
+    private string? MapImportWarning(string code) => code switch
+    {
+        ImportWarningCodes.JsonLdParseSkipped => L["RecipeCreate.Import.Warning.JsonLdParseSkipped"].Value,
+        ImportWarningCodes.JsonLdEmptyIngredients => L["RecipeCreate.Import.Warning.JsonLdEmptyIngredients"].Value,
+        ImportWarningCodes.NoContent => L["RecipeCreate.Import.Warning.NoContent"].Value,
+        ImportWarningCodes.HeuristicIngredients => L["RecipeCreate.Import.Warning.HeuristicIngredients"].Value,
+        ImportWarningCodes.LowConfidenceAiHint => L["RecipeCreate.Import.Warning.LowConfidenceAiHint"].Value,
+        _ => null,
+    };
 
     private Task OnIngredientTagsChanged(IReadOnlyList<string> tags)
     {

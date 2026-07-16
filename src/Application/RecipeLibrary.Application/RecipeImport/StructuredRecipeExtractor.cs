@@ -59,9 +59,9 @@ public sealed class StructuredRecipeExtractor
 
                 return MapRecipeNode(recipe.Value, warnings);
             }
-            catch (JsonException ex)
+            catch (JsonException)
             {
-                warnings.Add($"Skipped invalid JSON-LD block: {ex.Message}");
+                warnings.Add(ImportWarningCodes.JsonLdParseSkipped);
             }
         }
 
@@ -151,7 +151,7 @@ public sealed class StructuredRecipeExtractor
 
         if (ingredientLines.Count == 0)
         {
-            warnings.Add("JSON-LD Recipe found but recipeIngredient was empty.");
+            warnings.Add(ImportWarningCodes.JsonLdEmptyIngredients);
         }
 
         return new StructuredRecipeExtraction
@@ -326,7 +326,7 @@ public sealed class PlainTextSectionExtractor
 
         if (lines.Count == 0)
         {
-            warnings.Add("No content found to import.");
+            warnings.Add(ImportWarningCodes.NoContent);
             return new StructuredRecipeExtraction
             {
                 Source = ImportSource.PlainText,
@@ -371,7 +371,7 @@ public sealed class PlainTextSectionExtractor
 
         if (ingredientLines.Count == 0)
         {
-            warnings.Add("No ingredient section detected; trying heuristic ingredient lines.");
+            warnings.Add(ImportWarningCodes.HeuristicIngredients);
             ingredientLines.AddRange(lines.Skip(1).Where(LooksLikeIngredientLine).Select(StripBullet));
         }
 
