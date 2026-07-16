@@ -254,6 +254,48 @@ app.MapPost("/recipes/import-url", async (ImportRecipeFromUrlQuery query, IQuery
     }
 }).DisableAntiforgery().ApplyAuth(authEnabled);
 
+app.MapPost("/recipes/import-image", async (HttpRequest request, IQueryBus queryBus, CancellationToken ct) =>
+{
+    try
+    {
+        if (!request.HasFormContentType)
+        {
+            return Results.BadRequest("Expected multipart form data.");
+        }
+
+        var form = await request.ReadFormAsync(ct);
+        var file = form.Files.GetFile("file");
+        if (file is null || file.Length == 0)
+        {
+            return Results.BadRequest("Image file is required.");
+        }
+
+        await using var stream = file.OpenReadStream();
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory, ct);
+
+        var language = form["language"].ToString();
+        var result = await queryBus.QueryAsync<ImportRecipeFromImageQuery, ImportRecipeResult>(
+            new ImportRecipeFromImageQuery
+            {
+                ImageBytes = memory.ToArray(),
+                ContentType = file.ContentType ?? string.Empty,
+                Language = string.IsNullOrWhiteSpace(language) ? "nld" : language,
+            },
+            ct);
+
+        return Results.Ok(result);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+}).DisableAntiforgery().ApplyAuth(authEnabled);
+
 app.MapGet("/ingredients/search", async (string q, IQueryBus queryBus, CancellationToken ct) =>
 {
     var result = await queryBus.QueryAsync<SearchIngredientsQuery, IReadOnlyList<IngredientLookupItem>>(

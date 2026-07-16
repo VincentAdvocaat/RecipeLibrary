@@ -1,7 +1,8 @@
 @page "/recipes/create"
-
 @using System.ComponentModel.DataAnnotations
+@using System.Net.Http.Headers
 @using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components.Forms
 @using RecipeLibrary.Application.Contracts
 @using RecipeLibrary.Domain.ValueObjects
 @using RecipeLibrary.Resources
@@ -17,14 +18,238 @@
 <PageTitle>@L["RecipeCreate.PageTitle"]</PageTitle>
 
 <div class="min-h-screen bg-gray-100">
-    <div class="container mx-auto p-4 max-w-4xl">
+    <div class="container mx-auto p-4 max-w-4xl space-y-4">
         <RecipeOverviewHeader Title="@L["RecipeCreate.PageTitle"]" IsCreatePage="true" />
 
+        <RecipeCreateModeSwitcher Mode="_mode" ModeChanged="OnModeChanged" />
+
+        @if (_mode == RecipeCreateMode.Text)
+        {
+            @RenderTextImport()
+        }
+        else if (_mode == RecipeCreateMode.Photo)
+        {
+            @RenderPhotoImport()
+        }
+        else if (_mode == RecipeCreateMode.Url)
+        {
+            @RenderUrlImport()
+        }
+        else
+        {
+            @RenderManualForm()
+        }
+    </div>
+</div>
+
+<IngredientMatchConfirmDialog IsOpen="_showMatchConfirmDialog"
+                              Items="_confirmDialogItems"
+                              OnUseSuggestion="HandleConfirmUseSuggestion"
+                              OnConfirmNew="HandleConfirmNewIngredient"
+                              OnProceed="HandleConfirmDialogProceed"
+                              OnCancel="HandleConfirmDialogCancel" />
+
+@code {
+    private sealed class CreateRecipeVm
+    {
+        [Required(ErrorMessageResourceType = typeof(SharedResources), ErrorMessageResourceName = "RecipeCreate.Title.Required")]
+        public string Title { get; set; } = string.Empty;
+
+        public string? Description { get; set; }
+
+        [Range(0, 24 * 60)]
+        public int PreparationTimeMinutes { get; set; } = 30;
+
+        [Range(0, 24 * 60)]
+        public int CookingTimeMinutes { get; set; } = 0;
+
+        [Range(0, 100)]
+        public int Servings { get; set; } = 4;
+
+        public int DifficultyLevel { get; set; } = (int)RecipeDifficulty.Easy;
+
+        public int Category { get; set; } = (int)RecipeCategory.Vegetarian;
+
+        public List<RecipeIngredientEditorItem> Ingredients { get; set; } = [new RecipeIngredientEditorItem()];
+
+        public List<StepVm> Steps { get; set; } = [new StepVm { StepNumber = 1 }];
+    }
+
+    private sealed class StepVm
+    {
+        public int StepNumber { get; set; }
+
+        [Required(ErrorMessageResourceType = typeof(SharedResources), ErrorMessageResourceName = "RecipeCreate.Step.Text.Required")]
+        public string Text { get; set; } = string.Empty;
+    }
+
+    private readonly CreateRecipeVm _vm = new();
+    private RecipeCreateMode _mode = RecipeCreateMode.Manual;
+    private string? _imageUrl;
+    private bool _isSaving;
+    private string? _statusMessage;
+    private bool _saveSucceeded;
+    private bool _requiresOven;
+    private bool _requiresBaking;
+    private bool _requiresCooling;
+    private readonly Dictionary<int, List<IngredientLookupItem>> _ingredientSuggestions = [];
+    private readonly Dictionary<int, string> _ingredientMatchMessages = [];
+    private List<string> _ingredientTags = [];
+    private bool _showMatchConfirmDialog;
+    private List<RecipeIngredientEditorItem> _confirmDialogItems = [];
+    private List<(int Value, string Label)> _difficultyOptions = [];
+
+    private string _pasteContent = string.Empty;
+    private string _importUrl = string.Empty;
+    private string _ocrLanguage = "nld";
+    private IBrowserFile? _photoFile;
+    private bool _isProcessing;
+    private string? _importError;
+    private bool _showImportReviewBanner;
+
+    [SupplyParameterFromQuery(Name = "mode")]
+    public string? ModeQuery { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _difficultyOptions =
+        [
+            ((int)RecipeDifficulty.Unknown, L["Recipe.Difficulty.Unknown"]),
+            ((int)RecipeDifficulty.Easy, L["Recipe.Difficulty.Easy"]),
+            ((int)RecipeDifficulty.Medium, L["Recipe.Difficulty.Medium"]),
+            ((int)RecipeDifficulty.Hard, L["Recipe.Difficulty.Hard"]),
+        ];
+
+        if (!string.IsNullOrWhiteSpace(ModeQuery))
+        {
+            _mode = ModeQuery.Trim().ToLowerInvariant() switch
+            {
+                "text" => RecipeCreateMode.Text,
+                "photo" => RecipeCreateMode.Photo,
+                "url" or "link" => RecipeCreateMode.Url,
+                _ => RecipeCreateMode.Manual,
+            };
+        }
+
+        if (!ImportDraft.TryConsumeDraft(out var draft) || draft is null)
+        {
+            return;
+        }
+
+        ApplyDraftToVm(draft);
+        _mode = RecipeCreateMode.Manual;
+        _showImportReviewBanner = true;
+    }
+
+    private void OnModeChanged(RecipeCreateMode mode)
+    {
+        _mode = mode;
+        _importError = null;
+        StateHasChanged();
+    }
+
+    private RenderFragment RenderTextImport() => __builder =>
+    {
+        <div class="bg-white rounded-lg shadow p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.Text.Label"]</label>
+                <textarea class="block w-full rounded border border-gray-300 px-3 py-2 text-sm font-mono"
+                          rows="14"
+                          placeholder="@L["RecipeCreate.Text.Placeholder"]"
+                          @bind="_pasteContent"></textarea>
+            </div>
+            <p class="text-xs text-gray-500">@L["RecipeCreate.Import.Responsibility.Hint"]</p>
+            @if (!string.IsNullOrWhiteSpace(_importError))
+            {
+                <p class="text-sm text-red-600">@_importError</p>
+            }
+            <div class="flex flex-wrap justify-end gap-3">
+                <button type="button"
+                        class="inline-flex items-center px-4 py-2 rounded bg-gray-800 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50"
+                        disabled="@_isProcessing"
+                        @onclick="ProcessTextImportAsync">
+                    @L["RecipeImport.ProcessButton"]
+                </button>
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderPhotoImport() => __builder =>
+    {
+        <div class="bg-white rounded-lg shadow p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.PhotoImport.Label"]</label>
+                <InputFile OnChange="OnPhotoSelected"
+                           accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                           class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-3 file:rounded file:border-0 file:bg-gray-100 file:text-gray-800 hover:file:bg-gray-200" />
+                @if (_photoFile is not null)
+                {
+                    <p class="mt-2 text-sm text-gray-600">@_photoFile.Name</p>
+                }
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.PhotoImport.Language.Label"]</label>
+                <select class="block w-full max-w-xs rounded border border-gray-300 px-3 py-2 text-sm" @bind="_ocrLanguage">
+                    <option value="nld">@L["RecipeCreate.PhotoImport.Language.Dutch"]</option>
+                    <option value="eng">@L["RecipeCreate.PhotoImport.Language.English"]</option>
+                </select>
+            </div>
+            <p class="text-xs text-gray-500">@L["RecipeCreate.Import.Responsibility.Hint"]</p>
+            @if (!string.IsNullOrWhiteSpace(_importError))
+            {
+                <p class="text-sm text-red-600">@_importError</p>
+            }
+            <div class="flex flex-wrap justify-end gap-3">
+                <button type="button"
+                        class="inline-flex items-center px-4 py-2 rounded bg-gray-800 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50"
+                        disabled="@(_isProcessing || _photoFile is null)"
+                        @onclick="ProcessPhotoImportAsync">
+                    @L["RecipeImport.ProcessButton"]
+                </button>
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderUrlImport() => __builder =>
+    {
+        <div class="bg-white rounded-lg shadow p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.Url.Label"]</label>
+                <input class="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                       placeholder="@L["RecipeCreate.Url.Placeholder"]"
+                       @bind="_importUrl" />
+                <p class="mt-1 text-xs text-gray-500">@L["RecipeCreate.Url.Hint"]</p>
+            </div>
+            <p class="text-xs text-gray-500">@L["RecipeCreate.Import.Responsibility.Hint"]</p>
+            @if (!string.IsNullOrWhiteSpace(_importError))
+            {
+                <p class="text-sm text-red-600">@_importError</p>
+            }
+            <div class="flex flex-wrap justify-end gap-3">
+                <button type="button"
+                        class="inline-flex items-center px-4 py-2 rounded bg-gray-800 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50"
+                        disabled="@_isProcessing"
+                        @onclick="ProcessUrlImportAsync">
+                    @L["RecipeImport.ProcessButton"]
+                </button>
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderManualForm() => __builder =>
+    {
         <EditForm Model="_vm" FormName="create-recipe" Enhance="false" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-red-600 text-sm mb-4" />
 
             <div class="bg-white rounded-lg shadow p-6 space-y-6">
+                @if (_showImportReviewBanner)
+                {
+                    <div class="rounded border border-amber-200 bg-amber-50 p-3">
+                        <p class="text-sm text-amber-900">@L["RecipeCreate.Import.ReviewBanner"]</p>
+                    </div>
+                }
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.Photo.Label"]</label>
                     <PhotoUploadZone ImageUrl="_imageUrl" ImageUrlChanged="@(url => { _imageUrl = url ?? string.Empty; StateHasChanged(); })" />
@@ -110,15 +335,21 @@
                     {
                         var index = i;
                         var item = _vm.Ingredients[index];
-                        <RecipeIngredientEditorRow Item="@item"
-                                                 RowIndex="@index"
-                                                 ItemChanged="@(_ => OnIngredientRowChanged())"
-                                                 Suggestions="@GetIngredientSuggestions(index)"
-                                                 MatchMessage="@GetIngredientMatchMessage(index)"
-                                                 MatchMessageChanged="@(msg => SetIngredientMatchMessage(index, msg))"
-                                                 OnNameChanged="@(name => OnIngredientNameSearch(index, name))"
-                                                 CanRemove="@(_vm.Ingredients.Count > 1)"
-                                                 OnRemove="@(() => RemoveIngredient(index))" />
+                        <div class="@(item.NeedsReview ? "rounded border border-amber-300 bg-amber-50/40 p-2" : string.Empty)">
+                            @if (item.NeedsReview)
+                            {
+                                <p class="text-xs text-amber-800 mb-2">@L["RecipeCreate.Import.Ingredient.CheckHint"]</p>
+                            }
+                            <RecipeIngredientEditorRow Item="@item"
+                                                     RowIndex="@index"
+                                                     ItemChanged="@(_ => OnIngredientRowChanged())"
+                                                     Suggestions="@GetIngredientSuggestions(index)"
+                                                     MatchMessage="@GetIngredientMatchMessage(index)"
+                                                     MatchMessageChanged="@(msg => SetIngredientMatchMessage(index, msg))"
+                                                     OnNameChanged="@(name => OnIngredientNameSearch(index, name))"
+                                                     CanRemove="@(_vm.Ingredients.Count > 1)"
+                                                     OnRemove="@(() => RemoveIngredient(index))" />
+                        </div>
                     }
                     <button type="button" data-testid="@UiTestIds.IngredientAddRow" class="inline-flex items-center px-3 py-1.5 rounded border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50" @onclick="AddIngredient">
                         @L["RecipeCreate.Ingredient.AddButton"]
@@ -161,79 +392,153 @@
                 </div>
             </div>
         </EditForm>
-    </div>
-</div>
+    };
 
-<IngredientMatchConfirmDialog IsOpen="_showMatchConfirmDialog"
-                              Items="_confirmDialogItems"
-                              OnUseSuggestion="HandleConfirmUseSuggestion"
-                              OnConfirmNew="HandleConfirmNewIngredient"
-                              OnProceed="HandleConfirmDialogProceed"
-                              OnCancel="HandleConfirmDialogCancel" />
-
-@code {
-    private sealed class CreateRecipeVm
+    private async Task ProcessTextImportAsync()
     {
-        [Required(ErrorMessageResourceType = typeof(SharedResources), ErrorMessageResourceName = "RecipeCreate.Title.Required")]
-        public string Title { get; set; } = string.Empty;
-
-        public string? Description { get; set; }
-
-        [Range(0, 24 * 60)]
-        public int PreparationTimeMinutes { get; set; } = 30;
-
-        [Range(0, 24 * 60)]
-        public int CookingTimeMinutes { get; set; } = 0;
-
-        [Range(0, 100)]
-        public int Servings { get; set; } = 4;
-
-        public int DifficultyLevel { get; set; } = (int)RecipeDifficulty.Easy;
-
-        public int Category { get; set; } = (int)RecipeCategory.Vegetarian;
-
-        public List<RecipeIngredientEditorItem> Ingredients { get; set; } = [new RecipeIngredientEditorItem()];
-
-        public List<StepVm> Steps { get; set; } = [new StepVm { StepNumber = 1 }];
-    }
-
-    private sealed class StepVm
-    {
-        public int StepNumber { get; set; }
-
-        [Required(ErrorMessageResourceType = typeof(SharedResources), ErrorMessageResourceName = "RecipeCreate.Step.Text.Required")]
-        public string Text { get; set; } = string.Empty;
-    }
-
-    private readonly CreateRecipeVm _vm = new();
-    private string? _imageUrl;
-    private bool _isSaving;
-    private string? _statusMessage;
-    private bool _saveSucceeded;
-    private bool _requiresOven;
-    private bool _requiresBaking;
-    private bool _requiresCooling;
-    private readonly Dictionary<int, List<IngredientLookupItem>> _ingredientSuggestions = [];
-    private readonly Dictionary<int, string> _ingredientMatchMessages = [];
-    private List<string> _ingredientTags = [];
-    private bool _showMatchConfirmDialog;
-    private List<RecipeIngredientEditorItem> _confirmDialogItems = [];
-    private List<(int Value, string Label)> _difficultyOptions = [];
-
-    protected override void OnInitialized()
-    {
-        _difficultyOptions =
-        [
-            ((int)RecipeDifficulty.Unknown, L["Recipe.Difficulty.Unknown"]),
-            ((int)RecipeDifficulty.Easy, L["Recipe.Difficulty.Easy"]),
-            ((int)RecipeDifficulty.Medium, L["Recipe.Difficulty.Medium"]),
-            ((int)RecipeDifficulty.Hard, L["Recipe.Difficulty.Hard"]),
-        ];
-
-        if (!ImportDraft.TryConsumeDraft(out var draft) || draft is null)
+        _importError = null;
+        if (string.IsNullOrWhiteSpace(_pasteContent))
         {
+            _importError = L["RecipeImport.Error.EmptyContent"];
             return;
         }
+
+        _isProcessing = true;
+        try
+        {
+            var response = await Http.PostAsJsonAsync(
+                "/recipes/import",
+                new ImportRecipeContentQuery { Content = _pasteContent, ContentKind = ImportContentKind.Auto });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _importError = await response.Content.ReadAsStringAsync();
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<ImportRecipeResult>();
+            if (result is null)
+            {
+                _importError = L["RecipeImport.Error.NoResult"];
+                return;
+            }
+
+            CompleteImport(result);
+        }
+        catch (Exception ex)
+        {
+            _importError = ex.Message;
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private Task OnPhotoSelected(InputFileChangeEventArgs e)
+    {
+        _photoFile = e.FileCount > 0 ? e.File : null;
+        _importError = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task ProcessPhotoImportAsync()
+    {
+        _importError = null;
+        if (_photoFile is null)
+        {
+            _importError = L["RecipeCreate.PhotoImport.Error.NoFile"];
+            return;
+        }
+
+        _isProcessing = true;
+        try
+        {
+            await using var fileStream = _photoFile.OpenReadStream(maxAllowedSize: 8 * 1024 * 1024);
+            using var content = new MultipartFormDataContent();
+            var streamContent = new StreamContent(fileStream);
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(_photoFile.ContentType);
+            content.Add(streamContent, "file", _photoFile.Name);
+            content.Add(new StringContent(_ocrLanguage), "language");
+
+            var response = await Http.PostAsync("/recipes/import-image", content);
+            if (!response.IsSuccessStatusCode)
+            {
+                _importError = await response.Content.ReadAsStringAsync();
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<ImportRecipeResult>();
+            if (result is null)
+            {
+                _importError = L["RecipeImport.Error.NoResult"];
+                return;
+            }
+
+            CompleteImport(result);
+        }
+        catch (Exception ex)
+        {
+            _importError = ex.Message;
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task ProcessUrlImportAsync()
+    {
+        _importError = null;
+        if (string.IsNullOrWhiteSpace(_importUrl))
+        {
+            _importError = L["RecipeCreate.Url.Error.Empty"];
+            return;
+        }
+
+        _isProcessing = true;
+        try
+        {
+            var response = await Http.PostAsJsonAsync(
+                "/recipes/import-url",
+                new ImportRecipeFromUrlQuery { Url = _importUrl.Trim() });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _importError = await response.Content.ReadAsStringAsync();
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<ImportRecipeResult>();
+            if (result is null)
+            {
+                _importError = L["RecipeImport.Error.NoResult"];
+                return;
+            }
+
+            CompleteImport(result);
+        }
+        catch (Exception ex)
+        {
+            _importError = ex.Message;
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private void CompleteImport(ImportRecipeResult result)
+    {
+        ApplyDraftToVm(result);
+        _showImportReviewBanner = true;
+        _mode = RecipeCreateMode.Manual;
+        _importError = null;
+    }
+
+    private void ApplyDraftToVm(ImportRecipeResult draft)
+    {
+        const decimal reviewThreshold = 0.7m;
 
         _vm.Title = draft.Title ?? string.Empty;
         _vm.Description = draft.Description;
@@ -245,6 +550,8 @@
             Preparation = x.Preparation,
             Quantity = x.Quantity,
             UnitName = x.Unit,
+            NeedsReview = x.Confidence < reviewThreshold,
+            LastMatchType = x.MatchType,
         }).ToList();
 
         if (_vm.Ingredients.Count == 0)
@@ -262,6 +569,26 @@
         {
             _vm.Steps.Add(new StepVm { StepNumber = 1 });
         }
+
+        _ingredientSuggestions.Clear();
+        _ingredientMatchMessages.Clear();
+        for (var i = 0; i < draft.Ingredients.Count; i++)
+        {
+            var matchType = draft.Ingredients[i].MatchType;
+            if (string.IsNullOrWhiteSpace(matchType))
+            {
+                continue;
+            }
+
+            _ingredientMatchMessages[i] = matchType switch
+            {
+                "exact" => L["RecipeCreate.Ingredient.Match.Exact"],
+                "alias" => L["RecipeCreate.Ingredient.Match.Alias"],
+                "fuzzy" => L["RecipeCreate.Ingredient.Match.Fuzzy", draft.Ingredients[i].Name, "—"],
+                "none" => L["RecipeCreate.Ingredient.Match.None"],
+                _ => string.Empty,
+            };
+        }
     }
 
     private Task OnIngredientTagsChanged(IReadOnlyList<string> tags)
@@ -276,10 +603,7 @@
         StateHasChanged();
     }
 
-    private void OnCancel()
-    {
-        Navigation.NavigateTo("/recipes");
-    }
+    private void OnCancel() => Navigation.NavigateTo("/recipes");
 
     private void AddIngredient()
     {

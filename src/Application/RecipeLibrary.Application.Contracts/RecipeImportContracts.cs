@@ -34,6 +34,16 @@ public sealed class ImportRecipeFromUrlQuery : IQuery<ImportRecipeResult>
     public string Url { get; init; } = string.Empty;
 }
 
+public sealed class ImportRecipeFromImageQuery : IQuery<ImportRecipeResult>
+{
+    public byte[] ImageBytes { get; init; } = [];
+
+    public string ContentType { get; init; } = string.Empty;
+
+    /// <summary>Tesseract language code: nld or eng.</summary>
+    public string Language { get; init; } = "nld";
+}
+
 public sealed class ImportRecipeResult
 {
     public string? Title { get; init; }

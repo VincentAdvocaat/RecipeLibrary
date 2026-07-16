@@ -1,0 +1,47 @@
+@* Molecule: segmented control for recipe create entry modes. *@
+@using RecipeLibrary.Resources
+@using RecipeLibrary.Web.Models
+
+<nav class="flex rounded-lg border border-gray-300 bg-white p-1 gap-1" aria-label="@L["RecipeCreate.Mode.AriaLabel"]" data-testid="recipe-create-mode-switcher">
+    <button type="button"
+            class="@TabClass(RecipeCreateMode.Manual)"
+            data-testid="recipe-create-mode-manual"
+            aria-pressed="@(Mode == RecipeCreateMode.Manual)"
+            @onclick="() => Select(RecipeCreateMode.Manual)">
+        @L["RecipeCreate.Mode.Manual"]
+    </button>
+    <button type="button"
+            class="@TabClass(RecipeCreateMode.Text)"
+            data-testid="recipe-create-mode-text"
+            aria-pressed="@(Mode == RecipeCreateMode.Text)"
+            @onclick="() => Select(RecipeCreateMode.Text)">
+        @L["RecipeCreate.Mode.Text"]
+    </button>
+    <button type="button"
+            class="@TabClass(RecipeCreateMode.Photo)"
+            data-testid="recipe-create-mode-photo"
+            aria-pressed="@(Mode == RecipeCreateMode.Photo)"
+            @onclick="() => Select(RecipeCreateMode.Photo)">
+        @L["RecipeCreate.Mode.Photo"]
+    </button>
+    <button type="button"
+            class="@TabClass(RecipeCreateMode.Url)"
+            data-testid="recipe-create-mode-url"
+            aria-pressed="@(Mode == RecipeCreateMode.Url)"
+            @onclick="() => Select(RecipeCreateMode.Url)">
+        @L["RecipeCreate.Mode.Url"]
+    </button>
+</nav>
+
+@code {
+    [Parameter] public RecipeCreateMode Mode { get; set; } = RecipeCreateMode.Manual;
+
+    [Parameter] public EventCallback<RecipeCreateMode> ModeChanged { get; set; }
+
+    private string TabClass(RecipeCreateMode value) =>
+        Mode == value
+            ? "flex-1 px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white"
+            : "flex-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50";
+
+    private Task Select(RecipeCreateMode value) => ModeChanged.InvokeAsync(value);
+}
