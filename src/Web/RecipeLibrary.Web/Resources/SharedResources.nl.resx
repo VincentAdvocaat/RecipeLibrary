@@ -218,7 +218,7 @@
   <data name="ShoppingList.AddItem.SectionLabel" xml:space="preserve"><value>Handmatig item toevoegen</value></data>
   <data name="ShoppingList.AddItem.Button" xml:space="preserve"><value>Toevoegen</value></data>
   
-  <data name="ShoppingList.ApplyPantry.Button" xml:space="preserve"><value>Voorraad overslaan</value></data>
+  <data name="ShoppingList.ApplyPantry.Button" xml:space="preserve"><value>Voorraadproducten van lijst verwijderen</value></data>
   <data name="ShoppingList.MoveToPantry.Button" xml:space="preserve"><value>Naar voorraad</value></data>
   <data name="Pantry.PageTitle" xml:space="preserve"><value>Voorraadkast</value></data>
   <data name="Pantry.Intro.Message" xml:space="preserve"><value>Markeer basisproducten die je standaard in huis hebt (bijvoorbeeld zout of olie). Die worden overgeslagen wanneer je recepten aan je boodschappenlijst toevoegt.</value></data>

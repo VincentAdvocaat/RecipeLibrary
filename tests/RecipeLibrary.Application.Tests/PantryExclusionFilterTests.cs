@@ -83,6 +83,37 @@ public sealed class PantryExclusionFilterTests
     }
 
     [Fact]
+    public void ExcludeMatchingLines_OmitsLine_WhenNormalizedNameMatches_DespiteDifferentCanonicalIds()
+    {
+        var pantry = new[]
+        {
+            new PantryItem
+            {
+                Id = Guid.NewGuid(),
+                DisplayName = "Zout",
+                CanonicalIngredientId = Guid.NewGuid(),
+            },
+        };
+
+        var lines = new[]
+        {
+            new ShoppingListIngredientLine
+            {
+                CanonicalIngredientId = Guid.NewGuid(),
+                DisplayName = "zout",
+                Quantity = 1,
+                Unit = Unit.Teaspoon,
+                RecipeId = Guid.NewGuid(),
+                RecipeTitle = "Test",
+            },
+        };
+
+        var result = _filter.ExcludeMatchingLines(lines, pantry);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
     public void ExcludeMatchingItems_KeepsNonMatchingItems()
     {
         var pantry = new[]

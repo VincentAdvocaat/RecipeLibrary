@@ -39,21 +39,21 @@ public sealed class PantryIngredientMerger(IIngredientTextNormalizer normalizer)
         string displayName) =>
         FindMatch(pantryItems, canonicalIngredientId, displayName) is not null;
 
-    public PantryMergeKey BuildKey(Guid? canonicalIngredientId, string displayName) =>
-        new(canonicalIngredientId, normalizer.Normalize(displayName));
-
-    internal PantryMergeKey BuildKey(PantryItem item) =>
-        BuildKey(item.CanonicalIngredientId, item.DisplayName);
-
+    /// <summary>
+    /// Presence match: same canonical id, or same normalized display name
+    /// (name fallback also applies when both sides have different canonical ids).
+    /// </summary>
     public bool Matches(
         Guid? leftCanonicalId,
         string leftDisplayName,
         Guid? rightCanonicalId,
         string rightDisplayName)
     {
-        if (leftCanonicalId.HasValue && rightCanonicalId.HasValue)
+        if (leftCanonicalId.HasValue
+            && rightCanonicalId.HasValue
+            && leftCanonicalId.Value == rightCanonicalId.Value)
         {
-            return leftCanonicalId.Value == rightCanonicalId.Value;
+            return true;
         }
 
         return string.Equals(

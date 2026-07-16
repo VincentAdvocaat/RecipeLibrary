@@ -16,8 +16,6 @@ public sealed class ApplyPantryToShoppingListCommandHandler(
         ApplyPantryToShoppingListCommand command,
         CancellationToken ct = default)
     {
-        PantryOwnerKey.Validate(command.OwnerKey);
-
         await ShoppingListAccessGuard.EnsureListAccessAsync(
             shoppingListRepository,
             command.ShoppingListId,
@@ -27,7 +25,8 @@ public sealed class ApplyPantryToShoppingListCommandHandler(
         var list = await shoppingListRepository.GetListByIdAsync(command.ShoppingListId, ct)
             ?? throw new InvalidOperationException("Shopping list not found.");
 
-        var pantryItems = await pantryRepository.GetByOwnerKeyAsync(command.OwnerKey, ct);
+        var ownerKey = PantryOwnerKey.Resolve(userContext.OwnerUserId, list.GroupId);
+        var pantryItems = await pantryRepository.GetByOwnerKeyAsync(ownerKey, ct);
         if (pantryItems.Count == 0)
         {
             return new ApplyPantryToShoppingListResult(0);

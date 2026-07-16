@@ -91,7 +91,7 @@
 @code {
     private bool _loading = true;
     private int _badgeCount;
-    private string _ownerKey = string.Empty;
+    private Guid _groupId;
     private IReadOnlyList<PantryItemDto> _items = [];
     private string _addItemName = string.Empty;
     private Guid? _addItemCanonicalId;
@@ -104,11 +104,11 @@
 
     private async Task ReloadAsync()
     {
-        _ownerKey = await PantrySession.GetOwnerKeyAsync();
+        _groupId = await PantrySession.GetGroupIdAsync();
         var group = await ShoppingSession.GetOrCreateGroupAsync();
         _badgeCount = await ShoppingSession.GetUncheckedCountAsync(group.GroupId);
         var result = await QueryBus.QueryAsync<GetPantryItemsQuery, GetPantryItemsResult>(
-            new GetPantryItemsQuery { OwnerKey = _ownerKey });
+            new GetPantryItemsQuery { ShoppingListGroupId = _groupId });
         _items = result.Items;
         _loading = false;
     }
@@ -145,7 +145,7 @@
         await CommandBus.SendAsync<UpsertPantryItemCommand, UpsertPantryItemResult>(
             new UpsertPantryItemCommand
             {
-                OwnerKey = _ownerKey,
+                ShoppingListGroupId = _groupId,
                 CanonicalIngredientId = _addItemCanonicalId,
                 DisplayName = _addItemName.Trim(),
             });
@@ -159,7 +159,7 @@
     private async Task RemoveItemAsync(Guid itemId)
     {
         await CommandBus.SendAsync<RemovePantryItemCommand, RemovePantryItemResult>(
-            new RemovePantryItemCommand { OwnerKey = _ownerKey, ItemId = itemId });
+            new RemovePantryItemCommand { ShoppingListGroupId = _groupId, ItemId = itemId });
         await ReloadAsync();
     }
 }

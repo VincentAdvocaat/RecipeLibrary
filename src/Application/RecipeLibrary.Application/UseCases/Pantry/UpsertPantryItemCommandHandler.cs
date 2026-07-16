@@ -1,11 +1,14 @@
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Pantry;
+using RecipeLibrary.Application.ShoppingLists;
 
 namespace RecipeLibrary.Application.UseCases.Pantry;
 
 public sealed class UpsertPantryItemCommandHandler(
     IPantryRepository repository,
+    IShoppingListRepository shoppingListRepository,
+    IShoppingListUserContext userContext,
     PantryIngredientMerger merger)
     : ICommandHandler<UpsertPantryItemCommand, UpsertPantryItemResult>
 {
@@ -13,7 +16,11 @@ public sealed class UpsertPantryItemCommandHandler(
         UpsertPantryItemCommand command,
         CancellationToken ct = default)
     {
-        PantryOwnerKey.Validate(command.OwnerKey);
+        await ShoppingListAccessGuard.EnsureGroupAccessAsync(
+            shoppingListRepository,
+            command.ShoppingListGroupId,
+            userContext.OwnerUserId,
+            ct);
 
         var displayName = (command.DisplayName ?? string.Empty).Trim();
         if (string.IsNullOrEmpty(displayName))
@@ -21,13 +28,14 @@ public sealed class UpsertPantryItemCommandHandler(
             throw new ArgumentException("Display name is required.");
         }
 
-        var existingItems = await repository.GetByOwnerKeyAsync(command.OwnerKey, ct);
+        var ownerKey = PantryOwnerKey.Resolve(userContext.OwnerUserId, command.ShoppingListGroupId);
+        var existingItems = await repository.GetByOwnerKeyAsync(ownerKey, ct);
 
         var item = merger.EnsurePresent(
             existingItems,
             command.CanonicalIngredientId,
             displayName,
-            command.OwnerKey);
+            ownerKey);
 
         await repository.UpsertAsync(item, ct);
 

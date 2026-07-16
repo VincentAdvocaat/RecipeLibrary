@@ -8,7 +8,6 @@
 
 @inject ICommandBus CommandBus
 @inject ShoppingListSessionService ShoppingSession
-@inject PantrySessionService PantrySession
 @inject NavigationManager Navigation
 @inject HttpClient Http
 
@@ -485,9 +484,8 @@
 
     private async Task MoveItemToPantryAsync(Guid itemId)
     {
-        var ownerKey = await PantrySession.GetOwnerKeyAsync();
         await CommandBus.SendAsync<MoveShoppingListItemToPantryCommand, MoveShoppingListItemToPantryResult>(
-            new MoveShoppingListItemToPantryCommand { OwnerKey = ownerKey, ItemId = itemId });
+            new MoveShoppingListItemToPantryCommand { ItemId = itemId });
         await ReloadAsync();
     }
 
@@ -651,11 +649,9 @@
             return;
         }
 
-        var ownerKey = await PantrySession.GetOwnerKeyAsync();
         await CommandBus.SendAsync<ApplyPantryToShoppingListCommand, ApplyPantryToShoppingListResult>(
             new ApplyPantryToShoppingListCommand
             {
-                OwnerKey = ownerKey,
                 ShoppingListId = _activeList.Id,
             });
 

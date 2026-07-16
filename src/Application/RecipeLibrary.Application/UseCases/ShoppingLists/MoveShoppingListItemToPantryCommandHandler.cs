@@ -9,6 +9,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandler(
     IShoppingListRepository shoppingListRepository,
     IPantryRepository pantryRepository,
     IShoppingListUserContext userContext,
+    IUnitOfWork unitOfWork,
     PantryIngredientMerger pantryMerger)
     : ICommandHandler<MoveShoppingListItemToPantryCommand, MoveShoppingListItemToPantryResult>
 {
@@ -16,8 +17,6 @@ public sealed class MoveShoppingListItemToPantryCommandHandler(
         MoveShoppingListItemToPantryCommand command,
         CancellationToken ct = default)
     {
-        PantryOwnerKey.Validate(command.OwnerKey);
-
         await ShoppingListAccessGuard.EnsureItemAccessAsync(
             shoppingListRepository,
             command.ItemId,
@@ -27,16 +26,24 @@ public sealed class MoveShoppingListItemToPantryCommandHandler(
         var item = await shoppingListRepository.GetItemByIdAsync(command.ItemId, ct)
             ?? throw new InvalidOperationException("Shopping list item not found.");
 
-        var existingItems = await pantryRepository.GetByOwnerKeyAsync(command.OwnerKey, ct);
+        var list = await shoppingListRepository.GetListByIdAsync(item.ShoppingListId, ct)
+            ?? throw new InvalidOperationException("Shopping list not found.");
+
+        var ownerKey = PantryOwnerKey.Resolve(userContext.OwnerUserId, list.GroupId);
+        var existingItems = await pantryRepository.GetByOwnerKeyAsync(ownerKey, ct);
         var pantryItem = pantryMerger.EnsurePresent(
             existingItems,
             item.CanonicalIngredientId,
             item.DisplayName,
-            command.OwnerKey);
+            ownerKey);
 
-        await pantryRepository.UpsertAsync(pantryItem, ct);
+        var removed = false;
+        await unitOfWork.ExecuteInTransactionAsync(async transactionCt =>
+        {
+            await pantryRepository.UpsertAsync(pantryItem, transactionCt);
+            removed = await shoppingListRepository.RemoveItemAsync(command.ItemId, transactionCt);
+        }, ct);
 
-        var removed = await shoppingListRepository.RemoveItemAsync(command.ItemId, ct);
         return new MoveShoppingListItemToPantryResult(removed, pantryItem.Id);
     }
 }
