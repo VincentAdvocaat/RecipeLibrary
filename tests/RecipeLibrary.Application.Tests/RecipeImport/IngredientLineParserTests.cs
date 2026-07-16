@@ -167,14 +167,14 @@ public sealed class IngredientLineParserTests
     }
 
     [Fact]
-    public void Parse_ParsesUnmeasuredToTaste()
+    public void Parse_ParsesBareIngredientAsUnmeasuredWithoutInventingToTaste()
     {
         var result = _sut.Parse("olijfolie");
 
         Assert.Null(result.Quantity);
         Assert.Null(result.Unit);
         Assert.Equal("olijfolie", result.Name);
-        Assert.Equal("naar smaak", result.Preparation);
+        Assert.Null(result.Preparation);
     }
 
     [Fact]

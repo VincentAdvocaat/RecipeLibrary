@@ -91,6 +91,12 @@ else
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Browser file uploads travel over SignalR; raise the limit for multi-screenshot OCR import.
+builder.Services.Configure<Microsoft.AspNetCore.SignalR.HubOptions>(options =>
+{
+    options.MaximumReceiveMessageSize = 32 * 1024 * 1024;
+});
+
 var recipeDbConnectionString = builder.Configuration.GetConnectionString("RecipeDb");
 if (string.IsNullOrWhiteSpace(recipeDbConnectionString) && builder.Environment.IsDevelopment())
 {
@@ -112,12 +118,12 @@ builder.Services.AddPersistence(recipeDbConnectionString);
 builder.Services.AddRecipeImport(builder.Configuration);
 builder.Services.AddApplication();
 
-var ocrMaxImageBytes = builder.Configuration.GetValue<int?>($"{RecipeImportOptions.SectionName}:Ocr:MaxImageBytes")
-    ?? new RecipeImportOcrOptions().MaxImageBytes;
+var ocrOptions = builder.Configuration.GetSection($"{RecipeImportOptions.SectionName}:Ocr").Get<RecipeImportOcrOptions>()
+    ?? new RecipeImportOcrOptions();
 builder.Services.Configure<FormOptions>(options =>
 {
-    // Allow multipart overhead (field names + language) above the OCR image cap.
-    options.MultipartBodyLengthLimit = ocrMaxImageBytes + (256 * 1024);
+    var maxImages = Math.Max(1, ocrOptions.MaxImagesPerImport);
+    options.MultipartBodyLengthLimit = (long)ocrOptions.MaxImageBytes * maxImages + (256 * 1024);
 });
 
 var recipeImagesDefaultPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "RecipeLibraryUploads"));
@@ -135,7 +141,12 @@ ConfigureDataProtection(builder);
 builder.Services.AddScoped(sp =>
 {
     var nav = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
-    return new HttpClient { BaseAddress = new Uri(nav.BaseUri) };
+    return new HttpClient
+    {
+        BaseAddress = new Uri(nav.BaseUri),
+        // OCR of multiple screenshots can take longer than the default 100s.
+        Timeout = TimeSpan.FromMinutes(5),
+    };
 });
 
 var app = builder.Build();
@@ -275,30 +286,55 @@ app.MapPost("/recipes/import-image", async (
             return Results.BadRequest("Expected multipart form data.");
         }
 
-        var maxBytes = importOptions.Value.Ocr.MaxImageBytes;
+        var ocr = importOptions.Value.Ocr;
+        var maxBytes = ocr.MaxImageBytes;
+        var maxImages = Math.Max(1, ocr.MaxImagesPerImport);
         var form = await request.ReadFormAsync(ct);
-        var file = form.Files.GetFile("file");
-        if (file is null || file.Length == 0)
+        IReadOnlyList<IFormFile> files = form.Files.GetFiles("file");
+        if (files.Count == 0)
+        {
+            files = form.Files.ToList();
+        }
+
+        if (files.Count == 0)
         {
             return Results.BadRequest("Image file is required.");
         }
 
-        if (file.Length > maxBytes)
+        if (files.Count > maxImages)
         {
-            return Results.BadRequest($"Image exceeds maximum size of {maxBytes} bytes.");
+            return Results.BadRequest($"At most {maxImages} images are allowed per import.");
         }
 
-        await using var stream = file.OpenReadStream();
-        using var memory = new MemoryStream(capacity: (int)Math.Min(file.Length, maxBytes));
-        await stream.CopyToAsync(memory, ct);
+        var images = new List<ImportImageFile>(files.Count);
+        foreach (var file in files)
+        {
+            if (file.Length == 0)
+            {
+                return Results.BadRequest("Image file is required.");
+            }
+
+            if (file.Length > maxBytes)
+            {
+                return Results.BadRequest($"Image exceeds maximum size of {maxBytes} bytes.");
+            }
+
+            await using var stream = file.OpenReadStream();
+            using var memory = new MemoryStream(capacity: (int)Math.Min(file.Length, maxBytes));
+            await stream.CopyToAsync(memory, ct);
+            images.Add(new ImportImageFile
+            {
+                ImageBytes = memory.ToArray(),
+                ContentType = file.ContentType ?? string.Empty,
+                FileName = file.FileName ?? string.Empty,
+            });
+        }
 
         var language = form["language"].ToString();
         var result = await queryBus.QueryAsync<ImportRecipeFromImageQuery, ImportRecipeResult>(
             new ImportRecipeFromImageQuery
             {
-                ImageBytes = memory.ToArray(),
-                ContentType = file.ContentType ?? string.Empty,
-                FileName = file.FileName ?? string.Empty,
+                Images = images,
                 Language = string.IsNullOrWhiteSpace(language) ? "nld" : language,
             },
             ct);

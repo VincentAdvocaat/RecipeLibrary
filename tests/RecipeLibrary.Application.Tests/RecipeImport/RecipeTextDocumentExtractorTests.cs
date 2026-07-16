@@ -81,6 +81,27 @@ public sealed class RecipeTextDocumentExtractorTests
     }
 
     [Fact]
+    public void Extract_DoesNotTreatInstructionStartingWithGaNaarOvenAsChrome()
+    {
+        const string text = """
+            Inleiding:
+            Korte omschrijving.
+
+            Ingrediënten: Toast
+            2 sneetjes brood
+
+            Bereiding: Toast
+            Ga naar de oven en rooster het brood knapperig.
+            Bestuif met zout.
+            """;
+
+        var doc = RecipeTextDocumentExtractor.Extract(text);
+
+        Assert.Equal(2, doc.Steps.Count);
+        Assert.Contains(doc.Steps, s => s.Text.Contains("Ga naar de oven", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Extract_LabeledPrepAndCookTimes_AreSplit()
     {
         const string text = """

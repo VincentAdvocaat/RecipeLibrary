@@ -39,4 +39,7 @@ public sealed class RecipeImportOcrOptions
     public string TessDataPath { get; init; } = string.Empty;
 
     public int MaxImageBytes { get; init; } = 8 * 1024 * 1024;
+
+    /// <summary>Maximum number of photos/screenshots in one import request.</summary>
+    public int MaxImagesPerImport { get; init; } = 5;
 }

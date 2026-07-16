@@ -73,21 +73,20 @@ public static class RecipeTextDocumentExtractor
         "raak dit",
         "stuur dit",
         "bewaar in",
-        "e-mail",
-        "email",
         "e-mailadres",
         "emailadres",
         "merknamen in",
         "affiliate",
         "zet de kookstand",
-        "ga naar",
+        "ga naar de inhoud",
+        "ga naar boven",
+        "naar voorbeeld",
         "naar mijn",
         "scroll naar",
         "laatst bijgewerkt",
         "gemaakt door",
         "opgeslagen",
         "aanmelden",
-        "zoeken",
     ];
 
     private static readonly HashSet<string> ChromeExactLines = new(StringComparer.OrdinalIgnoreCase)
@@ -100,6 +99,9 @@ public static class RecipeTextDocumentExtractor
         "youtube",
         "home",
         "recepten",
+        "zoeken",
+        "e-mail",
+        "email",
         "vegan recept",
         "vegetarisch recept",
         "lactose arm recept",
@@ -647,19 +649,9 @@ public static class RecipeTextDocumentExtractor
         var lower = normalized.ToLowerInvariant();
         foreach (var prefix in ChromeLinePrefixes)
         {
-            if (lower.StartsWith(prefix, StringComparison.Ordinal) || lower.Contains(prefix, StringComparison.Ordinal))
+            // Start-of-line only: Contains() falsely drops real steps like "Ga naar de oven…".
+            if (lower.StartsWith(prefix, StringComparison.Ordinal))
             {
-                // Avoid treating long instructional prose as chrome when it merely contains a short token.
-                if (prefix.Length <= 4 && normalized.Length > 40)
-                {
-                    continue;
-                }
-
-                if (normalized.Length > 180 && !lower.StartsWith(prefix, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
                 return true;
             }
         }

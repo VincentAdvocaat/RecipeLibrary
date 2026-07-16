@@ -43,6 +43,16 @@ public sealed class RecipeImportUrlSafetyTests
         Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("8.8.8.8")));
         Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("1.1.1.1")));
     }
+
+    [Fact]
+    public async Task ResolvePublicHttpEndpointAsync_ReturnsLiteralPublicAddress()
+    {
+        var endpoint = await RecipeImportUrlSafety.ResolvePublicHttpEndpointAsync(
+            "https://8.8.8.8/recipe");
+
+        Assert.Equal("8.8.8.8", endpoint.Uri.Host);
+        Assert.Equal(IPAddress.Parse("8.8.8.8"), Assert.Single(endpoint.Addresses));
+    }
 }
 
 public sealed class RecipeImportLooksLikeHtmlTests

@@ -17,15 +17,33 @@ public static class RecipeImportUrlSafety
 
     public static async Task EnsurePublicHttpUrlAsync(string url, CancellationToken ct = default)
     {
+        _ = await ResolvePublicHttpEndpointAsync(url, ct);
+    }
+
+    public static async Task EnsurePublicHttpUrlAsync(Uri uri, CancellationToken ct = default)
+    {
+        _ = await ResolvePublicHttpEndpointAsync(uri, ct);
+    }
+
+    /// <summary>
+    /// Validates the URL and returns the DNS addresses that passed the public-host check.
+    /// Callers should connect only to these addresses to prevent DNS rebinding.
+    /// </summary>
+    public static async Task<PublicHttpEndpoint> ResolvePublicHttpEndpointAsync(
+        string url,
+        CancellationToken ct = default)
+    {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
             throw new ArgumentException("URL must be an absolute http or https address.");
         }
 
-        await EnsurePublicHttpUrlAsync(uri, ct);
+        return await ResolvePublicHttpEndpointAsync(uri, ct);
     }
 
-    public static async Task EnsurePublicHttpUrlAsync(Uri uri, CancellationToken ct = default)
+    public static async Task<PublicHttpEndpoint> ResolvePublicHttpEndpointAsync(
+        Uri uri,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
 
@@ -55,7 +73,7 @@ public static class RecipeImportUrlSafety
                 throw new ArgumentException("URL host is not allowed.");
             }
 
-            return;
+            return new PublicHttpEndpoint(uri, [literalIp]);
         }
 
         IPAddress[] addresses;
@@ -72,6 +90,8 @@ public static class RecipeImportUrlSafety
         {
             throw new ArgumentException("URL host is not allowed.");
         }
+
+        return new PublicHttpEndpoint(uri, addresses);
     }
 
     public static bool IsBlockedAddress(IPAddress address)
@@ -160,3 +180,8 @@ public static class RecipeImportUrlSafety
         return false;
     }
 }
+
+/// <summary>
+/// A validated http(s) URL plus the DNS addresses that were confirmed public at resolve time.
+/// </summary>
+public readonly record struct PublicHttpEndpoint(Uri Uri, IReadOnlyList<IPAddress> Addresses);

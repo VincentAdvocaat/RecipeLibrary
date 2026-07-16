@@ -36,6 +36,13 @@ public sealed class ImportRecipeFromUrlQuery : IQuery<ImportRecipeResult>
 
 public sealed class ImportRecipeFromImageQuery : IQuery<ImportRecipeResult>
 {
+    /// <summary>
+    /// One or more images. OCR text is concatenated in order, then parsed once.
+    /// Prefer this over <see cref="ImageBytes"/> for multi-photo import.
+    /// </summary>
+    public IReadOnlyList<ImportImageFile> Images { get; init; } = [];
+
+    /// <summary>Legacy single-image payload; used when <see cref="Images"/> is empty.</summary>
     public byte[] ImageBytes { get; init; } = [];
 
     public string ContentType { get; init; } = string.Empty;
@@ -45,6 +52,15 @@ public sealed class ImportRecipeFromImageQuery : IQuery<ImportRecipeResult>
 
     /// <summary>Tesseract language code: nld or eng.</summary>
     public string Language { get; init; } = "nld";
+}
+
+public sealed class ImportImageFile
+{
+    public byte[] ImageBytes { get; init; } = [];
+
+    public string ContentType { get; init; } = string.Empty;
+
+    public string FileName { get; init; } = string.Empty;
 }
 
 public sealed class ImportRecipeResult

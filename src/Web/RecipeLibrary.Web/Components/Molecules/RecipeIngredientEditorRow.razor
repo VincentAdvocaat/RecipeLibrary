@@ -122,10 +122,7 @@
         {
             Item.UnitName = null;
             Item.Quantity = null;
-            if (string.IsNullOrWhiteSpace(Item.Preparation))
-            {
-                Item.Preparation = "naar smaak";
-            }
+            // Leave preparation as-is; do not invent a localized "to taste" note.
         }
         else if (Item.Quantity is decimal quantity && UnitRules.TryParse(Item.UnitName, out var unit))
         {

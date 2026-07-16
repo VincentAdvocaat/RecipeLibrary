@@ -170,6 +170,59 @@ public sealed class ImportRecipeQueryHandlerTests
             }));
     }
 
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_MultipleImages_ConcatenatesOcrText()
+    {
+        var extractor = new QueuedImageTextExtractor(
+        [
+            """
+            Ingrediënten
+            200 gr pasta
+            """,
+            """
+            Bereiding
+            1. Kook de pasta.
+            """,
+        ]);
+        var sut = new ImportRecipeFromImageQueryHandler(
+            extractor,
+            CreateService(),
+            Options.Create(new RecipeImportOptions { Ocr = new RecipeImportOcrOptions { MaxImagesPerImport = 5 } }));
+
+        var result = await sut.HandleAsync(new ImportRecipeFromImageQuery
+        {
+            Images =
+            [
+                new ImportImageFile { ImageBytes = [1], ContentType = "image/png", FileName = "a.png" },
+                new ImportImageFile { ImageBytes = [2], ContentType = "image/png", FileName = "b.png" },
+            ],
+            Language = "nl",
+        });
+
+        Assert.Equal(2, extractor.CallCount);
+        Assert.True(result.Ingredients.Count > 0);
+        Assert.True(result.Steps.Count > 0);
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_Throws_WhenTooManyImages()
+    {
+        var sut = new ImportRecipeFromImageQueryHandler(
+            new FakeImageTextExtractor("x"),
+            CreateService(),
+            Options.Create(new RecipeImportOptions { Ocr = new RecipeImportOcrOptions { MaxImagesPerImport = 1 } }));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new ImportRecipeFromImageQuery
+            {
+                Images =
+                [
+                    new ImportImageFile { ImageBytes = [1], ContentType = "image/png" },
+                    new ImportImageFile { ImageBytes = [2], ContentType = "image/png" },
+                ],
+            }));
+    }
+
     private static RecipeImportService CreateService() =>
         new(
             new RecipeTextParser(new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser()))),
@@ -209,6 +262,20 @@ public sealed class ImportRecipeQueryHandlerTests
         public Task<string> ExtractTextAsync(Stream imageStream, string language, CancellationToken ct = default)
         {
             LastLanguage = language;
+            return Task.FromResult(text);
+        }
+    }
+
+    private sealed class QueuedImageTextExtractor(IReadOnlyList<string> texts) : IRecipeImageTextExtractor
+    {
+        private int _index;
+
+        public int CallCount { get; private set; }
+
+        public Task<string> ExtractTextAsync(Stream imageStream, string language, CancellationToken ct = default)
+        {
+            CallCount++;
+            var text = _index < texts.Count ? texts[_index++] : string.Empty;
             return Task.FromResult(text);
         }
     }

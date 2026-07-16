@@ -50,28 +50,77 @@ public sealed class ImportRecipeFromImageQueryHandler(
 
     public async Task<ImportRecipeResult> HandleAsync(ImportRecipeFromImageQuery query, CancellationToken ct = default)
     {
-        if (query.ImageBytes is null || query.ImageBytes.Length == 0)
+        var images = ResolveImages(query);
+        if (images.Count == 0)
         {
             throw new ArgumentException("Image is required.");
         }
 
-        var maxBytes = options.Value.Ocr.MaxImageBytes;
-        if (query.ImageBytes.Length > maxBytes)
+        var maxImages = Math.Max(1, options.Value.Ocr.MaxImagesPerImport);
+        if (images.Count > maxImages)
         {
-            throw new ArgumentException($"Image exceeds maximum size of {maxBytes} bytes.");
+            throw new ArgumentException($"At most {maxImages} images are allowed per import.");
         }
 
-        ResolveContentType(query.ContentType, query.FileName);
-
+        var maxBytes = options.Value.Ocr.MaxImageBytes;
         var language = NormalizeLanguage(query.Language);
-        await using var stream = new MemoryStream(query.ImageBytes, writable: false);
-        var text = await imageTextExtractor.ExtractTextAsync(stream, language, ct);
-        if (string.IsNullOrWhiteSpace(text))
+        var textParts = new List<string>(images.Count);
+
+        foreach (var image in images)
+        {
+            if (image.ImageBytes is null || image.ImageBytes.Length == 0)
+            {
+                throw new ArgumentException("Image is required.");
+            }
+
+            if (image.ImageBytes.Length > maxBytes)
+            {
+                throw new ArgumentException($"Image exceeds maximum size of {maxBytes} bytes.");
+            }
+
+            ResolveContentType(image.ContentType, image.FileName);
+
+            await using var stream = new MemoryStream(image.ImageBytes, writable: false);
+            var text = await imageTextExtractor.ExtractTextAsync(stream, language, ct);
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                textParts.Add(text.Trim());
+            }
+        }
+
+        if (textParts.Count == 0)
         {
             throw new InvalidOperationException("No text could be extracted from the image.");
         }
 
-        return await recipeImportService.ImportPlainTextAsync(text, ct);
+        var combined = textParts.Count == 1
+            ? textParts[0]
+            : string.Join("\n\n", textParts);
+
+        return await recipeImportService.ImportPlainTextAsync(combined, ct);
+    }
+
+    private static IReadOnlyList<ImportImageFile> ResolveImages(ImportRecipeFromImageQuery query)
+    {
+        if (query.Images is { Count: > 0 })
+        {
+            return query.Images;
+        }
+
+        if (query.ImageBytes is { Length: > 0 })
+        {
+            return
+            [
+                new ImportImageFile
+                {
+                    ImageBytes = query.ImageBytes,
+                    ContentType = query.ContentType,
+                    FileName = query.FileName,
+                },
+            ];
+        }
+
+        return [];
     }
 
     internal static string ResolveContentType(string? contentType, string? fileName)

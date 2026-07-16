@@ -38,14 +38,14 @@
     },
     {
       "name": "peper en zout",
-      "preparation": "naar smaak",
+      "preparation": null,
       "quantity": null,
       "unit": null,
       "createAsNewIngredient": false
     },
     {
       "name": "olijfolie",
-      "preparation": "naar smaak",
+      "preparation": null,
       "quantity": null,
       "unit": null,
       "createAsNewIngredient": false

@@ -78,7 +78,7 @@
   <data name="RecipeCreate.Mode.AriaLabel" xml:space="preserve"><value>How to add the recipe</value></data>
   <data name="RecipeCreate.Mode.Manual" xml:space="preserve"><value>Manual</value></data>
   <data name="RecipeCreate.Mode.Text" xml:space="preserve"><value>Text</value></data>
-  <data name="RecipeCreate.Mode.Photo" xml:space="preserve"><value>Photo</value></data>
+  <data name="RecipeCreate.Mode.Photo" xml:space="preserve"><value>Photo (experimental)</value></data>
   <data name="RecipeCreate.Mode.Url" xml:space="preserve"><value>Link</value></data>
   <data name="RecipeCreate.Text.Label" xml:space="preserve"><value>Paste recipe text</value></data>
   <data name="RecipeCreate.Text.Placeholder" xml:space="preserve"><value>Paste a recipe, notes, or mixed text. Extra content is fine — we will try to extract the recipe.</value></data>
@@ -86,11 +86,15 @@
   <data name="RecipeCreate.Url.Placeholder" xml:space="preserve"><value>https://example.com/recipe</value></data>
   <data name="RecipeCreate.Url.Hint" xml:space="preserve"><value>Paste a link to a recipe page. We will try to read the recipe from that page.</value></data>
   <data name="RecipeCreate.Url.Error.Empty" xml:space="preserve"><value>Enter a website link to import.</value></data>
-  <data name="RecipeCreate.PhotoImport.Label" xml:space="preserve"><value>Upload photo or screenshot</value></data>
+  <data name="RecipeCreate.PhotoImport.Label" xml:space="preserve"><value>Upload photos or screenshots</value></data>
   <data name="RecipeCreate.PhotoImport.Language.Label" xml:space="preserve"><value>Text language on the photo</value></data>
   <data name="RecipeCreate.PhotoImport.Language.Dutch" xml:space="preserve"><value>Dutch</value></data>
   <data name="RecipeCreate.PhotoImport.Language.English" xml:space="preserve"><value>English</value></data>
-  <data name="RecipeCreate.PhotoImport.Error.NoFile" xml:space="preserve"><value>Choose a photo to import.</value></data>
+  <data name="RecipeCreate.PhotoImport.Error.NoFile" xml:space="preserve"><value>Choose at least one photo to import.</value></data>
+  <data name="RecipeCreate.PhotoImport.Multiple.Hint" xml:space="preserve"><value>You can select up to {0} photos or screenshots. They are processed in order.</value></data>
+  <data name="RecipeCreate.PhotoImport.Error.MaxImages" xml:space="preserve"><value>You can select at most {0} photos.</value></data>
+  <data name="RecipeCreate.PhotoImport.Error.UploadTimeout" xml:space="preserve"><value>The upload timed out. Try fewer or smaller photos.</value></data>
+  <data name="RecipeCreate.PhotoImport.Experimental.Disclaimer" xml:space="preserve"><value>Experimental: photo import is not reliable yet. Prefer text or URL import; results may fail or be incomplete.</value></data>
   <data name="RecipeCreate.Import.Responsibility.Hint" xml:space="preserve"><value>Only import text, screenshots, or links you have the right to use. You are responsible for the content you add.</value></data>
   <data name="RecipeCreate.Import.ReviewBanner" xml:space="preserve"><value>We filled in this recipe for you. Please check that everything looks right before you save.</value></data>
   <data name="RecipeCreate.Import.Ingredient.CheckHint" xml:space="preserve"><value>Please check if this looks right.</value></data>

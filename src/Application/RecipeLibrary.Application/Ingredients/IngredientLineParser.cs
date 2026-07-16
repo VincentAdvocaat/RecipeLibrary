@@ -174,8 +174,8 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
     {
         var (name, explicitPrep) = IngredientPreparationSplitter.Split(normalized);
         var resolved = lineResolver.Resolve(name, explicitPrep);
-        var preparation = resolved.Preparation ?? "naar smaak";
-        return Unmeasured(raw, resolved.DisplayName, preparation, confidence);
+        // Bare lines (e.g. "olijfolie", "eieren") stay unmeasured without inventing "naar smaak".
+        return Unmeasured(raw, resolved.DisplayName, resolved.Preparation, confidence);
     }
 
     private static ParsedIngredientLine Unmeasured(string raw, string name, string? preparation, decimal confidence) =>
