@@ -59,8 +59,9 @@ stages:
       displayName: Publish container image to GHCR
       condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
 
-- stage: DeployTest
-  displayName: Deploy test environment
+# SEC deploys automatically after Build. Configure environment "test-sec" WITHOUT approvals.
+- stage: DeployTestSEC
+  displayName: Deploy test SEC
   dependsOn: Build
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
   variables:
@@ -162,6 +163,15 @@ stages:
                 echo "If this is the first deploy, run docs/azure/sql-grants.sql for the managed identity and redeploy."
                 exit 1
 
+# NEU is optional: runs in parallel with SEC but waits on environment "test-neu" approvals only.
+# Configure Approvals on environment "test-neu"; reject/timeout to skip NEU without blocking SEC.
+- stage: DeployTestNEU
+  displayName: Deploy test NEU (optional)
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
+  variables:
+    containerImageDigest: $[ stageDependencies.Build.BuildAndTest.outputs['PublishImage.containerImageDigest'] ]
+  jobs:
   - deployment: DeployTestNEU
     displayName: Deploy test NEU
     environment: test-neu
