@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Domain.Entities;
-using RecipeLibrary.Domain.ValueObjects;
 
 namespace RecipeLibrary.Infrastructure.Persistence;
 
@@ -30,7 +29,8 @@ public sealed class EfPantryRepository(RecipeDbContext dbContext) : IPantryRepos
 
         if (tracked is not null)
         {
-            tracked.Quantity = item.Quantity;
+            tracked.CanonicalIngredientId = item.CanonicalIngredientId;
+            tracked.DisplayName = item.DisplayName;
             tracked.UpdatedAt = item.UpdatedAt;
             await dbContext.SaveChangesAsync(ct);
             return tracked;
@@ -39,23 +39,6 @@ public sealed class EfPantryRepository(RecipeDbContext dbContext) : IPantryRepos
         await dbContext.PantryItems.AddAsync(item, ct);
         await dbContext.SaveChangesAsync(ct);
         return item;
-    }
-
-    public async Task<bool> UpdateQuantityAsync(
-        Guid itemId,
-        string ownerKey,
-        decimal quantity,
-        CancellationToken ct = default)
-    {
-        var updated = await dbContext.PantryItems
-            .Where(p => p.Id == itemId && p.OwnerUserId == ownerKey)
-            .ExecuteUpdateAsync(
-                s => s
-                    .SetProperty(p => p.Quantity, new Quantity(quantity))
-                    .SetProperty(p => p.UpdatedAt, DateTimeOffset.UtcNow),
-                ct);
-
-        return updated > 0;
     }
 
     public async Task<bool> RemoveAsync(Guid itemId, string ownerKey, CancellationToken ct = default)

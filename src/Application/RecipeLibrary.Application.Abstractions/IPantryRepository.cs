@@ -10,7 +10,5 @@ public interface IPantryRepository
 
     Task<PantryItem> UpsertAsync(PantryItem item, CancellationToken ct = default);
 
-    Task<bool> UpdateQuantityAsync(Guid itemId, string ownerKey, decimal quantity, CancellationToken ct = default);
-
     Task<bool> RemoveAsync(Guid itemId, string ownerKey, CancellationToken ct = default);
 }

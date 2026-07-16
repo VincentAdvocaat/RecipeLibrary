@@ -9,15 +9,13 @@ public sealed class ApplyPantryToShoppingListCommandHandler(
     IShoppingListRepository shoppingListRepository,
     IPantryRepository pantryRepository,
     IShoppingListUserContext userContext,
-    PantrySubtractor subtractor)
+    PantryExclusionFilter exclusionFilter)
     : ICommandHandler<ApplyPantryToShoppingListCommand, ApplyPantryToShoppingListResult>
 {
     public async Task<ApplyPantryToShoppingListResult> HandleAsync(
         ApplyPantryToShoppingListCommand command,
         CancellationToken ct = default)
     {
-        PantryOwnerKey.Validate(command.OwnerKey);
-
         await ShoppingListAccessGuard.EnsureListAccessAsync(
             shoppingListRepository,
             command.ShoppingListId,
@@ -27,18 +25,19 @@ public sealed class ApplyPantryToShoppingListCommandHandler(
         var list = await shoppingListRepository.GetListByIdAsync(command.ShoppingListId, ct)
             ?? throw new InvalidOperationException("Shopping list not found.");
 
-        var pantryItems = await pantryRepository.GetByOwnerKeyAsync(command.OwnerKey, ct);
+        var ownerKey = PantryOwnerKey.Resolve(userContext.OwnerUserId, list.GroupId);
+        var pantryItems = await pantryRepository.GetByOwnerKeyAsync(ownerKey, ct);
         if (pantryItems.Count == 0)
         {
-            return new ApplyPantryToShoppingListResult(0, 0);
+            return new ApplyPantryToShoppingListResult(0);
         }
 
         var originalCount = list.Items.Count;
-        var adjusted = subtractor.SubtractFromListItems(list.Items.ToList(), pantryItems);
-        var removed = originalCount - adjusted.Count;
+        var remaining = exclusionFilter.ExcludeMatchingItems(list.Items.ToList(), pantryItems);
+        var removed = originalCount - remaining.Count;
 
-        await shoppingListRepository.ReplaceListItemsAsync(list.Id, adjusted, ct);
+        await shoppingListRepository.ReplaceListItemsAsync(list.Id, remaining, ct);
 
-        return new ApplyPantryToShoppingListResult(adjusted.Count, removed);
+        return new ApplyPantryToShoppingListResult(removed);
     }
 }

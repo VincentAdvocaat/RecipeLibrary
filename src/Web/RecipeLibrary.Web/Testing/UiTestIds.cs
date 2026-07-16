@@ -75,8 +75,7 @@ public static class UiTestIds
     public const string PantryAddSubmit = "pantry-add-submit";
     public const string NavPantry = "nav-pantry";
 
-    public static string PantryQuantityEdit(Guid itemId) => $"pantry-{itemId:D}-quantity-edit";
-    public static string PantryQuantityInput(Guid itemId) => $"pantry-{itemId:D}-quantity-input";
-    public static string PantryQuantitySave(Guid itemId) => $"pantry-{itemId:D}-quantity-save";
     public static string PantryItemRemove(Guid itemId) => $"pantry-{itemId:D}-remove";
+
+    public static string ItemMoveToPantry(Guid itemId) => $"item-{itemId:D}-move-to-pantry";
 }

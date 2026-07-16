@@ -1,7 +1,8 @@
-using RecipeLibrary.Domain.ValueObjects;
-
 namespace RecipeLibrary.Domain.Entities;
 
+/// <summary>
+/// Staple the owner already keeps at home (presence only; no inventory quantity).
+/// </summary>
 public sealed class PantryItem
 {
     public Guid Id { get; set; }
@@ -12,10 +13,6 @@ public sealed class PantryItem
     public Guid? CanonicalIngredientId { get; set; }
 
     public string DisplayName { get; set; } = string.Empty;
-
-    public Quantity Quantity { get; set; }
-
-    public Unit Unit { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 

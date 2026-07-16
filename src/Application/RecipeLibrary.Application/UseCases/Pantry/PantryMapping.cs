@@ -11,8 +11,6 @@ internal static class PantryMapping
             Id = item.Id,
             CanonicalIngredientId = item.CanonicalIngredientId,
             DisplayName = item.DisplayName,
-            Quantity = item.Quantity.Value,
-            Unit = item.Unit.ToString(),
         };
 
     public static GetPantryItemsResult MapItems(IReadOnlyList<PantryItem> items) =>

@@ -1,14 +1,14 @@
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
-using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.Pantry;
-using RecipeLibrary.Domain.Entities;
-using RecipeLibrary.Domain.ValueObjects;
+using RecipeLibrary.Application.ShoppingLists;
 
 namespace RecipeLibrary.Application.UseCases.Pantry;
 
 public sealed class UpsertPantryItemCommandHandler(
     IPantryRepository repository,
+    IShoppingListRepository shoppingListRepository,
+    IShoppingListUserContext userContext,
     PantryIngredientMerger merger)
     : ICommandHandler<UpsertPantryItemCommand, UpsertPantryItemResult>
 {
@@ -16,7 +16,11 @@ public sealed class UpsertPantryItemCommandHandler(
         UpsertPantryItemCommand command,
         CancellationToken ct = default)
     {
-        PantryOwnerKey.Validate(command.OwnerKey);
+        await ShoppingListAccessGuard.EnsureGroupAccessAsync(
+            shoppingListRepository,
+            command.ShoppingListGroupId,
+            userContext.OwnerUserId,
+            ct);
 
         var displayName = (command.DisplayName ?? string.Empty).Trim();
         if (string.IsNullOrEmpty(displayName))
@@ -24,21 +28,17 @@ public sealed class UpsertPantryItemCommandHandler(
             throw new ArgumentException("Display name is required.");
         }
 
-        var unit = UnitRules.ParseOrThrow(command.Unit);
-        IngredientQuantityFormatter.ValidateQuantity(command.Quantity, unit);
+        var ownerKey = PantryOwnerKey.Resolve(userContext.OwnerUserId, command.ShoppingListGroupId);
+        var existingItems = await repository.GetByOwnerKeyAsync(ownerKey, ct);
 
-        var existingItems = await repository.GetByOwnerKeyAsync(command.OwnerKey, ct);
-
-        var merged = merger.MergeLineIntoPantry(
+        var item = merger.EnsurePresent(
             existingItems,
             command.CanonicalIngredientId,
             displayName,
-            command.Quantity,
-            unit,
-            command.OwnerKey);
+            ownerKey);
 
-        await repository.UpsertAsync(merged, ct);
+        await repository.UpsertAsync(item, ct);
 
-        return new UpsertPantryItemResult(true, merged.Id);
+        return new UpsertPantryItemResult(true, item.Id);
     }
 }

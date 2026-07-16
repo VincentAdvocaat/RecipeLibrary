@@ -9,7 +9,6 @@
 
 @inject ICommandBus CommandBus
 @inject ShoppingListSessionService ShoppingSession
-@inject PantrySessionService PantrySession
 @inject NavigationManager Navigation
 @inject HttpClient Http
 
@@ -251,6 +250,12 @@
                                     @if (!_splitMode)
                                     {
                                         <button type="button"
+                                                data-testid="@UiTestIds.ItemMoveToPantry(item.Id)"
+                                                class="text-xs text-gray-600 hover:text-gray-900"
+                                                @onclick="() => MoveItemToPantryAsync(item.Id)">
+                                            @L["ShoppingList.MoveToPantry.Button"]
+                                        </button>
+                                        <button type="button"
                                                 data-testid="@UiTestIds.ItemRemove(item.Id)"
                                                 class="text-xs text-red-600 hover:text-red-800"
                                                 @onclick="() => RemoveItemAsync(item.Id)">
@@ -482,6 +487,13 @@
         await ReloadAsync();
     }
 
+    private async Task MoveItemToPantryAsync(Guid itemId)
+    {
+        await CommandBus.SendAsync<MoveShoppingListItemToPantryCommand, MoveShoppingListItemToPantryResult>(
+            new MoveShoppingListItemToPantryCommand { ItemId = itemId });
+        await ReloadAsync();
+    }
+
     private async Task MoveItemAsync(Guid itemId, Guid targetListId)
     {
         await CommandBus.SendAsync<MoveShoppingListItemCommand, MoveShoppingListItemResult>(
@@ -642,11 +654,9 @@
             return;
         }
 
-        var ownerKey = await PantrySession.GetOwnerKeyAsync();
         await CommandBus.SendAsync<ApplyPantryToShoppingListCommand, ApplyPantryToShoppingListResult>(
             new ApplyPantryToShoppingListCommand
             {
-                OwnerKey = ownerKey,
                 ShoppingListId = _activeList.Id,
             });
 

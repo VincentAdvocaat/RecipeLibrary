@@ -1,65 +1,79 @@
 using RecipeLibrary.Application.Abstractions;
-using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Domain.Entities;
-using RecipeLibrary.Domain.ValueObjects;
 
 namespace RecipeLibrary.Application.Pantry;
 
 public sealed class PantryIngredientMerger(IIngredientTextNormalizer normalizer)
 {
-    public PantryItem MergeLineIntoPantry(
+    /// <summary>
+    /// Ensures the staple is present. Idempotent: returns the existing item when it already matches.
+    /// </summary>
+    public PantryItem EnsurePresent(
         IReadOnlyList<PantryItem> existingItems,
         Guid? canonicalIngredientId,
         string displayName,
-        decimal quantity,
-        Unit unit,
         string ownerKey)
     {
-        var items = existingItems.ToList();
-        var key = BuildKey(canonicalIngredientId, displayName, unit);
-        var normalizedQuantity = IngredientQuantityFormatter.Normalize(quantity, unit);
-        var now = DateTimeOffset.UtcNow;
-
-        var existing = FindMatch(items, key);
+        var existing = FindMatch(existingItems, canonicalIngredientId, displayName);
         if (existing is not null)
         {
-            existing.Quantity = new Quantity(
-                IngredientQuantityFormatter.Normalize(
-                    existing.Quantity.Value + normalizedQuantity,
-                    existing.Unit));
-            existing.UpdatedAt = now;
+            existing.UpdatedAt = DateTimeOffset.UtcNow;
             return existing;
         }
 
-        var item = new PantryItem
+        var now = DateTimeOffset.UtcNow;
+        return new PantryItem
         {
             Id = Guid.NewGuid(),
             OwnerUserId = ownerKey,
             CanonicalIngredientId = canonicalIngredientId,
             DisplayName = displayName.Trim(),
-            Quantity = new Quantity(normalizedQuantity),
-            Unit = unit,
             CreatedAt = now,
             UpdatedAt = now,
         };
-        items.Add(item);
-        return item;
     }
 
-    internal PantryMergeKey BuildKey(PantryItem item) =>
-        BuildKey(item.CanonicalIngredientId, item.DisplayName, item.Unit);
+    public bool IsPresent(
+        IReadOnlyList<PantryItem> pantryItems,
+        Guid? canonicalIngredientId,
+        string displayName) =>
+        FindMatch(pantryItems, canonicalIngredientId, displayName) is not null;
 
-    public PantryMergeKey BuildKey(Guid? canonicalIngredientId, string displayName, Unit unit) =>
-        new(
-            canonicalIngredientId,
-            normalizer.Normalize(displayName),
-            unit);
+    /// <summary>
+    /// Presence match: same canonical id, or same normalized display name
+    /// (name fallback also applies when both sides have different canonical ids).
+    /// </summary>
+    public bool Matches(
+        Guid? leftCanonicalId,
+        string leftDisplayName,
+        Guid? rightCanonicalId,
+        string rightDisplayName)
+    {
+        if (leftCanonicalId.HasValue
+            && rightCanonicalId.HasValue
+            && leftCanonicalId.Value == rightCanonicalId.Value)
+        {
+            return true;
+        }
 
-    private PantryItem? FindMatch(IReadOnlyList<PantryItem> items, PantryMergeKey key)
+        return string.Equals(
+            normalizer.Normalize(leftDisplayName),
+            normalizer.Normalize(rightDisplayName),
+            StringComparison.Ordinal);
+    }
+
+    private PantryItem? FindMatch(
+        IReadOnlyList<PantryItem> items,
+        Guid? canonicalIngredientId,
+        string displayName)
     {
         foreach (var item in items)
         {
-            if (BuildKey(item).Equals(key))
+            if (Matches(
+                    item.CanonicalIngredientId,
+                    item.DisplayName,
+                    canonicalIngredientId,
+                    displayName))
             {
                 return item;
             }

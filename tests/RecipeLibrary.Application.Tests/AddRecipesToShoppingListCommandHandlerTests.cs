@@ -61,6 +61,67 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
         Assert.Single(shoppingRepo.ReplacedItems!);
     }
 
+    [Fact]
+    public async Task HandleAsync_ExcludesPantryStaples_FromMergedList()
+    {
+        var listId = Guid.NewGuid();
+        var recipeId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var saltId = Guid.NewGuid();
+        var list = new ShoppingList { Id = listId, GroupId = groupId, Items = [] };
+        var recipe = new Recipe
+        {
+            Id = recipeId,
+            Title = new RecipeTitle("Soep"),
+            Ingredients =
+            [
+                new Ingredient
+                {
+                    Id = Guid.NewGuid(),
+                    IngredientId = saltId,
+                    Name = "Zout",
+                    Quantity = new Quantity(1),
+                    Unit = Unit.Teaspoon,
+                },
+                new Ingredient
+                {
+                    Id = Guid.NewGuid(),
+                    IngredientId = Guid.NewGuid(),
+                    Name = "Ui",
+                    Quantity = new Quantity(1),
+                    Unit = Unit.Piece,
+                },
+            ],
+        };
+
+        var shoppingRepo = new FakeShoppingListRepository { List = list };
+        var recipeRepo = new FakeRecipeRepository(recipe);
+        var pantryRepo = new FakePantryRepository
+        {
+            Items =
+            [
+                new PantryItem
+                {
+                    Id = Guid.NewGuid(),
+                    DisplayName = "Zout",
+                    CanonicalIngredientId = saltId,
+                },
+            ],
+        };
+        var sut = CreateSut(shoppingRepo, recipeRepo, pantryRepo);
+
+        var result = await sut.HandleAsync(new AddRecipesToShoppingListCommand
+        {
+            ShoppingListId = listId,
+            RecipeIds = [recipeId],
+        });
+
+        Assert.Equal(1, result.IngredientsAdded);
+        Assert.NotNull(shoppingRepo.ReplacedItems);
+        Assert.Single(shoppingRepo.ReplacedItems!);
+        Assert.Equal("Ui", shoppingRepo.ReplacedItems![0].DisplayName);
+    }
+
     private static AddRecipesToShoppingListCommandHandler CreateSut(
         FakeShoppingListRepository shoppingRepo,
         FakeRecipeRepository recipeRepo,
@@ -71,7 +132,7 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
             pantryRepo ?? new FakePantryRepository(),
             new AnonymousShoppingListUserContext(),
             new ShoppingListIngredientMerger(new IngredientTextNormalizer()),
-            new PantrySubtractor(new PantryIngredientMerger(new IngredientTextNormalizer())));
+            new PantryExclusionFilter(new PantryIngredientMerger(new IngredientTextNormalizer())));
 
     private sealed class FakeRecipeRepository(Recipe recipe) : IRecipeRepository
     {
@@ -134,9 +195,6 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
 
         public Task<PantryItem> UpsertAsync(PantryItem item, CancellationToken ct = default) =>
             Task.FromResult(item);
-
-        public Task<bool> UpdateQuantityAsync(Guid itemId, string ownerKey, decimal quantity, CancellationToken ct = default) =>
-            Task.FromResult(false);
 
         public Task<bool> RemoveAsync(Guid itemId, string ownerKey, CancellationToken ct = default) =>
             Task.FromResult(false);
