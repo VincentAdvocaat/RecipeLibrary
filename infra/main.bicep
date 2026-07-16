@@ -27,11 +27,19 @@ param clientPublicIp string = ''
 @description('Whether to allow Azure services to access the SQL server (equivalent to adding firewall rule 0.0.0.0).')
 param allowAzureServices bool = true
 
-@description('Public GHCR image repository without digest (lowercase), e.g. ghcr.io/owner/recipelibrary.')
+@description('GHCR image repository without digest (lowercase), e.g. ghcr.io/owner/recipelibrary.')
 param ghcrImageRepository string = 'ghcr.io/vincentadvocaat/recipelibrary'
 
 @description('Immutable GHCR image digest including sha256 prefix, e.g. sha256:abc123....')
 param containerImageDigest string
+
+@secure()
+@description('GitHub username used by Container Apps to authenticate to GHCR.')
+param ghcrUsername string
+
+@secure()
+@description('GitHub PAT (or token) with read:packages used by Container Apps to pull from GHCR.')
+param ghcrPassword string
 
 var stableSuffix = toLower(uniqueString(subscription().subscriptionId, resourceGroup().id))
 var suffix = (nameSuffix == '') ? stableSuffix : toLower(nameSuffix)
@@ -180,6 +188,20 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
     managedEnvironmentId: managedEnvironment.id
     configuration: {
       activeRevisionsMode: 'Single'
+      // GHCR packages are private by default; Container Apps need registry credentials to pull.
+      secrets: [
+        {
+          name: 'ghcr-password'
+          value: ghcrPassword
+        }
+      ]
+      registries: [
+        {
+          server: 'ghcr.io'
+          username: ghcrUsername
+          passwordSecretRef: 'ghcr-password'
+        }
+      ]
       ingress: {
         external: true
         targetPort: 8080

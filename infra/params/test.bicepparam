@@ -12,9 +12,11 @@ param tenantId = '00000000-0000-0000-0000-000000000000'
 param entraAdminLogin = 'your.name@yourtenant.onmicrosoft.com'
 param entraAdminObjectId = '00000000-0000-0000-0000-000000000000'
 
-// Public GHCR image (immutable digest required for deploy)
+// GHCR image (immutable digest required for deploy). Private packages need GHCR credentials.
 param ghcrImageRepository = 'ghcr.io/vincentadvocaat/recipelibrary'
 param containerImageDigest = 'sha256:0000000000000000000000000000000000000000000000000000000000000000'
+param ghcrUsername = readEnvironmentVariable('GHCR_USERNAME')
+param ghcrPassword = readEnvironmentVariable('GHCR_TOKEN')
 
 // Optional: set to your current public IP for laptop debugging
 // param clientPublicIp = '203.0.113.10'
