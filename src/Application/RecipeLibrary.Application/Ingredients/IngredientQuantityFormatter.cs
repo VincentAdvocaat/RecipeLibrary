@@ -10,7 +10,7 @@ public static class IngredientQuantityFormatter
 {
     public static decimal Normalize(decimal quantity, Unit unit)
     {
-        if (UnitRules.AllowsDecimals(unit))
+        if (UnitRules.AllowsCulinaryFractions(unit))
         {
             return CulinaryQuantityFractions.SnapToNearest(quantity);
         }
@@ -21,7 +21,7 @@ public static class IngredientQuantityFormatter
     public static string Format(decimal quantity, Unit unit)
     {
         var normalized = Normalize(quantity, unit);
-        if (UnitRules.AllowsDecimals(unit))
+        if (UnitRules.AllowsCulinaryFractions(unit))
         {
             return CulinaryQuantityFractions.FormatMixed(normalized);
         }
@@ -36,7 +36,7 @@ public static class IngredientQuantityFormatter
             throw new ArgumentException("Ingredient quantity must be greater than 0.");
         }
 
-        if (UnitRules.AllowsDecimals(unit))
+        if (UnitRules.AllowsCulinaryFractions(unit))
         {
             if (!CulinaryQuantityFractions.TrySnap(quantity, out var snapped) || snapped <= 0)
             {

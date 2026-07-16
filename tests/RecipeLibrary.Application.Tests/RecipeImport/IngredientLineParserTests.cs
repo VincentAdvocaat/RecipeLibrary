@@ -103,6 +103,16 @@ public sealed class IngredientLineParserTests
     }
 
     [Fact]
+    public void Parse_DoesNotSilentlySnapNonCulinaryFraction_ForTeaspoon()
+    {
+        var result = _sut.Parse("1/7 tl zout");
+
+        Assert.Equal(1m / 7m, result.Quantity);
+        Assert.Equal(nameof(Unit.Teaspoon), result.Unit);
+        Assert.Equal("zout", result.Name);
+    }
+
+    [Fact]
     public void Parse_ParsesRangeIntoPreparation()
     {
         var result = _sut.Parse("2-3 wortels");

@@ -1,7 +1,7 @@
 @* Molecule: quantity input — whole numbers, or whole + culinary fraction for tsp/tbsp. *@
 @namespace RecipeLibrary.Components.Molecules
 
-@if (_allowsDecimals)
+@if (_allowsCulinaryFractions)
 {
     <div class="flex gap-1 min-w-0">
         <input type="number"
@@ -41,16 +41,17 @@ else
     [Parameter] public string? UnitName { get; set; }
     [Parameter] public string? CssClass { get; set; }
 
-    private bool _allowsDecimals;
+    private bool _allowsCulinaryFractions;
     private int _whole;
     private string _fractionKey = "0";
     private int _wholeDisplay = 1;
 
     protected override void OnParametersSet()
     {
-        _allowsDecimals = UnitRules.TryParse(UnitName, out var unit) && UnitRules.AllowsDecimals(unit);
+        _allowsCulinaryFractions =
+            UnitRules.TryParse(UnitName, out var unit) && UnitRules.AllowsCulinaryFractions(unit);
 
-        if (_allowsDecimals)
+        if (_allowsCulinaryFractions)
         {
             var (whole, fraction) = CulinaryQuantityFractions.Split(Quantity <= 0 ? 1m : Quantity);
             _whole = whole;

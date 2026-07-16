@@ -77,7 +77,19 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         var remainder = string.Join(' ', tokens.Skip(index)).Trim();
         var (name, explicitPrep) = SplitNameAndPreparation(remainder);
         var resolved = lineResolver.Resolve(name, explicitPrep);
-        var finalQuantity = IngredientQuantityFormatter.Normalize(quantity * unitMultiplier, unit);
+        var scaled = quantity * unitMultiplier;
+        // Culinary units: snap only within tolerance so e.g. 1/7 is not silently changed to ¼.
+        decimal finalQuantity;
+        if (UnitRules.AllowsCulinaryFractions(unit))
+        {
+            finalQuantity = CulinaryQuantityFractions.TrySnap(scaled, out var snapped)
+                ? snapped
+                : scaled;
+        }
+        else
+        {
+            finalQuantity = IngredientQuantityFormatter.Normalize(scaled, unit);
+        }
 
         var confidence = hasExplicitUnit && resolved.DisplayName.Length > 0
             ? 0.95m
