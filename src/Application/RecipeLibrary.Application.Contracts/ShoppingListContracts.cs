@@ -47,9 +47,9 @@ public sealed class ShoppingListItemDto
 
     public string? Preparation { get; init; }
 
-    public decimal Quantity { get; init; }
+    public decimal? Quantity { get; init; }
 
-    public string Unit { get; init; } = string.Empty;
+    public string? Unit { get; init; }
 
     public bool IsChecked { get; init; }
 
@@ -164,9 +164,9 @@ public sealed class AddManualShoppingListItemCommand : ICommand<AddManualShoppin
 
     public string? Preparation { get; init; }
 
-    public decimal Quantity { get; init; }
+    public decimal? Quantity { get; init; }
 
-    public string Unit { get; init; } = string.Empty;
+    public string? Unit { get; init; }
 }
 
 public sealed record AddManualShoppingListItemResult(bool Added, Guid? ItemId);

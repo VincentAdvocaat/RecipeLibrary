@@ -22,8 +22,6 @@ internal static class RecipeIngredientBuilder
         foreach (var ingredientDto in ingredientDtos)
         {
             var rawName = (ingredientDto.Name ?? string.Empty).Trim();
-            var unit = UnitRules.ParseOrThrow(ingredientDto.Unit);
-            var quantity = IngredientQuantityFormatter.Normalize(ingredientDto.Quantity, unit);
             var resolved = lineResolver.Resolve(ingredientDto.Name, ingredientDto.Preparation);
             CanonicalIngredient canonicalIngredient;
 
@@ -49,6 +47,15 @@ internal static class RecipeIngredientBuilder
                         ct);
             }
 
+            Quantity? quantity = null;
+            Unit? unit = null;
+            if (!IngredientMeasure.IsUnmeasured(ingredientDto.Quantity, ingredientDto.Unit))
+            {
+                unit = UnitRules.ParseOrThrow(ingredientDto.Unit);
+                quantity = new Quantity(
+                    IngredientQuantityFormatter.Normalize(ingredientDto.Quantity!.Value, unit.Value));
+            }
+
             ingredients.Add(new Ingredient
             {
                 Id = Guid.NewGuid(),
@@ -56,7 +63,7 @@ internal static class RecipeIngredientBuilder
                 Name = resolved.DisplayName,
                 Preparation = resolved.Preparation,
                 IngredientId = canonicalIngredient.Id,
-                Quantity = new Quantity(quantity),
+                Quantity = quantity,
                 Unit = unit,
             });
         }

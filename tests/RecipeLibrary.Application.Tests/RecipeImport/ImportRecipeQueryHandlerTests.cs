@@ -20,7 +20,7 @@ public sealed class ImportRecipeQueryHandlerTests
         var result = await sut.HandleAsync(new ImportRecipeContentQuery { Content = html, ContentKind = ImportContentKind.Html });
 
         Assert.Equal("Snelle pasta", result.Title);
-        Assert.Equal(ImportSource.JsonLd, result.Source);
+        Assert.Equal(ImportSource.PlainText, result.Source);
     }
 
     [Fact]
@@ -163,20 +163,12 @@ public sealed class ImportRecipeQueryHandlerTests
 
     private static RecipeImportService CreateService() =>
         new(
-            new StructuredRecipeExtractor(),
-            new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser())),
-            new IngredientMatcher(new EmptyIngredientRepository(), new IngredientTextNormalizer(), new IngredientSimilarityScorer()),
-            new NullIngredientLineAiParser(),
-            Options.Create(new RecipeImportOptions()));
+            new RecipeTextParser(new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser()))),
+            new HtmlRecipeTextExtractor(),
+            new IngredientMatcher(new EmptyIngredientRepository(), new IngredientTextNormalizer(), new IngredientSimilarityScorer()));
 
     private static string GetFixturePath(string fileName) =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "recipe-import", fileName);
-
-    private sealed class NullIngredientLineAiParser : IIngredientLineAiParser
-    {
-        public Task<IReadOnlyList<AiParsedIngredientLine>> ParseLinesAsync(IReadOnlyList<string> rawLines, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<AiParsedIngredientLine>>([]);
-    }
 
     private sealed class EmptyIngredientRepository : IIngredientRepository
     {

@@ -24,10 +24,7 @@ public sealed class ShoppingListIngredientMerger(IIngredientTextNormalizer norma
             {
                 if (!HasSource(existing, line.RecipeId))
                 {
-                    existing.Quantity = new Quantity(
-                        IngredientQuantityFormatter.Normalize(
-                            existing.Quantity.Value + line.Quantity,
-                            existing.Unit));
+                    existing.Quantity = SumQuantities(existing.Quantity, line.Quantity, existing.Unit);
                     existing.Sources.Add(new ShoppingListItemSource
                     {
                         ShoppingListItemId = existing.Id,
@@ -45,7 +42,7 @@ public sealed class ShoppingListIngredientMerger(IIngredientTextNormalizer norma
                     CanonicalIngredientId = line.CanonicalIngredientId,
                     DisplayName = line.DisplayName,
                     Preparation = line.Preparation,
-                    Quantity = new Quantity(IngredientQuantityFormatter.Normalize(line.Quantity, line.Unit)),
+                    Quantity = NormalizeLineQuantity(line.Quantity, line.Unit),
                     Unit = line.Unit,
                     IsChecked = false,
                     SortOrder = sortBase++,
@@ -72,8 +69,8 @@ public sealed class ShoppingListIngredientMerger(IIngredientTextNormalizer norma
         Guid? canonicalIngredientId,
         string displayName,
         string? preparation,
-        decimal quantity,
-        Unit unit,
+        decimal? quantity,
+        Unit? unit,
         Guid shoppingListId)
     {
         var items = existingItems.Select(CloneItem).ToList();
@@ -84,14 +81,11 @@ public sealed class ShoppingListIngredientMerger(IIngredientTextNormalizer norma
             NormalizePreparation(preparation));
 
         var existing = FindMatch(items, key);
-        var normalizedQuantity = IngredientQuantityFormatter.Normalize(quantity, unit);
+        var normalizedQuantity = NormalizeLineQuantity(quantity, unit);
 
         if (existing is not null)
         {
-            existing.Quantity = new Quantity(
-                IngredientQuantityFormatter.Normalize(
-                    existing.Quantity.Value + normalizedQuantity,
-                    existing.Unit));
+            existing.Quantity = SumQuantities(existing.Quantity, normalizedQuantity?.Value, existing.Unit);
             return items;
         }
 
@@ -103,7 +97,7 @@ public sealed class ShoppingListIngredientMerger(IIngredientTextNormalizer norma
             CanonicalIngredientId = canonicalIngredientId,
             DisplayName = displayName.Trim(),
             Preparation = NormalizePreparation(preparation),
-            Quantity = new Quantity(normalizedQuantity),
+            Quantity = normalizedQuantity,
             Unit = unit,
             IsChecked = false,
             SortOrder = sortOrder,
@@ -150,6 +144,37 @@ public sealed class ShoppingListIngredientMerger(IIngredientTextNormalizer norma
         return string.IsNullOrEmpty(trimmed) ? null : trimmed;
     }
 
+    private static Quantity? NormalizeLineQuantity(decimal? quantity, Unit? unit)
+    {
+        if (unit is null || quantity is null)
+        {
+            return null;
+        }
+
+        return new Quantity(IngredientQuantityFormatter.Normalize(quantity.Value, unit.Value));
+    }
+
+    private static Quantity? SumQuantities(Quantity? existing, decimal? add, Unit? unit)
+    {
+        if (unit is null)
+        {
+            return existing;
+        }
+
+        if (existing is null)
+        {
+            return add is null ? null : new Quantity(IngredientQuantityFormatter.Normalize(add.Value, unit.Value));
+        }
+
+        if (add is null)
+        {
+            return existing;
+        }
+
+        return new Quantity(
+            IngredientQuantityFormatter.Normalize(existing.Value.Value + add.Value, unit.Value));
+    }
+
     public IReadOnlyList<ShoppingListItem> MergeItemIntoList(
         IReadOnlyList<ShoppingListItem> existingItems,
         ShoppingListItem itemToMove,
@@ -161,10 +186,10 @@ public sealed class ShoppingListIngredientMerger(IIngredientTextNormalizer norma
 
         if (existing is not null)
         {
-            existing.Quantity = new Quantity(
-                IngredientQuantityFormatter.Normalize(
-                    existing.Quantity.Value + itemToMove.Quantity.Value,
-                    existing.Unit));
+            existing.Quantity = SumQuantities(
+                existing.Quantity,
+                itemToMove.Quantity?.Value,
+                existing.Unit);
 
             foreach (var source in itemToMove.Sources)
             {

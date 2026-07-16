@@ -365,11 +365,11 @@
     private bool _confirmDeleteList;
     private bool _confirmDeleteGroup;
     private Guid? _editingQuantityItemId;
-    private decimal _editQuantityDraft;
+    private decimal? _editQuantityDraft;
     private string _addItemName = string.Empty;
     private string? _addItemPreparation;
-    private decimal _addItemQuantity = 1;
-    private string _addItemUnit = nameof(Unit.Gram);
+    private decimal? _addItemQuantity = 1;
+    private string? _addItemUnit = nameof(Unit.Gram);
     private Guid? _addItemCanonicalId;
     private List<IngredientLookupItem> _addItemSuggestions = [];
 
@@ -584,8 +584,13 @@
 
     private void StartEditQuantity(ShoppingListItemDto item)
     {
+        if (item.Quantity is null || string.IsNullOrWhiteSpace(item.Unit))
+        {
+            return;
+        }
+
         _editingQuantityItemId = item.Id;
-        _editQuantityDraft = item.Quantity;
+        _editQuantityDraft = item.Quantity.Value;
     }
 
     private void CancelEditQuantity() => _editingQuantityItemId = null;
@@ -596,7 +601,7 @@
             new UpdateShoppingListItemQuantityCommand
             {
                 ItemId = itemId,
-                Quantity = _editQuantityDraft,
+                Quantity = _editQuantityDraft ?? 0,
             });
 
         _editingQuantityItemId = null;
@@ -675,17 +680,33 @@
 
     private void OnAddQuantityOrUnitChanged()
     {
-        if (UnitRules.TryParse(_addItemUnit, out var unit))
+        if (string.IsNullOrWhiteSpace(_addItemUnit))
         {
-            _addItemQuantity = IngredientQuantityFormatter.Normalize(_addItemQuantity, unit);
+            _addItemUnit = null;
+            _addItemQuantity = null;
+            return;
+        }
+
+        if (_addItemQuantity is decimal q && UnitRules.TryParse(_addItemUnit, out var unit))
+        {
+            _addItemQuantity = IngredientQuantityFormatter.Normalize(q, unit);
+        }
+        else if (_addItemQuantity is null)
+        {
+            _addItemQuantity = 1;
         }
     }
 
     private string FormatLine(ShoppingListItemDto item) =>
         ShoppingListDisplayHelper.FormatQuantityLine(item, GetUnitLabel);
 
-    private string GetUnitLabel(string unit)
+    private string GetUnitLabel(string? unit)
     {
+        if (string.IsNullOrWhiteSpace(unit))
+        {
+            return string.Empty;
+        }
+
         var key = $"Recipe.Unit.{unit}";
         var localized = L[key];
         return localized.ResourceNotFound ? unit : localized.Value;

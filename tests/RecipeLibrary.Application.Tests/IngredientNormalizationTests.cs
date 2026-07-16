@@ -38,6 +38,17 @@ public sealed class IngredientNormalizationTests
     }
 
     [Fact]
+    public void ParseIngredient_CommaSeparated_DoesNotLeaveTrailingCommaOnName()
+    {
+        var sut = new IngredientNameParser();
+
+        var parsed = sut.ParseIngredient("ui, fijngehakt");
+
+        Assert.Equal("ui", parsed.Name);
+        Assert.Equal("fijngehakt", parsed.Preparation);
+    }
+
+    [Fact]
     public void ParseIngredient_ExtractsInBlokjes()
     {
         var sut = new IngredientNameParser();

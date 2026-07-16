@@ -57,6 +57,14 @@ public sealed class ImportRecipeResult
 
     public int? CookingTimeMinutes { get; init; }
 
+    /// <summary>Difficulty enum value when known (0 = Unknown).</summary>
+    public int? Difficulty { get; init; }
+
+    /// <summary>RecipeCategory enum value when known (0 = Unknown).</summary>
+    public int? Category { get; init; }
+
+    public int? Servings { get; init; }
+
     public ImportSource Source { get; init; }
 
     public IReadOnlyList<ImportedIngredientLine> Ingredients { get; init; } = [];
@@ -70,9 +78,11 @@ public sealed class ImportedIngredientLine
 {
     public string RawLine { get; init; } = string.Empty;
 
-    public decimal Quantity { get; init; }
+    /// <summary>Null when unmeasured (e.g. naar smaak).</summary>
+    public decimal? Quantity { get; init; }
 
-    public string Unit { get; init; } = string.Empty;
+    /// <summary>Null when unmeasured (e.g. naar smaak).</summary>
+    public string? Unit { get; init; }
 
     public string Name { get; init; } = string.Empty;
 

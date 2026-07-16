@@ -18,7 +18,7 @@ public sealed class ImportRecipePipelineTests
         var result = await sut.ImportContentAsync(
             new ImportRecipeContentQuery { Content = html, ContentKind = ImportContentKind.Html });
 
-        Assert.Equal(ImportSource.JsonLd, result.Source);
+        Assert.Equal(ImportSource.PlainText, result.Source);
         Assert.Equal("Snelle pasta", result.Title);
         Assert.True(result.Ingredients.Count >= 3);
         Assert.Equal("pasta", result.Ingredients[0].Name);
@@ -28,22 +28,12 @@ public sealed class ImportRecipePipelineTests
 
     private static RecipeImportService CreateService() =>
         new(
-            new StructuredRecipeExtractor(),
-            new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser())),
-            new IngredientMatcher(new FakeIngredientRepository(), new IngredientTextNormalizer(), new IngredientSimilarityScorer()),
-            new TestNullIngredientLineAiParser(),
-            Options.Create(new RecipeImportOptions()));
+            new RecipeTextParser(new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser()))),
+            new HtmlRecipeTextExtractor(),
+            new IngredientMatcher(new FakeIngredientRepository(), new IngredientTextNormalizer(), new IngredientSimilarityScorer()));
 
     private static string GetFixturePath(string fileName) =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "recipe-import", fileName);
-
-    private sealed class TestNullIngredientLineAiParser : IIngredientLineAiParser
-    {
-        public Task<IReadOnlyList<AiParsedIngredientLine>> ParseLinesAsync(
-            IReadOnlyList<string> rawLines,
-            CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<AiParsedIngredientLine>>([]);
-    }
 
     private sealed class FakeIngredientRepository : IIngredientRepository
     {

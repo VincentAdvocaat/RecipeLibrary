@@ -1,86 +1,61 @@
-using Microsoft.Extensions.Options;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
 
 namespace RecipeLibrary.Application.RecipeImport;
 
+/// <summary>
+/// Import entry: normalize any modality to plain text, then parse with <see cref="RecipeTextParser"/>.
+/// </summary>
 public sealed class RecipeImportService(
-    StructuredRecipeExtractor structuredRecipeExtractor,
-    IngredientLineParser ingredientLineParser,
-    IngredientMatcher ingredientMatcher,
-    IIngredientLineAiParser aiParser,
-    IOptions<RecipeImportOptions> options)
+    RecipeTextParser recipeTextParser,
+    HtmlRecipeTextExtractor htmlRecipeTextExtractor,
+    IngredientMatcher ingredientMatcher)
 {
     public async Task<ImportRecipeResult> ImportContentAsync(
         ImportRecipeContentQuery query,
         CancellationToken ct = default)
     {
-        var extraction = structuredRecipeExtractor.Extract(query.Content, query.ContentKind);
-        return await BuildResultAsync(extraction, ct);
+        var text = ResolvePlainText(query.Content, query.ContentKind);
+        return await BuildResultAsync(text, ct);
     }
 
-    private async Task<ImportRecipeResult> BuildResultAsync(StructuredRecipeExtraction extraction, CancellationToken ct)
+    public async Task<ImportRecipeResult> ImportPlainTextAsync(string plainText, CancellationToken ct = default) =>
+        await BuildResultAsync(plainText ?? string.Empty, ct);
+
+    public string HtmlToRecipeText(string html) => htmlRecipeTextExtractor.Extract(html);
+
+    private string ResolvePlainText(string content, ImportContentKind contentKind)
     {
-        var warnings = extraction.Warnings.ToList();
-        var parsedLines = new List<ImportedIngredientLine>();
-        var aiCandidates = new List<(int Index, string RawLine)>();
-
-        for (var i = 0; i < extraction.IngredientLines.Count; i++)
+        var raw = content ?? string.Empty;
+        var isHtml = contentKind switch
         {
-            var rawLine = extraction.IngredientLines[i];
-            if (string.IsNullOrWhiteSpace(rawLine))
-            {
-                continue;
-            }
+            ImportContentKind.Html => true,
+            ImportContentKind.PlainText => false,
+            _ => LooksLikeHtml(raw),
+        };
 
-            var parsed = ingredientLineParser.Parse(rawLine);
-            var imported = MapParsedLine(parsed, ImportParseMethod.Deterministic);
-            parsedLines.Add(imported);
+        return isHtml ? htmlRecipeTextExtractor.Extract(raw) : raw;
+    }
 
-            if (imported.Confidence < options.Value.Ai.ConfidenceThreshold)
-            {
-                aiCandidates.Add((parsedLines.Count - 1, rawLine));
-            }
-        }
+    private static bool LooksLikeHtml(string content) =>
+        content.Contains('<', StringComparison.Ordinal) && content.Contains('>', StringComparison.Ordinal);
 
-        if (aiCandidates.Count > 0 && options.Value.Ai.Enabled)
+    private async Task<ImportRecipeResult> BuildResultAsync(string plainText, CancellationToken ct)
+    {
+        var parsed = recipeTextParser.Parse(plainText);
+        var ingredients = parsed.Ingredients.ToList();
+
+        for (var i = 0; i < ingredients.Count; i++)
         {
-            var aiLines = await aiParser.ParseLinesAsync(
-                aiCandidates.Select(x => x.RawLine).ToList(),
-                ct);
-
-            for (var i = 0; i < aiCandidates.Count && i < aiLines.Count; i++)
-            {
-                var (index, _) = aiCandidates[i];
-                var aiLine = aiLines[i];
-                parsedLines[index] = new ImportedIngredientLine
-                {
-                    RawLine = aiLine.RawLine,
-                    Quantity = aiLine.Quantity,
-                    Unit = aiLine.Unit,
-                    Name = aiLine.Name,
-                    Preparation = aiLine.Preparation,
-                    Confidence = aiLine.Confidence,
-                    ParseMethod = ImportParseMethod.Ai,
-                };
-            }
-        }
-        else if (aiCandidates.Count > 0 && !options.Value.Ai.Enabled)
-        {
-            warnings.Add(ImportWarningCodes.LowConfidenceAiHint);
-        }
-
-        for (var i = 0; i < parsedLines.Count; i++)
-        {
-            var line = parsedLines[i];
+            var line = ingredients[i];
             if (string.IsNullOrWhiteSpace(line.Name))
             {
                 continue;
             }
 
             var match = await ingredientMatcher.MatchAsync(line.Name, ct);
-            parsedLines[i] = new ImportedIngredientLine
+            ingredients[i] = new ImportedIngredientLine
             {
                 RawLine = line.RawLine,
                 Quantity = line.Quantity,
@@ -95,26 +70,17 @@ public sealed class RecipeImportService(
 
         return new ImportRecipeResult
         {
-            Title = extraction.Title,
-            Description = extraction.Description,
-            PreparationTimeMinutes = extraction.PreparationTimeMinutes,
-            CookingTimeMinutes = extraction.CookingTimeMinutes,
-            Source = extraction.Source,
-            Ingredients = parsedLines,
-            Steps = extraction.Steps,
-            Warnings = warnings,
+            Title = parsed.Title,
+            Description = parsed.Description,
+            PreparationTimeMinutes = parsed.PreparationTimeMinutes,
+            CookingTimeMinutes = parsed.CookingTimeMinutes,
+            Difficulty = parsed.Difficulty,
+            Category = parsed.Category,
+            Servings = parsed.Servings,
+            Source = ImportSource.PlainText,
+            Ingredients = ingredients,
+            Steps = parsed.Steps,
+            Warnings = parsed.Warnings,
         };
     }
-
-    private static ImportedIngredientLine MapParsedLine(ParsedIngredientLine parsed, ImportParseMethod method) =>
-        new()
-        {
-            RawLine = parsed.RawLine,
-            Quantity = parsed.Quantity,
-            Unit = parsed.Unit,
-            Name = parsed.Name,
-            Preparation = parsed.Preparation,
-            Confidence = parsed.Confidence,
-            ParseMethod = method,
-        };
 }

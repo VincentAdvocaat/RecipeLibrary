@@ -35,8 +35,19 @@ public sealed class AddManualShoppingListItemCommandHandler(
             throw new ArgumentException("Preparation must be at most 200 characters.");
         }
 
-        var unit = UnitRules.ParseOrThrow(command.Unit);
-        IngredientQuantityFormatter.ValidateQuantity(command.Quantity, unit);
+        Unit? unit = null;
+        decimal? quantity = null;
+        if (!IngredientMeasure.IsUnmeasured(command.Quantity, command.Unit))
+        {
+            if (command.Quantity is null || string.IsNullOrWhiteSpace(command.Unit))
+            {
+                throw new ArgumentException("Quantity and unit are both required unless the item is unmeasured.");
+            }
+
+            unit = UnitRules.ParseOrThrow(command.Unit);
+            IngredientQuantityFormatter.ValidateQuantity(command.Quantity.Value, unit.Value);
+            quantity = command.Quantity.Value;
+        }
 
         var list = await shoppingListRepository.GetListByIdAsync(command.ShoppingListId, ct)
             ?? throw new InvalidOperationException("Shopping list not found.");
@@ -46,7 +57,7 @@ public sealed class AddManualShoppingListItemCommandHandler(
             command.CanonicalIngredientId,
             displayName,
             preparation,
-            command.Quantity,
+            quantity,
             unit,
             list.Id);
 

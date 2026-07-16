@@ -55,7 +55,7 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         Assert.Equal(listId, repo.LastReplacedListId);
         Assert.Single(repo.LastReplacedItems!);
         Assert.Equal("Melk", repo.LastReplacedItems![0].DisplayName);
-        Assert.Equal(2, repo.LastReplacedItems[0].Quantity.Value);
+        Assert.Equal(2, repo.LastReplacedItems[0].Quantity!.Value.Value);
         Assert.Empty(repo.LastReplacedItems[0].Sources);
     }
 
@@ -92,7 +92,7 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
 
         Assert.Single(repo.LastReplacedItems!);
         Assert.Equal(existing.Id, repo.LastReplacedItems![0].Id);
-        Assert.Equal(3, repo.LastReplacedItems[0].Quantity.Value);
+        Assert.Equal(3, repo.LastReplacedItems[0].Quantity!.Value.Value);
     }
 
     private sealed class FakeShoppingListRepository : IShoppingListRepository

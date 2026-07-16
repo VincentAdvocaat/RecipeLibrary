@@ -5,5 +5,5 @@ namespace RecipeLibrary.Application.ShoppingLists;
 internal readonly record struct ShoppingListMergeKey(
     Guid? CanonicalIngredientId,
     string NormalizedDisplayName,
-    Unit Unit,
+    Unit? Unit,
     string? Preparation);

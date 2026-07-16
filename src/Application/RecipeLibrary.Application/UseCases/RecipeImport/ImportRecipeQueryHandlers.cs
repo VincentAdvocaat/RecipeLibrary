@@ -33,13 +33,8 @@ public sealed class ImportRecipeFromUrlQueryHandler(
         }
 
         var html = await contentFetcher.FetchHtmlAsync(url, ct);
-        return await recipeImportService.ImportContentAsync(
-            new ImportRecipeContentQuery
-            {
-                Content = html,
-                ContentKind = ImportContentKind.Html,
-            },
-            ct);
+        var text = recipeImportService.HtmlToRecipeText(html);
+        return await recipeImportService.ImportPlainTextAsync(text, ct);
     }
 }
 
@@ -80,13 +75,7 @@ public sealed class ImportRecipeFromImageQueryHandler(
             throw new InvalidOperationException("No text could be extracted from the image.");
         }
 
-        return await recipeImportService.ImportContentAsync(
-            new ImportRecipeContentQuery
-            {
-                Content = text,
-                ContentKind = ImportContentKind.PlainText,
-            },
-            ct);
+        return await recipeImportService.ImportPlainTextAsync(text, ct);
     }
 
     internal static string ResolveContentType(string? contentType, string? fileName)

@@ -546,12 +546,26 @@
         _vm.Description = draft.Description;
         _vm.PreparationTimeMinutes = draft.PreparationTimeMinutes ?? _vm.PreparationTimeMinutes;
         _vm.CookingTimeMinutes = draft.CookingTimeMinutes ?? _vm.CookingTimeMinutes;
+        if (draft.Difficulty is int difficulty)
+        {
+            _vm.DifficultyLevel = difficulty;
+        }
+
+        if (draft.Servings is int servings)
+        {
+            _vm.Servings = servings;
+        }
+
+        if (draft.Category is int category)
+        {
+            _vm.Category = category;
+        }
         _vm.Ingredients = draft.Ingredients.Select(x => new RecipeIngredientEditorItem
         {
             Name = x.Name,
             Preparation = x.Preparation,
             Quantity = x.Quantity,
-            UnitName = x.Unit,
+            UnitName = string.IsNullOrWhiteSpace(x.Unit) ? null : x.Unit,
             NeedsReview = x.Confidence < reviewThreshold,
             LastMatchType = x.MatchType,
         }).ToList();

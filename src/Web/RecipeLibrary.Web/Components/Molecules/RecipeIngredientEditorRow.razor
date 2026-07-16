@@ -118,9 +118,22 @@
 
     private async Task OnQuantityOrUnitChanged()
     {
-        if (UnitRules.TryParse(Item.UnitName, out var unit))
+        if (string.IsNullOrWhiteSpace(Item.UnitName))
         {
-            Item.Quantity = IngredientQuantityFormatter.Normalize(Item.Quantity, unit);
+            Item.UnitName = null;
+            Item.Quantity = null;
+            if (string.IsNullOrWhiteSpace(Item.Preparation))
+            {
+                Item.Preparation = "naar smaak";
+            }
+        }
+        else if (Item.Quantity is decimal quantity && UnitRules.TryParse(Item.UnitName, out var unit))
+        {
+            Item.Quantity = IngredientQuantityFormatter.Normalize(quantity, unit);
+        }
+        else if (Item.Quantity is null)
+        {
+            Item.Quantity = 1;
         }
 
         await ItemChanged.InvokeAsync(Item);

@@ -20,21 +20,19 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         var raw = (rawLine ?? string.Empty).Trim();
         if (raw.Length == 0)
         {
-            return new ParsedIngredientLine(
-                raw,
-                1,
-                nameof(Unit.Piece),
-                string.Empty,
-                null,
-                0m,
-                ImportParseMethod.Deterministic);
+            return Unmeasured(raw, string.Empty, null, 0m);
         }
 
         var normalized = NormalizeLine(raw);
         var tokens = Tokenize(normalized);
         if (tokens.Count == 0)
         {
-            return Fallback(raw, normalized, 0.35m);
+            return FallbackUnmeasured(raw, normalized, 0.35m);
+        }
+
+        if (UnitAliasMap.IsHandfulWord(tokens[0]))
+        {
+            return ParseHandful(raw, tokens);
         }
 
         if (UnitAliasMap.IsVagueQuantityWord(tokens[0]))
@@ -50,10 +48,26 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         var index = 0;
         if (!TryParseQuantityToken(tokens[index], out var quantity, out var rangeNote))
         {
-            return Fallback(raw, normalized, 0.35m);
+            return FallbackUnmeasured(raw, normalized, 0.35m);
         }
 
         index++;
+
+        // "1 8 sneetjes stokbrood" — list index before real quantity + count unit.
+        if (index < tokens.Count
+            && IsWholeNumberQuantity(quantity)
+            && quantity is >= 1 and <= 20
+            && TryParseQuantityToken(tokens[index], out var secondQuantity, out _)
+            && IsWholeNumberQuantity(secondQuantity)
+            && index + 1 < tokens.Count
+            && UnitAliasMap.TryResolve(tokens[index + 1], out var peekUnit)
+            && UnitRules.IsCountUnit(peekUnit.Unit)
+            && peekUnit.Unit != Unit.Piece)
+        {
+            quantity = secondQuantity;
+            rangeNote = null;
+            index++;
+        }
 
         if (index < tokens.Count
             && TryParseProperFractionToken(tokens[index], out var extraFraction))
@@ -75,10 +89,9 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         }
 
         var remainder = string.Join(' ', tokens.Skip(index)).Trim();
-        var (name, explicitPrep) = SplitNameAndPreparation(remainder);
+        var (name, explicitPrep) = IngredientPreparationSplitter.Split(remainder);
         var resolved = lineResolver.Resolve(name, explicitPrep);
         var scaled = quantity * unitMultiplier;
-        // Culinary units: snap only within tolerance so e.g. 1/7 is not silently changed to ¼.
         decimal finalQuantity;
         if (UnitRules.AllowsCulinaryFractions(unit))
         {
@@ -109,29 +122,37 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
             ImportParseMethod.Deterministic);
     }
 
-    private static ParsedIngredientLine ParseVagueQuantity(string raw, IReadOnlyList<string> tokens)
+    private static ParsedIngredientLine ParseHandful(string raw, IReadOnlyList<string> tokens)
     {
-        var vagueWord = tokens[0];
         var remainder = string.Join(' ', tokens.Skip(1)).Trim();
-        var (name, explicitPrep) = SplitNameAndPreparation(remainder);
-
-        var unit = vagueWord.Equals("naar smaak", StringComparison.OrdinalIgnoreCase)
-            ? Unit.Piece
-            : Unit.Teaspoon;
-
-        var preparation = vagueWord.Equals("naar smaak", StringComparison.OrdinalIgnoreCase)
-            ? "naar smaak"
-            : explicitPrep;
-
-        if (!vagueWord.Equals("naar smaak", StringComparison.OrdinalIgnoreCase) && explicitPrep is not null)
-        {
-            preparation = explicitPrep;
-        }
+        var (name, explicitPrep) = IngredientPreparationSplitter.Split(remainder);
 
         return new ParsedIngredientLine(
             raw,
             1,
-            unit.ToString(),
+            nameof(Unit.Handful),
+            name,
+            explicitPrep,
+            0.85m,
+            ImportParseMethod.Deterministic);
+    }
+
+    private static ParsedIngredientLine ParseVagueQuantity(string raw, IReadOnlyList<string> tokens)
+    {
+        var vagueWord = tokens[0];
+        var remainder = string.Join(' ', tokens.Skip(1)).Trim();
+        var (name, explicitPrep) = IngredientPreparationSplitter.Split(remainder);
+
+        if (vagueWord.Equals("naar smaak", StringComparison.OrdinalIgnoreCase))
+        {
+            return Unmeasured(raw, name, "naar smaak", 0.55m);
+        }
+
+        var preparation = explicitPrep;
+        return new ParsedIngredientLine(
+            raw,
+            1,
+            nameof(Unit.Teaspoon),
             name,
             preparation,
             0.45m,
@@ -145,30 +166,30 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
             .Trim()
             .TrimEnd(',');
 
-        return new ParsedIngredientLine(
-            raw,
-            1,
-            nameof(Unit.Piece),
-            name,
-            "naar smaak",
-            0.35m,
-            ImportParseMethod.Deterministic);
+        var (cleanName, _) = IngredientPreparationSplitter.Split(name);
+        return Unmeasured(raw, cleanName, "naar smaak", 0.55m);
     }
 
-    private ParsedIngredientLine Fallback(string raw, string normalized, decimal confidence)
+    private ParsedIngredientLine FallbackUnmeasured(string raw, string normalized, decimal confidence)
     {
-        var (name, explicitPrep) = SplitNameAndPreparation(normalized);
+        var (name, explicitPrep) = IngredientPreparationSplitter.Split(normalized);
         var resolved = lineResolver.Resolve(name, explicitPrep);
-
-        return new ParsedIngredientLine(
-            raw,
-            1,
-            nameof(Unit.Piece),
-            resolved.DisplayName,
-            resolved.Preparation,
-            confidence,
-            ImportParseMethod.Deterministic);
+        var preparation = resolved.Preparation ?? "naar smaak";
+        return Unmeasured(raw, resolved.DisplayName, preparation, confidence);
     }
+
+    private static ParsedIngredientLine Unmeasured(string raw, string name, string? preparation, decimal confidence) =>
+        new(
+            raw,
+            Quantity: null,
+            Unit: null,
+            Name: name,
+            Preparation: preparation,
+            Confidence: confidence,
+            ParseMethod: ImportParseMethod.Deterministic);
+
+    private static bool IsWholeNumberQuantity(decimal quantity) =>
+        quantity == decimal.Truncate(quantity);
 
     private static string NormalizeLine(string raw)
     {
@@ -320,24 +341,6 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         return false;
     }
 
-    private static (string Name, string? Preparation) SplitNameAndPreparation(string remainder)
-    {
-        if (remainder.Length == 0)
-        {
-            return (string.Empty, null);
-        }
-
-        var commaIndex = remainder.IndexOf(',');
-        if (commaIndex < 0)
-        {
-            return (remainder.Trim(), null);
-        }
-
-        var name = remainder[..commaIndex].Trim();
-        var preparation = remainder[(commaIndex + 1)..].Trim();
-        return (name, preparation.Length > 0 ? preparation : null);
-    }
-
     private static string? MergePreparation(string? rangeNote, string? preparation)
     {
         if (rangeNote is null)
@@ -356,8 +359,8 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
 
 public sealed record ParsedIngredientLine(
     string RawLine,
-    decimal Quantity,
-    string Unit,
+    decimal? Quantity,
+    string? Unit,
     string Name,
     string? Preparation,
     decimal Confidence,

@@ -210,6 +210,14 @@
   <data name="Recipe.Unit.Teaspoon" xml:space="preserve"><value>theelepel</value></data>
   <data name="Recipe.Unit.Tablespoon" xml:space="preserve"><value>eetlepel</value></data>
   <data name="Recipe.Unit.Piece" xml:space="preserve"><value>stuk</value></data>
+  <data name="Recipe.Unit.Clove" xml:space="preserve"><value>teen</value></data>
+  <data name="Recipe.Unit.Handful" xml:space="preserve"><value>handje</value></data>
+  <data name="Recipe.Unit.Slice" xml:space="preserve"><value>sneetje</value></data>
+  <data name="Recipe.Unit.Sprig" xml:space="preserve"><value>takje</value></data>
+  <data name="Recipe.Unit.Leaf" xml:space="preserve"><value>blaadje</value></data>
+  <data name="Recipe.Unit.Bunch" xml:space="preserve"><value>bosje</value></data>
+  <data name="Recipe.Unit.Stalk" xml:space="preserve"><value>stengel</value></data>
+  <data name="RecipeCreate.Ingredient.Unit.Unmeasured" xml:space="preserve"><value>geen (naar smaak)</value></data>
   <data name="Auth.SignIn" xml:space="preserve"><value>Inloggen</value></data>
   <data name="Auth.SignOut" xml:space="preserve"><value>Uitloggen</value></data>
   <data name="Auth.SignedInAs" xml:space="preserve"><value>Ingelogd als {0}</value></data>

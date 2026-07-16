@@ -52,13 +52,17 @@ public static class RecipeIngredientSaveHelper
             .ToList();
 
     public static List<CreateRecipeIngredientDto> ToIngredientDtos(IEnumerable<RecipeIngredientEditorItem> ingredients) =>
-        ingredients.Select(x => new CreateRecipeIngredientDto
+        ingredients.Select(x =>
         {
-            Name = x.Name,
-            Preparation = string.IsNullOrWhiteSpace(x.Preparation) ? null : x.Preparation.Trim(),
-            Quantity = x.Quantity,
-            Unit = x.UnitName,
-            CreateAsNewIngredient = x.SaveResolution == IngredientSaveResolution.ConfirmedNew,
+            var unmeasured = x.IsUnmeasured;
+            return new CreateRecipeIngredientDto
+            {
+                Name = x.Name,
+                Preparation = string.IsNullOrWhiteSpace(x.Preparation) ? null : x.Preparation.Trim(),
+                Quantity = unmeasured ? null : x.Quantity,
+                Unit = unmeasured ? null : x.UnitName,
+                CreateAsNewIngredient = x.SaveResolution == IngredientSaveResolution.ConfirmedNew,
+            };
         }).ToList();
 
     public static void ResetMatchState(RecipeIngredientEditorItem ingredient)

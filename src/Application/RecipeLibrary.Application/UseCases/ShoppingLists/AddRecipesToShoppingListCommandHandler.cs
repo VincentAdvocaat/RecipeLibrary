@@ -44,7 +44,7 @@ public sealed class AddRecipesToShoppingListCommandHandler(
                     CanonicalIngredientId = ingredient.IngredientId,
                     DisplayName = ingredient.Name,
                     Preparation = ingredient.Preparation,
-                    Quantity = ingredient.Quantity.Value,
+                    Quantity = ingredient.Quantity?.Value,
                     Unit = ingredient.Unit,
                     RecipeId = recipe.Id,
                     RecipeTitle = recipe.Title.Value,

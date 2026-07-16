@@ -210,6 +210,14 @@
   <data name="Recipe.Unit.Teaspoon" xml:space="preserve"><value>teaspoon</value></data>
   <data name="Recipe.Unit.Tablespoon" xml:space="preserve"><value>tablespoon</value></data>
   <data name="Recipe.Unit.Piece" xml:space="preserve"><value>piece</value></data>
+  <data name="Recipe.Unit.Clove" xml:space="preserve"><value>clove</value></data>
+  <data name="Recipe.Unit.Handful" xml:space="preserve"><value>handful</value></data>
+  <data name="Recipe.Unit.Slice" xml:space="preserve"><value>slice</value></data>
+  <data name="Recipe.Unit.Sprig" xml:space="preserve"><value>sprig</value></data>
+  <data name="Recipe.Unit.Leaf" xml:space="preserve"><value>leaf</value></data>
+  <data name="Recipe.Unit.Bunch" xml:space="preserve"><value>bunch</value></data>
+  <data name="Recipe.Unit.Stalk" xml:space="preserve"><value>stalk</value></data>
+  <data name="RecipeCreate.Ingredient.Unit.Unmeasured" xml:space="preserve"><value>none (to taste)</value></data>
   <data name="Auth.SignIn" xml:space="preserve"><value>Sign in</value></data>
   <data name="Auth.SignOut" xml:space="preserve"><value>Sign out</value></data>
   <data name="Auth.SignedInAs" xml:space="preserve"><value>Signed in as {0}</value></data>

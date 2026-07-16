@@ -52,7 +52,7 @@ public sealed class ShoppingListIngredientMergerTests
             listId);
 
         Assert.Single(result);
-        Assert.Equal(5, result[0].Quantity.Value);
+        Assert.Equal(5, result[0].Quantity!.Value.Value);
         Assert.Equal(2, result[0].Sources.Count);
     }
 
@@ -129,7 +129,7 @@ public sealed class ShoppingListIngredientMergerTests
             listId);
 
         Assert.Single(result);
-        Assert.Equal(1, result[0].Quantity.Value);
+        Assert.Equal(1, result[0].Quantity!.Value.Value);
         Assert.Single(result[0].Sources);
     }
 
@@ -148,7 +148,7 @@ public sealed class ShoppingListIngredientMergerTests
 
         Assert.Single(result);
         Assert.Equal("Melk", result[0].DisplayName);
-        Assert.Equal(2, result[0].Quantity.Value);
+        Assert.Equal(2, result[0].Quantity!.Value.Value);
         Assert.Empty(result[0].Sources);
     }
 
@@ -176,6 +176,6 @@ public sealed class ShoppingListIngredientMergerTests
             listId);
 
         Assert.Single(result);
-        Assert.Equal(3, result[0].Quantity.Value);
+        Assert.Equal(3, result[0].Quantity!.Value.Value);
     }
 }
