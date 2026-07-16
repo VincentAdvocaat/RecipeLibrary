@@ -68,7 +68,7 @@ public sealed class RecipeImportService(
         }
         else if (aiCandidates.Count > 0 && !options.Value.Ai.Enabled)
         {
-            warnings.Add($"{aiCandidates.Count} ingredient line(s) have low confidence; enable RecipeImport:Ai to improve parsing.");
+            warnings.Add(ImportWarningCodes.LowConfidenceAiHint);
         }
 
         for (var i = 0; i < parsedLines.Count; i++)

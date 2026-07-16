@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<RecipeImportService>();
         services.AddScoped<IQueryHandler<ImportRecipeContentQuery, ImportRecipeResult>, ImportRecipeContentQueryHandler>();
         services.AddScoped<IQueryHandler<ImportRecipeFromUrlQuery, ImportRecipeResult>, ImportRecipeFromUrlQueryHandler>();
+        services.AddScoped<IQueryHandler<ImportRecipeFromImageQuery, ImportRecipeResult>, ImportRecipeFromImageQueryHandler>();
 
         services.AddScoped<IQueryHandler<GetOrCreateShoppingListGroupQuery, GetOrCreateShoppingListGroupResult>, GetOrCreateShoppingListGroupQueryHandler>();
         services.AddScoped<IQueryHandler<GetNextShoppingListNameQuery, GetNextShoppingListNameResult>, GetNextShoppingListNameQueryHandler>();

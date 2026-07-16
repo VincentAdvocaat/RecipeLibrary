@@ -26,3 +26,8 @@ public interface IRecipeImportContentFetcher
 {
     Task<string> FetchHtmlAsync(string url, CancellationToken ct = default);
 }
+
+public interface IRecipeImageTextExtractor
+{
+    Task<string> ExtractTextAsync(Stream imageStream, string language, CancellationToken ct = default);
+}
