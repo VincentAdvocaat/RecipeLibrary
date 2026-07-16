@@ -46,7 +46,8 @@ public static class DependencyInjection
         services.AddScoped<PantryExclusionFilter>();
 
         services.AddScoped<IngredientLineParser>();
-        services.AddScoped<StructuredRecipeExtractor>();
+        services.AddScoped<HtmlRecipeTextExtractor>();
+        services.AddScoped<RecipeTextParser>();
         services.AddScoped<RecipeImportService>();
         services.AddScoped<IQueryHandler<ImportRecipeContentQuery, ImportRecipeResult>, ImportRecipeContentQueryHandler>();
         services.AddScoped<IQueryHandler<ImportRecipeFromUrlQuery, ImportRecipeResult>, ImportRecipeFromUrlQueryHandler>();

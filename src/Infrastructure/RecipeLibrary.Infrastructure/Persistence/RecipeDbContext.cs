@@ -27,9 +27,13 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
             v => v.Value,
             v => new RecipeTitle(v));
 
-        var quantityConverter = new ValueConverter<Quantity, decimal>(
-            v => v.Value,
-            v => new Quantity(v));
+        var quantityConverter = new ValueConverter<Quantity?, decimal?>(
+            v => v.HasValue ? v.Value.Value : null,
+            v => v.HasValue ? new Quantity(v.Value) : null);
+
+        var nullableUnitConverter = new ValueConverter<Unit?, string?>(
+            v => v.HasValue ? v.Value.ToString() : null,
+            v => string.IsNullOrWhiteSpace(v) ? null : Enum.Parse<Unit>(v));
 
         modelBuilder.Entity<Recipe>(b =>
         {
@@ -81,11 +85,13 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
 
             b.Property(x => x.Quantity)
                 .HasConversion(quantityConverter)
-                .HasPrecision(18, 3);
+                .HasPrecision(18, 3)
+                .IsRequired(false);
 
             b.Property(x => x.Unit)
-                .HasConversion<string>()
-                .HasMaxLength(32);
+                .HasConversion(nullableUnitConverter)
+                .HasMaxLength(32)
+                .IsRequired(false);
 
             b.HasOne(x => x.IngredientDefinition)
                 .WithMany()
@@ -259,11 +265,13 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
 
             b.Property(x => x.Quantity)
                 .HasConversion(quantityConverter)
-                .HasPrecision(18, 3);
+                .HasPrecision(18, 3)
+                .IsRequired(false);
 
             b.Property(x => x.Unit)
-                .HasConversion<string>()
-                .HasMaxLength(32);
+                .HasConversion(nullableUnitConverter)
+                .HasMaxLength(32)
+                .IsRequired(false);
 
             b.HasMany(x => x.Sources)
                 .WithOne(x => x.Item)

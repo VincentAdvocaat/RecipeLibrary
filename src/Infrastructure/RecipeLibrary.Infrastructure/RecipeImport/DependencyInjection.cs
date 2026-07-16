@@ -13,11 +13,18 @@ public static class RecipeImportServiceRegistration
         services.Configure<RecipeImportOptions>(configuration.GetSection(RecipeImportOptions.SectionName));
 
         services.AddHttpClient(HttpClientName, (sp, client) =>
-        {
-            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RecipeImportOptions>>().Value;
-            client.Timeout = TimeSpan.FromSeconds(options.UrlFetch.TimeoutSeconds);
-            client.DefaultRequestHeaders.Accept.ParseAdd("text/html,application/xhtml+xml,application/json");
-        });
+            {
+                var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RecipeImportOptions>>().Value;
+                client.Timeout = TimeSpan.FromSeconds(options.UrlFetch.TimeoutSeconds);
+                client.DefaultRequestHeaders.Accept.ParseAdd("text/html,application/xhtml+xml,application/json");
+            })
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                // Validate each redirect hop against SSRF rules in RecipeImportContentFetcher.
+                AllowAutoRedirect = false,
+                // Connect only to pre-validated (or freshly filtered) public addresses — no DNS rebinding.
+                ConnectCallback = RecipeImportSocketsConnect.ConnectAsync,
+            });
 
         services.AddScoped<IRecipeImportContentFetcher, RecipeImportContentFetcher>();
         services.AddScoped<IRecipeImageTextExtractor, TesseractRecipeImageTextExtractor>();

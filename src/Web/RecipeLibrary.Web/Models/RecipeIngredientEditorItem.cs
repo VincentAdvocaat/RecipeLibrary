@@ -12,11 +12,11 @@ public sealed class RecipeIngredientEditorItem
 
     public string? Preparation { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "1000000", ErrorMessageResourceType = typeof(SharedResources), ErrorMessageResourceName = "RecipeCreate.Ingredient.Quantity.Invalid")]
-    public decimal Quantity { get; set; } = 1;
+    /// <summary>Null when unmeasured (e.g. naar smaak).</summary>
+    public decimal? Quantity { get; set; } = 1;
 
-    [Required(ErrorMessageResourceType = typeof(SharedResources), ErrorMessageResourceName = "RecipeCreate.Ingredient.Unit.Required")]
-    public string UnitName { get; set; } = nameof(Unit.Gram);
+    /// <summary>Null when unmeasured (e.g. naar smaak).</summary>
+    public string? UnitName { get; set; } = nameof(Unit.Gram);
 
     public IngredientSaveResolution SaveResolution { get; set; } = IngredientSaveResolution.Pending;
 
@@ -28,4 +28,7 @@ public sealed class RecipeIngredientEditorItem
 
     /// <summary>True when import confidence was low; show a friendly review hint in the UI.</summary>
     public bool NeedsReview { get; set; }
+
+    public bool IsUnmeasured =>
+        string.IsNullOrWhiteSpace(UnitName) && (Quantity is null or <= 0);
 }

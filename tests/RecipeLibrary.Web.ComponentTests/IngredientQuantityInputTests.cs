@@ -10,11 +10,11 @@ public sealed class IngredientQuantityInputTests : ComponentTestContext
     [Fact]
     public async Task ChangeToWholeNumber_InvokesQuantityChanged()
     {
-        decimal quantity = 1;
+        decimal? quantity = 1;
         var cut = RenderComponent<IngredientQuantityInput>(parameters => parameters
             .Add(p => p.Quantity, quantity)
             .Add(p => p.UnitName, nameof(Unit.Gram))
-            .Add(p => p.QuantityChanged, EventCallback.Factory.Create<decimal>(this, v => quantity = v)));
+            .Add(p => p.QuantityChanged, EventCallback.Factory.Create<decimal?>(this, v => quantity = v)));
 
         cut.Find("input").Change("3");
 
@@ -24,11 +24,11 @@ public sealed class IngredientQuantityInputTests : ComponentTestContext
     [Fact]
     public void IgnoresValuesBelowOne_ForWholeNumberUnits()
     {
-        decimal quantity = 5;
+        decimal? quantity = 5;
         var cut = RenderComponent<IngredientQuantityInput>(parameters => parameters
             .Add(p => p.Quantity, quantity)
             .Add(p => p.UnitName, nameof(Unit.Gram))
-            .Add(p => p.QuantityChanged, EventCallback.Factory.Create<decimal>(this, v => quantity = v)));
+            .Add(p => p.QuantityChanged, EventCallback.Factory.Create<decimal?>(this, v => quantity = v)));
 
         cut.Find("input").Change("0");
 
@@ -38,11 +38,11 @@ public sealed class IngredientQuantityInputTests : ComponentTestContext
     [Fact]
     public async Task CulinaryUnit_FractionSelect_SetsOneAndAHalf()
     {
-        decimal quantity = 1;
+        decimal? quantity = 1;
         var cut = RenderComponent<IngredientQuantityInput>(parameters => parameters
             .Add(p => p.Quantity, quantity)
             .Add(p => p.UnitName, nameof(Unit.Teaspoon))
-            .Add(p => p.QuantityChanged, EventCallback.Factory.Create<decimal>(this, v => quantity = v)));
+            .Add(p => p.QuantityChanged, EventCallback.Factory.Create<decimal?>(this, v => quantity = v)));
 
         Assert.NotEmpty(cut.FindAll("select"));
 
@@ -54,11 +54,11 @@ public sealed class IngredientQuantityInputTests : ComponentTestContext
     [Fact]
     public async Task CulinaryUnit_WholeZeroWithHalf_SetsHalf()
     {
-        decimal quantity = 1;
+        decimal? quantity = 1;
         var cut = RenderComponent<IngredientQuantityInput>(parameters => parameters
             .Add(p => p.Quantity, quantity)
             .Add(p => p.UnitName, nameof(Unit.Teaspoon))
-            .Add(p => p.QuantityChanged, EventCallback.Factory.Create<decimal>(this, v => quantity = v)));
+            .Add(p => p.QuantityChanged, EventCallback.Factory.Create<decimal?>(this, v => quantity = v)));
 
         cut.Find("select").Change("1/2");
         cut.Find("input").Change("0");
@@ -75,5 +75,16 @@ public sealed class IngredientQuantityInputTests : ComponentTestContext
 
         Assert.Empty(cut.FindAll("select"));
         Assert.Single(cut.FindAll("input"));
+    }
+
+    [Fact]
+    public void UnmeasuredUnit_ShowsPlaceholder()
+    {
+        var cut = RenderComponent<IngredientQuantityInput>(parameters => parameters
+            .Add(p => p.Quantity, (decimal?)null)
+            .Add(p => p.UnitName, (string?)null));
+
+        Assert.Empty(cut.FindAll("input"));
+        Assert.Contains("—", cut.Markup);
     }
 }

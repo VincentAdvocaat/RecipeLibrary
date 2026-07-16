@@ -1,7 +1,11 @@
 @* Molecule: quantity input — whole numbers, or whole + culinary fraction for tsp/tbsp. *@
 @namespace RecipeLibrary.Components.Molecules
 
-@if (_allowsCulinaryFractions)
+@if (string.IsNullOrWhiteSpace(UnitName))
+{
+    <span class="text-sm text-gray-400 px-1">—</span>
+}
+else if (_allowsCulinaryFractions)
 {
     <div class="flex gap-1 min-w-0">
         <input type="number"
@@ -35,8 +39,8 @@ else
 }
 
 @code {
-    [Parameter] public decimal Quantity { get; set; } = 1;
-    [Parameter] public EventCallback<decimal> QuantityChanged { get; set; }
+    [Parameter] public decimal? Quantity { get; set; } = 1;
+    [Parameter] public EventCallback<decimal?> QuantityChanged { get; set; }
     [Parameter] public EventCallback QuantityChangedAfter { get; set; }
     [Parameter] public string? UnitName { get; set; }
     [Parameter] public string? CssClass { get; set; }
@@ -51,17 +55,18 @@ else
         _allowsCulinaryFractions =
             UnitRules.TryParse(UnitName, out var unit) && UnitRules.AllowsCulinaryFractions(unit);
 
+        var q = Quantity ?? 0m;
         if (_allowsCulinaryFractions)
         {
-            var (whole, fraction) = CulinaryQuantityFractions.Split(Quantity <= 0 ? 1m : Quantity);
+            var (whole, fraction) = CulinaryQuantityFractions.Split(q <= 0 ? 1m : q);
             _whole = whole;
             _fractionKey = CulinaryQuantityFractions.FractionKey(fraction);
         }
         else
         {
-            _wholeDisplay = Quantity <= 0
+            _wholeDisplay = q <= 0
                 ? 1
-                : (int)decimal.Round(Quantity, 0, MidpointRounding.AwayFromZero);
+                : (int)decimal.Round(q, 0, MidpointRounding.AwayFromZero);
         }
     }
 

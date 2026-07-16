@@ -10,9 +10,9 @@ public sealed class ShoppingListIngredientLine
 
     public string? Preparation { get; init; }
 
-    public decimal Quantity { get; init; }
+    public decimal? Quantity { get; init; }
 
-    public Unit Unit { get; init; }
+    public Unit? Unit { get; init; }
 
     public Guid RecipeId { get; init; }
 

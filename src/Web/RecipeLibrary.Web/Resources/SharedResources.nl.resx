@@ -78,7 +78,7 @@
   <data name="RecipeCreate.Mode.AriaLabel" xml:space="preserve"><value>Hoe wil je het recept toevoegen</value></data>
   <data name="RecipeCreate.Mode.Manual" xml:space="preserve"><value>Handmatig</value></data>
   <data name="RecipeCreate.Mode.Text" xml:space="preserve"><value>Tekst</value></data>
-  <data name="RecipeCreate.Mode.Photo" xml:space="preserve"><value>Foto</value></data>
+  <data name="RecipeCreate.Mode.Photo" xml:space="preserve"><value>Foto (experimenteel)</value></data>
   <data name="RecipeCreate.Mode.Url" xml:space="preserve"><value>Link</value></data>
   <data name="RecipeCreate.Text.Label" xml:space="preserve"><value>Plak recepttekst</value></data>
   <data name="RecipeCreate.Text.Placeholder" xml:space="preserve"><value>Plak een recept, notities of gemengde tekst. Extra inhoud mag — we proberen het recept eruit te halen.</value></data>
@@ -86,11 +86,15 @@
   <data name="RecipeCreate.Url.Placeholder" xml:space="preserve"><value>https://voorbeeld.nl/recept</value></data>
   <data name="RecipeCreate.Url.Hint" xml:space="preserve"><value>Plak een link naar een receptpagina. We proberen het recept van die pagina te lezen.</value></data>
   <data name="RecipeCreate.Url.Error.Empty" xml:space="preserve"><value>Vul een link in om te importeren.</value></data>
-  <data name="RecipeCreate.PhotoImport.Label" xml:space="preserve"><value>Upload foto of screenshot</value></data>
+  <data name="RecipeCreate.PhotoImport.Label" xml:space="preserve"><value>Upload foto's of screenshots</value></data>
   <data name="RecipeCreate.PhotoImport.Language.Label" xml:space="preserve"><value>Taal van de tekst op de foto</value></data>
   <data name="RecipeCreate.PhotoImport.Language.Dutch" xml:space="preserve"><value>Nederlands</value></data>
   <data name="RecipeCreate.PhotoImport.Language.English" xml:space="preserve"><value>English</value></data>
-  <data name="RecipeCreate.PhotoImport.Error.NoFile" xml:space="preserve"><value>Kies een foto om te importeren.</value></data>
+  <data name="RecipeCreate.PhotoImport.Error.NoFile" xml:space="preserve"><value>Kies minstens 1 foto om te importeren.</value></data>
+  <data name="RecipeCreate.PhotoImport.Multiple.Hint" xml:space="preserve"><value>Je kunt tot {0} foto's of screenshots selecteren. Ze worden op volgorde verwerkt.</value></data>
+  <data name="RecipeCreate.PhotoImport.Error.MaxImages" xml:space="preserve"><value>Je kunt maximaal {0} foto's selecteren.</value></data>
+  <data name="RecipeCreate.PhotoImport.Error.UploadTimeout" xml:space="preserve"><value>Het uploaden duurde te lang. Probeer minder of kleinere foto's.</value></data>
+  <data name="RecipeCreate.PhotoImport.Experimental.Disclaimer" xml:space="preserve"><value>Experimenteel: foto-import werkt nog niet betrouwbaar. Gebruik liever tekst of een URL; resultaten kunnen mislukken of onvolledig zijn.</value></data>
   <data name="RecipeCreate.Import.Responsibility.Hint" xml:space="preserve"><value>Importeer alleen tekst, screenshots of links die je mag gebruiken. Jij bent verantwoordelijk voor de content die je toevoegt.</value></data>
   <data name="RecipeCreate.Import.ReviewBanner" xml:space="preserve"><value>We hebben dit recept voor je ingevuld. Check even of alles klopt vóór je opslaat.</value></data>
   <data name="RecipeCreate.Import.Ingredient.CheckHint" xml:space="preserve"><value>Check even of dit klopt.</value></data>
@@ -210,6 +214,14 @@
   <data name="Recipe.Unit.Teaspoon" xml:space="preserve"><value>theelepel</value></data>
   <data name="Recipe.Unit.Tablespoon" xml:space="preserve"><value>eetlepel</value></data>
   <data name="Recipe.Unit.Piece" xml:space="preserve"><value>stuk</value></data>
+  <data name="Recipe.Unit.Clove" xml:space="preserve"><value>teen</value></data>
+  <data name="Recipe.Unit.Handful" xml:space="preserve"><value>handje</value></data>
+  <data name="Recipe.Unit.Slice" xml:space="preserve"><value>sneetje</value></data>
+  <data name="Recipe.Unit.Sprig" xml:space="preserve"><value>takje</value></data>
+  <data name="Recipe.Unit.Leaf" xml:space="preserve"><value>blaadje</value></data>
+  <data name="Recipe.Unit.Bunch" xml:space="preserve"><value>bosje</value></data>
+  <data name="Recipe.Unit.Stalk" xml:space="preserve"><value>stengel</value></data>
+  <data name="RecipeCreate.Ingredient.Unit.Unmeasured" xml:space="preserve"><value>geen (naar smaak)</value></data>
   <data name="Auth.SignIn" xml:space="preserve"><value>Inloggen</value></data>
   <data name="Auth.SignOut" xml:space="preserve"><value>Uitloggen</value></data>
   <data name="Auth.SignedInAs" xml:space="preserve"><value>Ingelogd als {0}</value></data>

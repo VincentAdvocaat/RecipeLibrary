@@ -253,7 +253,7 @@
             Name = x.Name,
             Preparation = x.Preparation,
             Quantity = x.Quantity,
-            UnitName = x.Unit,
+            UnitName = string.IsNullOrWhiteSpace(x.Unit) ? null : x.Unit,
         }).ToList();
         if (_vm.Ingredients.Count == 0)
         {

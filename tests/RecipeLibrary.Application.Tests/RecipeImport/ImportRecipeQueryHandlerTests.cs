@@ -20,7 +20,7 @@ public sealed class ImportRecipeQueryHandlerTests
         var result = await sut.HandleAsync(new ImportRecipeContentQuery { Content = html, ContentKind = ImportContentKind.Html });
 
         Assert.Equal("Snelle pasta", result.Title);
-        Assert.Equal(ImportSource.JsonLd, result.Source);
+        Assert.Equal(ImportSource.PlainText, result.Source);
     }
 
     [Fact]
@@ -43,6 +43,15 @@ public sealed class ImportRecipeQueryHandlerTests
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new ImportRecipeFromUrlQuery { Url = "not-a-url" }));
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromUrlQueryHandler_Throws_ForPrivateHost()
+    {
+        var sut = new ImportRecipeFromUrlQueryHandler(new FakeContentFetcher(""), CreateService());
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new ImportRecipeFromUrlQuery { Url = "http://127.0.0.1/recipe" }));
     }
 
     [Fact]
@@ -161,22 +170,67 @@ public sealed class ImportRecipeQueryHandlerTests
             }));
     }
 
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_MultipleImages_ConcatenatesOcrText()
+    {
+        var extractor = new QueuedImageTextExtractor(
+        [
+            """
+            Ingrediënten
+            200 gr pasta
+            """,
+            """
+            Bereiding
+            1. Kook de pasta.
+            """,
+        ]);
+        var sut = new ImportRecipeFromImageQueryHandler(
+            extractor,
+            CreateService(),
+            Options.Create(new RecipeImportOptions { Ocr = new RecipeImportOcrOptions { MaxImagesPerImport = 5 } }));
+
+        var result = await sut.HandleAsync(new ImportRecipeFromImageQuery
+        {
+            Images =
+            [
+                new ImportImageFile { ImageBytes = [1], ContentType = "image/png", FileName = "a.png" },
+                new ImportImageFile { ImageBytes = [2], ContentType = "image/png", FileName = "b.png" },
+            ],
+            Language = "nl",
+        });
+
+        Assert.Equal(2, extractor.CallCount);
+        Assert.True(result.Ingredients.Count > 0);
+        Assert.True(result.Steps.Count > 0);
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromImageQueryHandler_Throws_WhenTooManyImages()
+    {
+        var sut = new ImportRecipeFromImageQueryHandler(
+            new FakeImageTextExtractor("x"),
+            CreateService(),
+            Options.Create(new RecipeImportOptions { Ocr = new RecipeImportOcrOptions { MaxImagesPerImport = 1 } }));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new ImportRecipeFromImageQuery
+            {
+                Images =
+                [
+                    new ImportImageFile { ImageBytes = [1], ContentType = "image/png" },
+                    new ImportImageFile { ImageBytes = [2], ContentType = "image/png" },
+                ],
+            }));
+    }
+
     private static RecipeImportService CreateService() =>
         new(
-            new StructuredRecipeExtractor(),
-            new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser())),
-            new IngredientMatcher(new EmptyIngredientRepository(), new IngredientTextNormalizer(), new IngredientSimilarityScorer()),
-            new NullIngredientLineAiParser(),
-            Options.Create(new RecipeImportOptions()));
+            new RecipeTextParser(new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser()))),
+            new HtmlRecipeTextExtractor(),
+            new IngredientMatcher(new EmptyIngredientRepository(), new IngredientTextNormalizer(), new IngredientSimilarityScorer()));
 
     private static string GetFixturePath(string fileName) =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "recipe-import", fileName);
-
-    private sealed class NullIngredientLineAiParser : IIngredientLineAiParser
-    {
-        public Task<IReadOnlyList<AiParsedIngredientLine>> ParseLinesAsync(IReadOnlyList<string> rawLines, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<AiParsedIngredientLine>>([]);
-    }
 
     private sealed class EmptyIngredientRepository : IIngredientRepository
     {
@@ -208,6 +262,20 @@ public sealed class ImportRecipeQueryHandlerTests
         public Task<string> ExtractTextAsync(Stream imageStream, string language, CancellationToken ct = default)
         {
             LastLanguage = language;
+            return Task.FromResult(text);
+        }
+    }
+
+    private sealed class QueuedImageTextExtractor(IReadOnlyList<string> texts) : IRecipeImageTextExtractor
+    {
+        private int _index;
+
+        public int CallCount { get; private set; }
+
+        public Task<string> ExtractTextAsync(Stream imageStream, string language, CancellationToken ct = default)
+        {
+            CallCount++;
+            var text = _index < texts.Count ? texts[_index++] : string.Empty;
             return Task.FromResult(text);
         }
     }

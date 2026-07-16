@@ -17,10 +17,11 @@ public sealed class Ingredient
 
     public string? Preparation { get; set; }
 
-    public Quantity Quantity { get; set; }
+    /// <summary>Null when the ingredient is unmeasured (e.g. naar smaak).</summary>
+    public Quantity? Quantity { get; set; }
 
-    public Unit Unit { get; set; }
+    /// <summary>Null when the ingredient is unmeasured (e.g. naar smaak).</summary>
+    public Unit? Unit { get; set; }
 
     public CanonicalIngredient? IngredientDefinition { get; set; }
 }
-

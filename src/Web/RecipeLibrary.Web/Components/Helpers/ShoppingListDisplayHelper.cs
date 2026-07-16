@@ -11,11 +11,16 @@ public static class ShoppingListDisplayHelper
         ShoppingListItemDto item,
         Func<string, string> localizeUnit)
     {
+        if (item.Quantity is null || string.IsNullOrWhiteSpace(item.Unit))
+        {
+            return string.Empty;
+        }
+
         var unit = UnitRules.TryParse(item.Unit, out var parsed) ? parsed : Unit.Unknown;
         var quantityText = unit == Unit.Unknown
-            ? ((long)decimal.Round(item.Quantity, 0, MidpointRounding.AwayFromZero))
+            ? ((long)decimal.Round(item.Quantity.Value, 0, MidpointRounding.AwayFromZero))
                 .ToString(CultureInfo.InvariantCulture)
-            : IngredientQuantityFormatter.Format(item.Quantity, unit);
+            : IngredientQuantityFormatter.Format(item.Quantity.Value, unit);
         var unitLabel = localizeUnit(item.Unit);
         return $"{quantityText} {unitLabel}";
     }

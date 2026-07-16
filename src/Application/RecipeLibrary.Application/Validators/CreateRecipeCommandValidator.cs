@@ -59,13 +59,30 @@ public static class CreateRecipeCommandValidator
                 throw new ArgumentException("Ingredient name is required.", nameof(command));
             }
 
-            var unitRaw = (ingredient.Unit ?? string.Empty).Trim();
+            if (IngredientMeasure.IsUnmeasured(ingredient.Quantity, ingredient.Unit))
+            {
+                if (ingredient.Preparation is { Length: > 200 })
+                {
+                    throw new ArgumentException("Ingredient preparation cannot exceed 200 characters.", nameof(command));
+                }
+
+                continue;
+            }
+
+            if (ingredient.Quantity is null || string.IsNullOrWhiteSpace(ingredient.Unit))
+            {
+                throw new ArgumentException(
+                    "Ingredient quantity and unit are both required unless the ingredient is unmeasured.",
+                    nameof(command));
+            }
+
+            var unitRaw = ingredient.Unit.Trim();
             if (!UnitRules.TryParse(unitRaw, out var unit))
             {
                 throw new ArgumentException("Ingredient unit is required or not recognized.", nameof(command));
             }
 
-            IngredientQuantityFormatter.ValidateQuantity(ingredient.Quantity, unit);
+            IngredientQuantityFormatter.ValidateQuantity(ingredient.Quantity.Value, unit);
 
             if (ingredient.Preparation is { Length: > 200 })
             {
@@ -98,4 +115,3 @@ public static class CreateRecipeCommandValidator
         }
     }
 }
-

@@ -10,6 +10,19 @@ public enum Unit
     Milliliter,
     Teaspoon,
     Tablespoon,
-    Piece
+    Piece,
+    /// <summary>Garlic clove (teen).</summary>
+    Clove,
+    /// <summary>Handful (handje).</summary>
+    Handful,
+    /// <summary>Slice of bread etc. (sneetje / plakje).</summary>
+    Slice,
+    /// <summary>Herb sprig (takje).</summary>
+    Sprig,
+    /// <summary>Leaf (blaadje).</summary>
+    Leaf,
+    /// <summary>Bunch (bosje).</summary>
+    Bunch,
+    /// <summary>Stalk (stengel).</summary>
+    Stalk,
 }
-

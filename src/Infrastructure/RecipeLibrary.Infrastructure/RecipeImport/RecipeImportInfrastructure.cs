@@ -11,42 +11,75 @@ public sealed class RecipeImportContentFetcher(
     IHttpClientFactory httpClientFactory,
     IOptions<RecipeImportOptions> options) : IRecipeImportContentFetcher
 {
+    private const int MaxRedirects = 5;
+
     public async Task<string> FetchHtmlAsync(string url, CancellationToken ct = default)
     {
         var client = httpClientFactory.CreateClient(RecipeImportServiceRegistration.HttpClientName);
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.UserAgent.ParseAdd("RecipeLibrary/1.0 (+recipe-import)");
+        var current = await RecipeImportUrlSafety.ResolvePublicHttpEndpointAsync(url, ct);
 
-        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-
-        if (!response.IsSuccessStatusCode)
+        for (var redirect = 0; redirect <= MaxRedirects; redirect++)
         {
-            throw new InvalidOperationException($"Failed to fetch URL: {(int)response.StatusCode} {response.ReasonPhrase}");
-        }
-
-        var maxBytes = options.Value.UrlFetch.MaxBytes;
-        await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-        var buffer = new char[Math.Min(maxBytes, 8192)];
-        var builder = new StringBuilder();
-        int read;
-        var totalBytes = 0;
-
-        while ((read = await reader.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
-        {
-            totalBytes += Encoding.UTF8.GetByteCount(buffer.AsSpan(0, read));
-            if (totalBytes > maxBytes)
+            using (RecipeImportConnectPin.Use(current.Uri.Host, current.Addresses))
             {
-                throw new InvalidOperationException($"Response exceeded maximum size of {maxBytes} bytes.");
-            }
+                using var request = new HttpRequestMessage(HttpMethod.Get, current.Uri);
+                request.Headers.UserAgent.ParseAdd("RecipeLibrary/1.0 (+recipe-import)");
 
-            builder.Append(buffer, 0, read);
+                using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+                if ((int)response.StatusCode is >= 300 and < 400)
+                {
+                    var location = response.Headers.Location;
+                    if (location is null)
+                    {
+                        throw new InvalidOperationException("Redirect response did not include a Location header.");
+                    }
+
+                    var next = location.IsAbsoluteUri
+                        ? location
+                        : new Uri(current.Uri, location);
+
+                    current = await RecipeImportUrlSafety.ResolvePublicHttpEndpointAsync(next, ct);
+                    continue;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to fetch URL: {(int)response.StatusCode} {response.ReasonPhrase}");
+                }
+
+                var maxBytes = options.Value.UrlFetch.MaxBytes;
+                await using var stream = await response.Content.ReadAsStreamAsync(ct);
+                using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+                var buffer = new char[Math.Min(maxBytes, 8192)];
+                var builder = new StringBuilder();
+                int read;
+                var totalBytes = 0;
+
+                while ((read = await reader.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
+                {
+                    totalBytes += Encoding.UTF8.GetByteCount(buffer.AsSpan(0, read));
+                    if (totalBytes > maxBytes)
+                    {
+                        throw new InvalidOperationException($"Response exceeded maximum size of {maxBytes} bytes.");
+                    }
+
+                    builder.Append(buffer, 0, read);
+                }
+
+                return builder.ToString();
+            }
         }
 
-        return builder.ToString();
+        throw new InvalidOperationException($"Too many redirects while fetching URL (max {MaxRedirects}).");
     }
 }
 
+/// <summary>
+/// Optional AI ingredient-line parser. Not used by the unified plain-text import pipeline;
+/// kept for future low-confidence upgrade paths.
+/// </summary>
 public sealed class OpenAiIngredientLineAiParser(
     IHttpClientFactory httpClientFactory,
     IOptions<RecipeImportOptions> options) : IIngredientLineAiParser

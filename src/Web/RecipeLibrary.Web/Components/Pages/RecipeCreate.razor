@@ -103,7 +103,7 @@
     private string _pasteContent = string.Empty;
     private string _importUrl = string.Empty;
     private string _ocrLanguage = "nld";
-    private IBrowserFile? _photoFile;
+    private List<IBrowserFile> _photoFiles = [];
     private bool _isProcessing;
     private string? _importError;
     private bool _showImportReviewBanner;
@@ -169,15 +169,26 @@
 
     private RenderFragment RenderPhotoImport() => __builder =>
     {
+        var maxImages = Math.Max(1, ImportOptions.Value.Ocr.MaxImagesPerImport);
         <div class="bg-white rounded-lg shadow p-6 space-y-4">
+            <div class="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
+                @L["RecipeCreate.PhotoImport.Experimental.Disclaimer"]
+            </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.PhotoImport.Label"]</label>
-                <InputFile OnChange="OnPhotoSelected"
+                <InputFile OnChange="OnPhotosSelected"
+                           multiple
                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                            class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-3 file:rounded file:border-0 file:bg-gray-100 file:text-gray-800 hover:file:bg-gray-200" />
-                @if (_photoFile is not null)
+                <p class="mt-1 text-xs text-gray-500">@L["RecipeCreate.PhotoImport.Multiple.Hint", maxImages]</p>
+                @if (_photoFiles.Count > 0)
                 {
-                    <p class="mt-2 text-sm text-gray-600">@_photoFile.Name</p>
+                    <ul class="mt-2 space-y-1 text-sm text-gray-600">
+                        @for (var i = 0; i < _photoFiles.Count; i++)
+                        {
+                            <li>@(i + 1). @_photoFiles[i].Name</li>
+                        }
+                    </ul>
                 }
             </div>
             <div>
@@ -195,7 +206,7 @@
             <div class="flex flex-wrap justify-end gap-3">
                 <button type="button"
                         class="inline-flex items-center px-4 py-2 rounded bg-gray-800 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50"
-                        disabled="@(_isProcessing || _photoFile is null)"
+                        disabled="@(_isProcessing || _photoFiles.Count == 0)"
                         @onclick="ProcessPhotoImportAsync">
                     @L["RecipeImport.ProcessButton"]
                 </button>
@@ -437,30 +448,63 @@
         }
     }
 
-    private Task OnPhotoSelected(InputFileChangeEventArgs e)
+    private Task OnPhotosSelected(InputFileChangeEventArgs e)
     {
-        _photoFile = e.FileCount > 0 ? e.File : null;
         _importError = null;
+        var maxImages = Math.Max(1, ImportOptions.Value.Ocr.MaxImagesPerImport);
+        try
+        {
+            if (e.FileCount > maxImages)
+            {
+                _importError = L["RecipeCreate.PhotoImport.Error.MaxImages", maxImages];
+            }
+
+            _photoFiles = e.FileCount > 0 ? e.GetMultipleFiles(maxImages).ToList() : [];
+        }
+        catch (InvalidOperationException)
+        {
+            _importError = L["RecipeCreate.PhotoImport.Error.MaxImages", maxImages];
+            _photoFiles = [];
+        }
+
         return Task.CompletedTask;
     }
 
     private async Task ProcessPhotoImportAsync()
     {
         _importError = null;
-        if (_photoFile is null)
+        if (_photoFiles.Count == 0)
         {
             _importError = L["RecipeCreate.PhotoImport.Error.NoFile"];
             return;
         }
 
+        var maxBytes = ImportOptions.Value.Ocr.MaxImageBytes;
         _isProcessing = true;
         try
         {
-            await using var fileStream = _photoFile.OpenReadStream(maxAllowedSize: ImportOptions.Value.Ocr.MaxImageBytes);
+            // Buffer each browser file fully before HTTP. Streaming BrowserFileStream into
+            // MultipartContent over Blazor Server SignalR causes TimeoutException.
+            var payloads = new List<(byte[] Bytes, string ContentType, string FileName)>(_photoFiles.Count);
+            foreach (var photo in _photoFiles)
+            {
+                await using var browserStream = photo.OpenReadStream(maxAllowedSize: maxBytes);
+                using var memory = new MemoryStream();
+                await browserStream.CopyToAsync(memory);
+                payloads.Add((
+                    memory.ToArray(),
+                    string.IsNullOrWhiteSpace(photo.ContentType) ? "application/octet-stream" : photo.ContentType,
+                    photo.Name));
+            }
+
             using var content = new MultipartFormDataContent();
-            var streamContent = new StreamContent(fileStream);
-            streamContent.Headers.ContentType = new MediaTypeHeaderValue(_photoFile.ContentType);
-            content.Add(streamContent, "file", _photoFile.Name);
+            foreach (var payload in payloads)
+            {
+                var part = new ByteArrayContent(payload.Bytes);
+                part.Headers.ContentType = new MediaTypeHeaderValue(payload.ContentType);
+                content.Add(part, "file", payload.FileName);
+            }
+
             content.Add(new StringContent(_ocrLanguage), "language");
 
             var response = await Http.PostAsync("/recipes/import-image", content);
@@ -478,6 +522,10 @@
             }
 
             CompleteImport(result);
+        }
+        catch (TimeoutException)
+        {
+            _importError = L["RecipeCreate.PhotoImport.Error.UploadTimeout"];
         }
         catch (Exception ex)
         {
@@ -546,12 +594,26 @@
         _vm.Description = draft.Description;
         _vm.PreparationTimeMinutes = draft.PreparationTimeMinutes ?? _vm.PreparationTimeMinutes;
         _vm.CookingTimeMinutes = draft.CookingTimeMinutes ?? _vm.CookingTimeMinutes;
+        if (draft.Difficulty is int difficulty)
+        {
+            _vm.DifficultyLevel = difficulty;
+        }
+
+        if (draft.Servings is int servings)
+        {
+            _vm.Servings = servings;
+        }
+
+        if (draft.Category is int category)
+        {
+            _vm.Category = category;
+        }
         _vm.Ingredients = draft.Ingredients.Select(x => new RecipeIngredientEditorItem
         {
             Name = x.Name,
             Preparation = x.Preparation,
             Quantity = x.Quantity,
-            UnitName = x.Unit,
+            UnitName = string.IsNullOrWhiteSpace(x.Unit) ? null : x.Unit,
             NeedsReview = x.Confidence < reviewThreshold,
             LastMatchType = x.MatchType,
         }).ToList();

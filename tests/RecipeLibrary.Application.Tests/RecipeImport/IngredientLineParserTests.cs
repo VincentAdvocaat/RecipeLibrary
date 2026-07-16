@@ -127,10 +127,54 @@ public sealed class IngredientLineParserTests
     {
         var result = _sut.Parse("zout naar smaak");
 
-        Assert.Equal(1, result.Quantity);
-        Assert.Equal(nameof(Unit.Piece), result.Unit);
+        Assert.Null(result.Quantity);
+        Assert.Null(result.Unit);
         Assert.Equal("zout", result.Name);
         Assert.Equal("naar smaak", result.Preparation);
+    }
+
+    [Fact]
+    public void Parse_ParsesListIndexBeforeQuantityAndSliceUnit()
+    {
+        var result = _sut.Parse("1 8 sneetjes stokbrood");
+
+        Assert.Equal(8, result.Quantity);
+        Assert.Equal(nameof(Unit.Slice), result.Unit);
+        Assert.Equal("stokbrood", result.Name);
+        Assert.Null(result.Preparation);
+    }
+
+    [Fact]
+    public void Parse_ParsesCloveUnit()
+    {
+        var result = _sut.Parse("1 teen knoflook");
+
+        Assert.Equal(1, result.Quantity);
+        Assert.Equal(nameof(Unit.Clove), result.Unit);
+        Assert.Equal("knoflook", result.Name);
+        Assert.Null(result.Preparation);
+    }
+
+    [Fact]
+    public void Parse_ParsesHandfulWithFreshPrep()
+    {
+        var result = _sut.Parse("Handje verse basilicum");
+
+        Assert.Equal(1, result.Quantity);
+        Assert.Equal(nameof(Unit.Handful), result.Unit);
+        Assert.Equal("basilicum", result.Name);
+        Assert.Equal("vers", result.Preparation);
+    }
+
+    [Fact]
+    public void Parse_ParsesBareIngredientAsUnmeasuredWithoutInventingToTaste()
+    {
+        var result = _sut.Parse("olijfolie");
+
+        Assert.Null(result.Quantity);
+        Assert.Null(result.Unit);
+        Assert.Equal("olijfolie", result.Name);
+        Assert.Null(result.Preparation);
     }
 
     [Fact]

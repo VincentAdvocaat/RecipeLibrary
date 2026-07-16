@@ -1,8 +1,9 @@
-@* Molecule: localized unit dropdown (value = enum name). *@
+@* Molecule: localized unit dropdown (value = enum name); empty = unmeasured. *@
 @using RecipeLibrary.Domain.ValueObjects
 @namespace RecipeLibrary.Components.Molecules
 
 <InputSelect class="@CssClass" @bind-Value="UnitName" @bind-Value:after="OnAfterChangeAsync">
+    <option value="">@L["RecipeCreate.Ingredient.Unit.Unmeasured"]</option>
     @foreach (var unit in UnitRules.SelectableUnitNames)
     {
         <option value="@unit">@L[$"Recipe.Unit.{unit}"]</option>
@@ -10,10 +11,19 @@
 </InputSelect>
 
 @code {
-    [Parameter] public string UnitName { get; set; } = nameof(Unit.Gram);
-    [Parameter] public EventCallback<string> UnitNameChanged { get; set; }
+    [Parameter] public string? UnitName { get; set; }
+    [Parameter] public EventCallback<string?> UnitNameChanged { get; set; }
     [Parameter] public EventCallback UnitNameChangedAfter { get; set; }
     [Parameter] public string? CssClass { get; set; }
 
-    private Task OnAfterChangeAsync() => UnitNameChangedAfter.InvokeAsync();
+    private async Task OnAfterChangeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(UnitName))
+        {
+            UnitName = null;
+        }
+
+        await UnitNameChanged.InvokeAsync(UnitName);
+        await UnitNameChangedAfter.InvokeAsync();
+    }
 }

@@ -11,6 +11,19 @@ public static class UnitRules
             .ToArray();
 
     /// <summary>
+    /// Count-style units (whole numbers only), including culinary piece descriptors.
+    /// </summary>
+    public static bool IsCountUnit(Unit unit) =>
+        unit is Unit.Piece
+            or Unit.Clove
+            or Unit.Handful
+            or Unit.Slice
+            or Unit.Sprig
+            or Unit.Leaf
+            or Unit.Bunch
+            or Unit.Stalk;
+
+    /// <summary>
     /// Teaspoon and tablespoon allow discrete culinary fractions (¼, ⅓, ½, ⅔, ¾).
     /// </summary>
     public static bool AllowsCulinaryFractions(Unit unit) =>
@@ -31,13 +44,18 @@ public static class UnitRules
             return false;
         }
 
-        if (!Enum.TryParse<Unit>(raw, ignoreCase: true, out unit) || unit == Unit.Unknown)
+        if (Enum.TryParse<Unit>(raw, ignoreCase: true, out unit) && unit != Unit.Unknown)
         {
-            unit = Unit.Unknown;
-            return false;
+            return true;
         }
 
-        return true;
+        if (UnitAliases.TryResolve(raw, out unit) && unit != Unit.Unknown)
+        {
+            return true;
+        }
+
+        unit = Unit.Unknown;
+        return false;
     }
 
     public static Unit ParseOrThrow(string? value)

@@ -34,8 +34,8 @@ internal static class ShoppingListMapping
             Id = item.Id,
             DisplayName = item.DisplayName,
             Preparation = item.Preparation,
-            Quantity = item.Quantity.Value,
-            Unit = item.Unit.ToString(),
+            Quantity = item.Quantity?.Value,
+            Unit = item.Unit?.ToString(),
             IsChecked = item.IsChecked,
             Sources = item.Sources
                 .Select(s => new ShoppingListItemSourceDto

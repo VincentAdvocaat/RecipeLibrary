@@ -37,8 +37,8 @@ public sealed class GetRecipeByIdQueryHandler(IRecipeRepository recipeRepository
                 {
                     Name = i.Name,
                     Preparation = i.Preparation,
-                    Quantity = i.Quantity.Value,
-                    Unit = i.Unit.ToString(),
+                    Quantity = i.Quantity?.Value,
+                    Unit = i.Unit?.ToString(),
                 })
                 .ToList(),
             Steps = recipe.InstructionSteps

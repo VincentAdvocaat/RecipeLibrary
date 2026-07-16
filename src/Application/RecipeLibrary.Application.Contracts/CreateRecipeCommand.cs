@@ -33,13 +33,14 @@ public sealed class CreateRecipeIngredientDto
 
     public string? Preparation { get; init; }
 
-    public decimal Quantity { get; init; }
+    /// <summary>Null when unmeasured (e.g. naar smaak).</summary>
+    public decimal? Quantity { get; init; }
 
     /// <summary>
-    /// Unit name, e.g. "Gram", "Milliliter", "Piece".
+    /// Unit name, e.g. "Gram", "Clove", "Handful". Null when unmeasured.
     /// Parsed to the Domain <c>Unit</c> enum in the application layer.
     /// </summary>
-    public string Unit { get; init; } = string.Empty;
+    public string? Unit { get; init; }
 
     public bool CreateAsNewIngredient { get; init; }
 }
@@ -128,8 +129,8 @@ public sealed class RecipeDetailIngredientItem
 {
     public string Name { get; init; } = string.Empty;
     public string? Preparation { get; init; }
-    public decimal Quantity { get; init; }
-    public string Unit { get; init; } = string.Empty;
+    public decimal? Quantity { get; init; }
+    public string? Unit { get; init; }
 }
 
 public sealed class RecipeDetailStepItem

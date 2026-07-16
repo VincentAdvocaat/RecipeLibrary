@@ -36,6 +36,13 @@ public sealed class ImportRecipeFromUrlQuery : IQuery<ImportRecipeResult>
 
 public sealed class ImportRecipeFromImageQuery : IQuery<ImportRecipeResult>
 {
+    /// <summary>
+    /// One or more images. OCR text is concatenated in order, then parsed once.
+    /// Prefer this over <see cref="ImageBytes"/> for multi-photo import.
+    /// </summary>
+    public IReadOnlyList<ImportImageFile> Images { get; init; } = [];
+
+    /// <summary>Legacy single-image payload; used when <see cref="Images"/> is empty.</summary>
     public byte[] ImageBytes { get; init; } = [];
 
     public string ContentType { get; init; } = string.Empty;
@@ -47,6 +54,15 @@ public sealed class ImportRecipeFromImageQuery : IQuery<ImportRecipeResult>
     public string Language { get; init; } = "nld";
 }
 
+public sealed class ImportImageFile
+{
+    public byte[] ImageBytes { get; init; } = [];
+
+    public string ContentType { get; init; } = string.Empty;
+
+    public string FileName { get; init; } = string.Empty;
+}
+
 public sealed class ImportRecipeResult
 {
     public string? Title { get; init; }
@@ -56,6 +72,14 @@ public sealed class ImportRecipeResult
     public int? PreparationTimeMinutes { get; init; }
 
     public int? CookingTimeMinutes { get; init; }
+
+    /// <summary>Difficulty enum value when known (0 = Unknown).</summary>
+    public int? Difficulty { get; init; }
+
+    /// <summary>RecipeCategory enum value when known (0 = Unknown).</summary>
+    public int? Category { get; init; }
+
+    public int? Servings { get; init; }
 
     public ImportSource Source { get; init; }
 
@@ -70,9 +94,11 @@ public sealed class ImportedIngredientLine
 {
     public string RawLine { get; init; } = string.Empty;
 
-    public decimal Quantity { get; init; }
+    /// <summary>Null when unmeasured (e.g. naar smaak).</summary>
+    public decimal? Quantity { get; init; }
 
-    public string Unit { get; init; } = string.Empty;
+    /// <summary>Null when unmeasured (e.g. naar smaak).</summary>
+    public string? Unit { get; init; }
 
     public string Name { get; init; } = string.Empty;
 
