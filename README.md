@@ -76,6 +76,7 @@ This repo uses a layered structure (`Domain`/`Application`/`Infrastructure`/`Web
   - **`RecipeLibrary.Application`**: handlers, validators, in-process bus implementation, and DI registration.
 - **`src/Infrastructure`**: EF Core persistence, repository implementations, external services.
 - **`src/Web`**: Blazor Server UI and dependency injection wiring.
+- **`data/ingredients`**: curated bilingual ingredient catalog for seeding the canonical ingredient store (see `docs/ingredient-catalog.md`).
 
 ## Infrastructure (Azure, Bicep)
 
@@ -155,6 +156,7 @@ repo-sync nodig. Zie `docs/azure/ado-github-integration.md`.
 
 ## Docs index
 
+- `docs/ingredient-catalog.md` — curated ingredient catalog (sources, generation, language keys, seed intent)
 - `docs/azure/ado-github-integration.md` — GitHub + Azure DevOps workflow
 - `docs/azure/subscription-bootstrap.md` — subscription, providers, service connection RBAC
 - `docs/local-debug.md` — local debug with Docker SQL
