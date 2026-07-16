@@ -46,11 +46,22 @@ git commit -m "Add shopping list export AB#15"
 De pipeline **VincentAdvocaat.RecipeLibrary** leest `azure-pipelines.yml` uit GitHub
 (branch `main`). Triggers:
 
-- **CI** bij pushes naar `main` en pull requests naar `main`
-- **CD (test)** na succesvolle build op `main`: Bicep (`main.bicep`) + zip-deploy naar App Service in een bestaande resource group
+- **CI** bij pushes naar `main` en pull requests naar `main` (inclusief Docker build-validatie op PR's)
+- **CD (test)** na succesvolle build op `main`: Bicep (`main.bicep`) + immutable GHCR digest naar Container Apps
 
-Eenmalige Azure DevOps-configuratie (service connection, geheime variabelen,
-environment `test`): zie **`pipeline-setup.md`**.
+Eenmalige Azure DevOps-configuratie (service connection, geheime variabelen incl.
+GHCR, environment `test`): zie **`pipeline-setup.md`**.
+
+### Emergency control pipeline
+
+Registreer **`azure-pipelines-control.yml`** als aparte pipeline (geen trigger).
+Acties: `status` (default), `stop`, `start`. `start` gebruikt environment **`test`**
+(zelfde als de deploy-pipeline).
+
+### Cost guard
+
+Deploy `infra/cost-guard.bicep` eenmalig met een Owner-account (niet de pipeline SP).
+Zie `infra/README.md`.
 
 Recente builds draaien vanaf GitHub (geen Azure Repos nodig).
 

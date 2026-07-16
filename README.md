@@ -9,8 +9,10 @@ A personal recipe library built with **.NET** and **Blazor Server**, designed to
 ```mermaid
 flowchart TD
   DevLaptop[DevLaptop] -->|az_login_EntraID| Azure[Azure]
-  UserBrowser[UserBrowser] -->|HTTPS| WebApp[AppService_WebApp]
-  WebApp -->|ManagedIdentity_EntraID| AzureSQL[AzureSQL_Serverless_FreeOffer]
+  UserBrowser[UserBrowser] -->|HTTPS| ContainerApp[ContainerApps_Consumption]
+  GHCR[Public_GHCR_Image] --> ContainerApp
+  ContainerApp -->|UserAssignedManagedIdentity| AzureSQL[AzureSQL_Serverless_FreeOffer]
+  ContainerApp -->|UserAssignedManagedIdentity| BlobStorage[BlobStorage]
   DevLaptop -->|EntraID_SQLClient| AzureSQL
 ```
 
@@ -77,11 +79,12 @@ This repo uses a layered structure (`Domain`/`Application`/`Infrastructure`/`Web
 
 ## Infrastructure (Azure, Bicep)
 
-This repo provisions a **test** environment in Azure (region: `westeurope`) using Bicep:
+This repo provisions a **test** environment in Azure (region: `swedencentral`) using Bicep:
 
-- **App Service Plan**: Free tier (F1)
-- **Web App**: System Assigned Managed Identity enabled
+- **Container Apps Consumption**: scale-to-zero, max 1 replica, public GHCR image
+- **User-assigned managed identity**: SQL and Blob access
 - **Azure SQL**: General Purpose **serverless** database using the **Azure SQL Database Free Offer**
+- **Cost guard**: optional `infra/cost-guard.bicep` budget + auto-stop (see `infra/README.md`)
 - **Firewall rules**: allow Azure services + optional laptop public IP for debugging
 
 See: `infra/README.md`
@@ -141,7 +144,9 @@ Policy reference: `.cursor/rules/worktrees-and-branches.mdc`
 
 - This project is designed to stay **free-tier friendly**; always verify your Azure subscription’s free offerings and quotas.
 - Azure SQL Free Offer is configured to **auto-pause until next month** when the free limit is exhausted.
-- Set a budget/alert on the resource group/subscription to avoid surprises.
+- Container Apps Consumption scales to **zero** when idle (`minReplicas: 0`).
+- Deploy `infra/cost-guard.bicep` for a €5 monthly budget with automatic stop at 80% actual spend.
+- Use `azure-pipelines-control.yml` for manual stop/start/status (`start` uses environment `test`).
 
 ## Azure DevOps (boards & CI)
 
@@ -151,6 +156,7 @@ repo-sync nodig. Zie `docs/azure/ado-github-integration.md`.
 ## Docs index
 
 - `docs/azure/ado-github-integration.md` — GitHub + Azure DevOps workflow
+- `docs/azure/subscription-bootstrap.md` — subscription, providers, service connection RBAC
 - `docs/local-debug.md` — local debug with Docker SQL
 - `docs/database-connection.md` — verbinden met de lokale Docker-database en tooling (SSMS, Azure Data Studio, VS Code)
 - `infra/README.md`

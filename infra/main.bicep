@@ -27,11 +27,30 @@ param clientPublicIp string = ''
 @description('Whether to allow Azure services to access the SQL server (equivalent to adding firewall rule 0.0.0.0).')
 param allowAzureServices bool = true
 
+@description('GHCR image repository without digest (lowercase), e.g. ghcr.io/owner/recipelibrary.')
+param ghcrImageRepository string = 'ghcr.io/vincentadvocaat/recipelibrary'
+
+@description('Immutable GHCR image digest including sha256 prefix, e.g. sha256:abc123....')
+param containerImageDigest string
+
+@secure()
+@description('GitHub username used by Container Apps to authenticate to GHCR.')
+param ghcrUsername string
+
+@secure()
+@description('GitHub PAT (or token) with read:packages used by Container Apps to pull from GHCR.')
+param ghcrPassword string
+
 var stableSuffix = toLower(uniqueString(subscription().subscriptionId, resourceGroup().id))
 var suffix = (nameSuffix == '') ? stableSuffix : toLower(nameSuffix)
 
-var webAppName = toLower('${projectName}-${environment}-${suffix}')
-var planName = toLower('asp-${projectName}-${environment}-${suffix}')
+// Container App names are limited to 2-32 chars (alphanumeric + single hyphens).
+// Abbreviate the project segment and shorten the unique suffix so env names like test-neu fit.
+var containerAppShortSuffix = take(suffix, 6)
+var containerAppName = toLower('ca-rl-${environment}-${containerAppShortSuffix}')
+var managedEnvName = toLower('cae-${projectName}-${environment}-${suffix}')
+var appIdentityName = toLower('id-${projectName}-${environment}-${suffix}')
+
 // Storage account names: 3-24 chars, lowercase alphanumeric. Bicep substring length is capped at 13.
 var storageAccountName = toLower('st${substring(uniqueString(resourceGroup().id, projectName, environment, 'blob'), 0, 13)}')
 
@@ -40,45 +59,18 @@ var sqlServerName = toLower('sql-${projectName}-${environment}-${suffix}')
 var sqlDatabaseName = toLower('${projectName}-${environment}')
 
 var sqlFqdn = '${sqlServerName}.database.windows.net'
+var containerImage = '${ghcrImageRepository}@${containerImageDigest}'
+var dataProtectionBlobUri = 'https://${storageAccount.name}.blob.core.windows.net/dataprotection/keys.xml'
 
-resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
-  name: planName
+resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: appIdentityName
   location: location
-  sku: {
-    name: 'F1'
-    tier: 'Free'
-    capacity: 1
-  }
-  properties: {
-    reserved: false
-  }
 }
 
-resource web 'Microsoft.Web/sites@2023-12-01' = {
-  name: webAppName
+resource managedEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
+  name: managedEnvName
   location: location
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties: {
-    httpsOnly: true
-    serverFarmId: plan.id
-    siteConfig: {
-      http20Enabled: true
-      alwaysOn: false
-    }
-  }
-}
-
-resource webAppSettings 'Microsoft.Web/sites/config@2023-12-01' = {
-  name: '${web.name}/appsettings'
-  properties: {
-    ASPNETCORE_ENVIRONMENT: 'test'
-    WEBSITE_RUN_FROM_PACKAGE: '1'
-    RecipeFileStorage__Provider: 'AzureBlob'
-    RecipeFileStorage__AzureBlob__AccountName: storageAccount.name
-    RecipeFileStorage__AzureBlob__ContainerName: 'recipe-images'
-  }
+  properties: {}
 }
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
@@ -108,14 +100,22 @@ resource recipeImagesContainer 'Microsoft.Storage/storageAccounts/blobServices/c
   }
 }
 
+resource dataProtectionContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: 'dataprotection'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
 var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 
-resource webBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageAccount.id, web.id, storageBlobDataContributorRoleId)
+resource appBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccount.id, appIdentity.id, storageBlobDataContributorRoleId)
   scope: storageAccount
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
-    principalId: web.identity.principalId
+    principalId: appIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -149,12 +149,9 @@ resource sqlDb 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
     capacity: 2
   }
   properties: {
-    // Serverless settings
     minCapacity: json('0.5')
     autoPauseDelay: 60
     maxSizeBytes: 34359738368 // 32 GiB
-
-    // Free Offer settings
     useFreeLimit: true
     freeLimitExhaustionBehavior: 'AutoPause'
   }
@@ -178,23 +175,148 @@ resource sqlAllowClientIp 'Microsoft.Sql/servers/firewallRules@2023-05-01-previe
   }
 }
 
-// Connection string uses Managed Identity. No passwords.
-resource webConnStrings 'Microsoft.Web/sites/config@2023-12-01' = {
-  name: '${web.name}/connectionstrings'
+resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
+  name: containerAppName
+  location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${appIdentity.id}': {}
+    }
+  }
   properties: {
-    RecipeDb: {
-      value: 'Server=tcp:${sqlFqdn},1433;Database=${sqlDatabaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Managed Identity;'
-      type: 'SQLAzure'
+    managedEnvironmentId: managedEnvironment.id
+    configuration: {
+      activeRevisionsMode: 'Single'
+      // GHCR packages are private by default; Container Apps need registry credentials to pull.
+      secrets: [
+        {
+          name: 'ghcr-password'
+          value: ghcrPassword
+        }
+      ]
+      registries: [
+        {
+          server: 'ghcr.io'
+          username: ghcrUsername
+          passwordSecretRef: 'ghcr-password'
+        }
+      ]
+      ingress: {
+        external: true
+        targetPort: 8080
+        transport: 'auto'
+        allowInsecure: false
+        stickySessions: {
+          affinity: 'sticky'
+        }
+      }
+    }
+    template: {
+      containers: [
+        {
+          name: 'web'
+          image: containerImage
+          resources: {
+            cpu: json('0.25')
+            memory: '0.5Gi'
+          }
+          env: [
+            {
+              name: 'ASPNETCORE_ENVIRONMENT'
+              value: 'test'
+            }
+            {
+              name: 'SKIP_SQL_WAIT'
+              value: 'true'
+            }
+            {
+              name: 'AZURE_CLIENT_ID'
+              value: appIdentity.properties.clientId
+            }
+            {
+              name: 'ConnectionStrings__RecipeDb'
+              value: 'Server=tcp:${sqlFqdn},1433;Database=${sqlDatabaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Managed Identity;User Id=${appIdentity.properties.clientId};'
+            }
+            {
+              name: 'RecipeFileStorage__Provider'
+              value: 'AzureBlob'
+            }
+            {
+              name: 'RecipeFileStorage__AzureBlob__AccountName'
+              value: storageAccount.name
+            }
+            {
+              name: 'RecipeFileStorage__AzureBlob__ContainerName'
+              value: recipeImagesContainer.name
+            }
+            {
+              name: 'DataProtection__ApplicationName'
+              value: '${projectName}-${environment}'
+            }
+            {
+              name: 'DataProtection__BlobUri'
+              value: dataProtectionBlobUri
+            }
+          ]
+          probes: [
+            {
+              type: 'Startup'
+              httpGet: {
+                path: '/health'
+                port: 8080
+                scheme: 'HTTP'
+              }
+              periodSeconds: 10
+              failureThreshold: 30
+            }
+            {
+              type: 'Liveness'
+              httpGet: {
+                path: '/health'
+                port: 8080
+                scheme: 'HTTP'
+              }
+              periodSeconds: 30
+            }
+            {
+              type: 'Readiness'
+              httpGet: {
+                path: '/health'
+                port: 8080
+                scheme: 'HTTP'
+              }
+              periodSeconds: 10
+            }
+          ]
+        }
+      ]
+      scale: {
+        minReplicas: 0
+        maxReplicas: 1
+        rules: [
+          {
+            name: 'http-scaler'
+            http: {
+              metadata: {
+                concurrentRequests: '10'
+              }
+            }
+          }
+        ]
+      }
     }
   }
 }
 
-output webAppName string = web.name
-output webAppDefaultHostname string = web.properties.defaultHostName
+output containerAppName string = containerApp.name
+output containerAppFqdn string = containerApp.properties.configuration.ingress.fqdn
+output managedIdentityName string = appIdentity.name
+output managedIdentityPrincipalId string = appIdentity.properties.principalId
+output managedIdentityClientId string = appIdentity.properties.clientId
 output sqlServerName string = sqlServer.name
 output sqlServerFqdn string = sqlFqdn
 output sqlDatabaseName string = sqlDb.name
-output webAppManagedIdentityPrincipalId string = web.identity.principalId
 output storageAccountName string = storageAccount.name
 output recipeImagesContainerName string = recipeImagesContainer.name
-
+output dataProtectionContainerName string = dataProtectionContainer.name

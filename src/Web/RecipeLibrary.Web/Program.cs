@@ -1,6 +1,10 @@
 using System.Globalization;
+using Azure.Extensions.AspNetCore.DataProtection.Blobs;
+using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
@@ -109,9 +113,16 @@ builder.Services.AddApplication();
 
 var recipeImagesDefaultPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "RecipeLibraryUploads"));
 builder.Services.AddRecipeFileStorage(builder.Configuration, recipeImagesDefaultPath);
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ShoppingListSessionService>();
 builder.Services.AddScoped<RecipeImportDraftService>();
+
+ConfigureDataProtection(builder);
+
 builder.Services.AddScoped(sp =>
 {
     var nav = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
@@ -143,6 +154,12 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+
+var forwardedHeadersOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<ForwardedHeadersOptions>>().Value;
+forwardedHeadersOptions.KnownIPNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders();
+
 app.UseHttpsRedirection();
 
 var localizationOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<RequestLocalizationOptions>>().Value;
@@ -165,6 +182,8 @@ if (authEnabled)
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy" })).AllowAnonymous();
 
 app.MapPost("/api/upload-recipe-image", async (IFormFile file, ICommandBus commandBus, CancellationToken ct) =>
 {
@@ -327,6 +346,21 @@ app.MapPost("/ingredients/{id:guid}/tags", async (Guid id, AddIngredientTagsRequ
 }).DisableAntiforgery().ApplyAuth(authEnabled);
 
 app.Run();
+
+static void ConfigureDataProtection(WebApplicationBuilder builder)
+{
+    var blobUri = builder.Configuration["DataProtection:BlobUri"];
+    if (string.IsNullOrWhiteSpace(blobUri))
+    {
+        return;
+    }
+
+    var applicationName = builder.Configuration["DataProtection:ApplicationName"] ?? "RecipeLibrary";
+    builder.Services
+        .AddDataProtection()
+        .SetApplicationName(applicationName)
+        .PersistKeysToAzureBlobStorage(new Uri(blobUri), new DefaultAzureCredential());
+}
 
 public partial class Program { }
 
