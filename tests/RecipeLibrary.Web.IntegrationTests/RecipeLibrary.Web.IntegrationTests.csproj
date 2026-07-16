@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
       <PrivateAssets>all</PrivateAssets>
@@ -18,7 +19,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RecipeLibrary.Testing\RecipeLibrary.Testing.csproj" />
+    <ProjectReference Include="..\..\src\Application\RecipeLibrary.Application\RecipeLibrary.Application.csproj" />
     <ProjectReference Include="..\..\src\Application\RecipeLibrary.Application.Contracts\RecipeLibrary.Application.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure\RecipeLibrary.Infrastructure\RecipeLibrary.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

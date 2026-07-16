@@ -30,4 +30,11 @@
     <None Include="RecipeImport\tessdata\nld.traineddata" Link="tessdata\nld.traineddata" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Source of truth lives in data/ingredients/; embed for runtime seeding after Migrate(). -->
+    <EmbeddedResource Include="..\..\..\data\ingredients\curated-ingredients.json"
+                      Link="SeedData\curated-ingredients.json"
+                      LogicalName="RecipeLibrary.Infrastructure.SeedData.curated-ingredients.json" />
+  </ItemGroup>
+
 </Project>

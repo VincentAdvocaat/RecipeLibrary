@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Infrastructure.Persistence.Seed;
 
 namespace RecipeLibrary.Infrastructure.Persistence;
 
@@ -26,14 +27,20 @@ public static class PersistenceServiceRegistration
         services.AddScoped<IShoppingListRepository, EfShoppingListRepository>();
         services.AddScoped<IPantryRepository, EfPantryRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+        services.AddScoped<IngredientCatalogSeeder>();
         return services;
     }
 
+    /// <summary>
+    /// Applies EF Core migrations, then idempotently seeds the curated ingredient catalog.
+    /// </summary>
     public static void EnsurePersistenceMigrated(this IServiceProvider services)
     {
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<RecipeDbContext>();
         db.Database.Migrate();
+
+        var seeder = scope.ServiceProvider.GetRequiredService<IngredientCatalogSeeder>();
+        seeder.SeedAsync().GetAwaiter().GetResult();
     }
 }
-

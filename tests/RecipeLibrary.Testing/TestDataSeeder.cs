@@ -45,24 +45,8 @@ public static class TestDataSeeder
         }
 
         var now = DateTimeOffset.UtcNow;
-        var gehaktId = Guid.NewGuid();
-        var tomatenId = Guid.NewGuid();
-
-        db.Ingredients.AddRange(
-            new CanonicalIngredient
-            {
-                Id = gehaktId,
-                CanonicalName = "Gehakt",
-                NormalizedName = "gehakt",
-                CreatedAt = now,
-            },
-            new CanonicalIngredient
-            {
-                Id = tomatenId,
-                CanonicalName = "Tomaten",
-                NormalizedName = "tomaten",
-                CreatedAt = now,
-            });
+        var gehaktId = await GetOrCreateCanonicalAsync(db, "Gehakt", "gehakt", ct);
+        var tomatenId = await GetOrCreateCanonicalAsync(db, "Tomaten", "tomaten", ct);
 
         var recipeId = Guid.NewGuid();
         var recipe = new Recipe
@@ -144,22 +128,79 @@ public static class TestDataSeeder
         };
     }
 
+    /// <summary>
+    /// Resolves an existing catalog row by normalized name or alias (after curated seed),
+    /// otherwise creates a canonical ingredient for tests.
+    /// </summary>
+    private static async Task<Guid> GetOrCreateCanonicalAsync(
+        RecipeDbContext db,
+        string canonicalName,
+        string normalizedName,
+        CancellationToken ct)
+    {
+        var existing = await db.Ingredients
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.NormalizedName == normalizedName, ct);
+        if (existing is not null)
+        {
+            return existing.Id;
+        }
+
+        var viaAlias = await db.IngredientAliases
+            .AsNoTracking()
+            .Where(x => x.NormalizedAlias == normalizedName)
+            .Select(x => x.IngredientId)
+            .SingleOrDefaultAsync(ct);
+        if (viaAlias != Guid.Empty)
+        {
+            return viaAlias;
+        }
+
+        var id = Guid.NewGuid();
+        db.Ingredients.Add(new CanonicalIngredient
+        {
+            Id = id,
+            CanonicalName = canonicalName,
+            NormalizedName = normalizedName,
+            CreatedAt = DateTimeOffset.UtcNow,
+        });
+        await db.SaveChangesAsync(ct);
+        return id;
+    }
+
     private static async Task<TestSeedData> LoadExistingAsync(RecipeDbContext db, CancellationToken ct)
     {
         var recipes = await db.Recipes.ToListAsync(ct);
         var recipe = recipes.FirstOrDefault(r => r.Title.Value == LasagnaTitle) ?? recipes.First();
-        var gehakt = await db.Ingredients.FirstAsync(i => i.NormalizedName == "gehakt", ct);
-        var tomaten = await db.Ingredients.FirstAsync(i => i.NormalizedName == "tomaten", ct);
+        var gehaktId = await ResolveCanonicalIdAsync(db, "gehakt", ct);
+        var tomatenId = await ResolveCanonicalIdAsync(db, "tomaten", ct);
         var group = await db.ShoppingListGroups.Include(g => g.Lists).FirstAsync(ct);
         var list = group.Lists.OrderBy(l => l.StoreOrder).First();
 
         return new TestSeedData
         {
             RecipeId = recipe.Id,
-            GehaktCanonicalId = gehakt.Id,
-            TomatenCanonicalId = tomaten.Id,
+            GehaktCanonicalId = gehaktId,
+            TomatenCanonicalId = tomatenId,
             ShoppingListGroupId = group.Id,
             ShoppingListId = list.Id,
         };
+    }
+
+    private static async Task<Guid> ResolveCanonicalIdAsync(RecipeDbContext db, string normalized, CancellationToken ct)
+    {
+        var byName = await db.Ingredients
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.NormalizedName == normalized, ct);
+        if (byName is not null)
+        {
+            return byName.Id;
+        }
+
+        return await db.IngredientAliases
+            .AsNoTracking()
+            .Where(x => x.NormalizedAlias == normalized)
+            .Select(x => x.IngredientId)
+            .SingleAsync(ct);
     }
 }
