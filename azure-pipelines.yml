@@ -7,6 +7,12 @@ pr:
 pool:
   vmImage: ubuntu-latest
 
+parameters:
+- name: deployNeu
+  displayName: Deploy NEU (North Europe) — optional manual deploy
+  type: boolean
+  default: false
+
 variables:
   buildConfiguration: Release
   projectName: recipelibrary
@@ -59,7 +65,7 @@ stages:
       displayName: Publish container image to GHCR
       condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
 
-# SEC deploys automatically after Build. Configure environment "test-sec" WITHOUT approvals.
+# SEC deploys automatically after Build on main (uses existing environment test-sec).
 - stage: DeployTestSEC
   displayName: Deploy test SEC
   dependsOn: Build
@@ -163,10 +169,11 @@ stages:
                 echo "If this is the first deploy, run docs/azure/sql-grants.sql for the managed identity and redeploy."
                 exit 1
 
-# NEU is optional: runs in parallel with SEC but waits on environment "test-neu" approvals only.
-# Configure Approvals on environment "test-neu"; reject/timeout to skip NEU without blocking SEC.
+# NEU does not run on automatic CI. Start it manually via Run pipeline and enable "Deploy NEU".
+# Uses existing environment test-neu (no environment approval required for this pattern).
+${{ if parameters.deployNeu }}:
 - stage: DeployTestNEU
-  displayName: Deploy test NEU (optional)
+  displayName: Deploy test NEU (manual)
   dependsOn: Build
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
   variables:
