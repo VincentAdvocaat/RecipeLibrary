@@ -1,4 +1,4 @@
-using RecipeLibrary.Application.Abstractions;
+﻿using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.UseCases.ShoppingLists;
 using RecipeLibrary.Domain.Entities;
@@ -55,5 +55,6 @@ public sealed class DeleteShoppingListGroupCommandHandlerTests
         public Task<Domain.Entities.ShoppingListItem?> GetItemByIdAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult<Domain.Entities.ShoppingListItem?>(null);
         public Task<bool> UpdateListNameAsync(Guid shoppingListId, string name, CancellationToken ct = default) => Task.FromResult(false);
         public Task<IReadOnlyList<string>> GetListNamesAsync(Guid? groupId = null, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<string>>([]);
+        public Task<bool> UpdateItemQuantityAsync(Guid itemId, decimal quantity, CancellationToken ct = default) => Task.FromResult(false);
     }
 }

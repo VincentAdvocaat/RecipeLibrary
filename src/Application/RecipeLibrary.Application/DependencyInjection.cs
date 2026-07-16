@@ -43,7 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IngredientLineResolver>();
         services.AddScoped<ShoppingListIngredientMerger>();
         services.AddScoped<PantryIngredientMerger>();
-        services.AddScoped<PantrySubtractor>();
+        services.AddScoped<PantryExclusionFilter>();
 
         services.AddScoped<IngredientLineParser>();
         services.AddScoped<StructuredRecipeExtractor>();
@@ -68,9 +68,9 @@ public static class DependencyInjection
 
         services.AddScoped<IQueryHandler<GetPantryItemsQuery, GetPantryItemsResult>, GetPantryItemsQueryHandler>();
         services.AddScoped<ICommandHandler<UpsertPantryItemCommand, UpsertPantryItemResult>, UpsertPantryItemCommandHandler>();
-        services.AddScoped<ICommandHandler<UpdatePantryItemQuantityCommand, UpdatePantryItemQuantityResult>, UpdatePantryItemQuantityCommandHandler>();
         services.AddScoped<ICommandHandler<RemovePantryItemCommand, RemovePantryItemResult>, RemovePantryItemCommandHandler>();
         services.AddScoped<ICommandHandler<ApplyPantryToShoppingListCommand, ApplyPantryToShoppingListResult>, ApplyPantryToShoppingListCommandHandler>();
+        services.AddScoped<ICommandHandler<MoveShoppingListItemToPantryCommand, MoveShoppingListItemToPantryResult>, MoveShoppingListItemToPantryCommandHandler>();
 
         return services;
     }

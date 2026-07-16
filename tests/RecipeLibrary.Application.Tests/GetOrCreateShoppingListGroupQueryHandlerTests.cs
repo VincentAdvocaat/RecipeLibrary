@@ -1,4 +1,4 @@
-using RecipeLibrary.Application.Abstractions;
+﻿using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.UseCases.ShoppingLists;
 using RecipeLibrary.Domain.Entities;
@@ -90,6 +90,9 @@ public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
 
         public Task<IReadOnlyList<string>> GetListNamesAsync(Guid? groupId = null, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<string>>([]);
+
+        public Task<bool> UpdateItemQuantityAsync(Guid itemId, decimal quantity, CancellationToken ct = default) =>
+            Task.FromResult(false);
 
         public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, string? ownerUserId = null, CancellationToken ct = default)
         {

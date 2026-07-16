@@ -292,14 +292,6 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
                 .HasMaxLength(200)
                 .IsRequired();
 
-            b.Property(x => x.Quantity)
-                .HasConversion(quantityConverter)
-                .HasPrecision(18, 3);
-
-            b.Property(x => x.Unit)
-                .HasConversion<string>()
-                .HasMaxLength(32);
-
             b.Property(x => x.CreatedAt).IsRequired();
             b.Property(x => x.UpdatedAt).IsRequired();
 

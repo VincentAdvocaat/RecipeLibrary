@@ -1,9 +1,6 @@
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
-using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.Pantry;
-using RecipeLibrary.Domain.Entities;
-using RecipeLibrary.Domain.ValueObjects;
 
 namespace RecipeLibrary.Application.UseCases.Pantry;
 
@@ -24,21 +21,16 @@ public sealed class UpsertPantryItemCommandHandler(
             throw new ArgumentException("Display name is required.");
         }
 
-        var unit = UnitRules.ParseOrThrow(command.Unit);
-        IngredientQuantityFormatter.ValidateQuantity(command.Quantity, unit);
-
         var existingItems = await repository.GetByOwnerKeyAsync(command.OwnerKey, ct);
 
-        var merged = merger.MergeLineIntoPantry(
+        var item = merger.EnsurePresent(
             existingItems,
             command.CanonicalIngredientId,
             displayName,
-            command.Quantity,
-            unit,
             command.OwnerKey);
 
-        await repository.UpsertAsync(merged, ct);
+        await repository.UpsertAsync(item, ct);
 
-        return new UpsertPantryItemResult(true, merged.Id);
+        return new UpsertPantryItemResult(true, item.Id);
     }
 }

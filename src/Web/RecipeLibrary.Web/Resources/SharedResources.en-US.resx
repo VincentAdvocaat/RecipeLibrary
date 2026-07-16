@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -189,7 +189,6 @@
   <data name="Auth.SignedInAs" xml:space="preserve"><value>Signed in as {0}</value></data>
   <data name="Nav.ShoppingList" xml:space="preserve"><value>Shopping list</value></data>
   <data name="Nav.Pantry" xml:space="preserve"><value>Pantry</value></data>
-  <data name="Nav.Pantry" xml:space="preserve"><value>Pantry</value></data>
   <data name="ShoppingList.NumberedNameFormat" xml:space="preserve"><value>Shopping list {0}</value></data>
   <data name="ShoppingList.PageTitle" xml:space="preserve"><value>Shopping list</value></data>
   <data name="ShoppingList.Empty.Message" xml:space="preserve"><value>Your shopping list is empty. Add recipes to get started.</value></data>
@@ -218,14 +217,15 @@
   <data name="ShoppingList.EditQuantity.SaveButton" xml:space="preserve"><value>Save</value></data>
   <data name="ShoppingList.AddItem.SectionLabel" xml:space="preserve"><value>Add item manually</value></data>
   <data name="ShoppingList.AddItem.Button" xml:space="preserve"><value>Add</value></data>
-  <data name="ShoppingList.ApplyPantry.Button" xml:space="preserve"><value>Apply pantry stock</value></data>
+  
+  <data name="ShoppingList.ApplyPantry.Button" xml:space="preserve"><value>Remove pantry staples</value></data>
+  <data name="ShoppingList.MoveToPantry.Button" xml:space="preserve"><value>Move to pantry</value></data>
   <data name="Pantry.PageTitle" xml:space="preserve"><value>Pantry</value></data>
-  <data name="Pantry.Intro.Message" xml:space="preserve"><value>Keep track of ingredients you already have at home. Checked shopping list items are added here automatically.</value></data>
-  <data name="Pantry.Empty.Message" xml:space="preserve"><value>Your pantry is empty. Add staples or check off items on your shopping list.</value></data>
+  <data name="Pantry.Intro.Message" xml:space="preserve"><value>Mark staples you normally already have at home (for example salt or oil). These are skipped when you add recipes to your shopping list.</value></data>
+  <data name="Pantry.Empty.Message" xml:space="preserve"><value>Your pantry is empty. Add staples you always keep at home.</value></data>
   <data name="Pantry.AddItem.SectionLabel" xml:space="preserve"><value>Add to pantry</value></data>
   <data name="Pantry.AddItem.Button" xml:space="preserve"><value>Add</value></data>
-  <data name="Pantry.EditQuantity.Button" xml:space="preserve"><value>Edit quantity</value></data>
-  <data name="Pantry.EditQuantity.SaveButton" xml:space="preserve"><value>Save</value></data>
+ 
   <data name="RecipeDetail.AddToShoppingListButton" xml:space="preserve"><value>Add to shopping list</value></data>
   <data name="RecipeDetail.AddedToShoppingList.Message" xml:space="preserve"><value>Added to shopping list.</value></data>
   <data name="RecipeDetail.AddToShoppingList.TargetLabel" xml:space="preserve"><value>Add to</value></data>
