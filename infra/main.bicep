@@ -36,7 +36,10 @@ param containerImageDigest string
 var stableSuffix = toLower(uniqueString(subscription().subscriptionId, resourceGroup().id))
 var suffix = (nameSuffix == '') ? stableSuffix : toLower(nameSuffix)
 
-var containerAppName = toLower('ca-${projectName}-${environment}-${suffix}')
+// Container App names are limited to 2-32 chars (alphanumeric + single hyphens).
+// Abbreviate the project segment and shorten the unique suffix so env names like test-neu fit.
+var containerAppShortSuffix = take(suffix, 6)
+var containerAppName = toLower('ca-rl-${environment}-${containerAppShortSuffix}')
 var managedEnvName = toLower('cae-${projectName}-${environment}-${suffix}')
 var appIdentityName = toLower('id-${projectName}-${environment}-${suffix}')
 
