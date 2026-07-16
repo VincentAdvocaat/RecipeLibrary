@@ -1,15 +1,15 @@
 trigger:
 - main
 
-pr:
-- main
+# Do not run this pipeline on pull requests (CI/CD only on main + manual runs).
+pr: none
 
 pool:
   vmImage: ubuntu-latest
 
 parameters:
 - name: deployNeu
-  displayName: Deploy NEU (North Europe) — optional manual deploy
+  displayName: Deploy NEU (North Europe) - optional manual deploy
   type: boolean
   default: false
 
@@ -171,11 +171,10 @@ stages:
 
 # NEU does not run on automatic CI. Start it manually via Run pipeline and enable "Deploy NEU".
 # Uses existing environment test-neu (no environment approval required for this pattern).
-${{ if parameters.deployNeu }}:
 - stage: DeployTestNEU
   displayName: Deploy test NEU (manual)
   dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'), ${{ parameters.deployNeu }})
   variables:
     containerImageDigest: $[ stageDependencies.Build.BuildAndTest.outputs['PublishImage.containerImageDigest'] ]
   jobs:
