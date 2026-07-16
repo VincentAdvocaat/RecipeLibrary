@@ -55,7 +55,8 @@ public sealed class HtmlRecipeTextExtractor
                     continue;
                 }
 
-                return FormatRecipeNodeAsText(recipe.Value);
+                var bodyText = document.Body?.TextContent;
+                return FormatRecipeNodeAsText(recipe.Value, bodyText);
             }
             catch (JsonException)
             {
@@ -66,13 +67,14 @@ public sealed class HtmlRecipeTextExtractor
         return null;
     }
 
-    private static string FormatRecipeNodeAsText(JsonElement recipe)
+    private static string FormatRecipeNodeAsText(JsonElement recipe, string? bodyText = null)
     {
         var sb = new StringBuilder();
         var title = GetStringProperty(recipe, "name");
         var description = GetStringProperty(recipe, "description");
         var prep = ParseIsoDurationMinutes(GetStringProperty(recipe, "prepTime"));
         var cook = ParseIsoDurationMinutes(GetStringProperty(recipe, "cookTime"));
+        var total = ParseIsoDurationMinutes(GetStringProperty(recipe, "totalTime"));
 
         if (!string.IsNullOrWhiteSpace(description))
         {
@@ -81,18 +83,23 @@ public sealed class HtmlRecipeTextExtractor
             sb.AppendLine();
         }
 
-        var totalMinutes = (prep ?? 0) + (cook ?? 0);
-        if (totalMinutes > 0)
+        var combinedMinutes = (prep ?? 0) + (cook ?? 0);
+        var totalMinutes = total ?? (combinedMinutes > 0 ? combinedMinutes : null);
+        if (totalMinutes is > 0)
         {
-            sb.AppendLine($"{totalMinutes} M");
+            sb.AppendLine($"{totalMinutes.Value} M");
         }
-        else if (cook is > 0)
+
+        var difficultyLabel = TryFindDifficultyLabel(bodyText);
+        if (!string.IsNullOrWhiteSpace(difficultyLabel))
         {
-            sb.AppendLine($"{cook.Value} M");
+            sb.AppendLine(difficultyLabel);
         }
-        else if (prep is > 0)
+
+        var servings = ParseServings(recipe);
+        if (servings is > 0)
         {
-            sb.AppendLine($"{prep.Value} M");
+            sb.AppendLine($"{servings.Value} porties");
         }
 
         sb.AppendLine();
@@ -241,8 +248,13 @@ public sealed class HtmlRecipeTextExtractor
 
         if (element.ValueKind == JsonValueKind.Object)
         {
-            var text = GetStringProperty(element, "text")
-                ?? GetStringProperty(element, "name");
+            // HowToSection / ItemList: nest first so section titles are not treated as steps.
+            if (element.TryGetProperty("itemListElement", out var nested))
+            {
+                return ParseInstructionTexts(nested);
+            }
+
+            var text = GetStringProperty(element, "text");
             if (!string.IsNullOrWhiteSpace(text))
             {
                 return [text.Trim()];
@@ -250,6 +262,82 @@ public sealed class HtmlRecipeTextExtractor
         }
 
         return [];
+    }
+
+    private static int? ParseServings(JsonElement recipe)
+    {
+        if (!recipe.TryGetProperty("recipeYield", out var yieldElement))
+        {
+            return null;
+        }
+
+        foreach (var candidate in EnumerateStringValues(yieldElement))
+        {
+            var match = Regex.Match(candidate, @"\d+", RegexOptions.CultureInvariant);
+            if (match.Success
+                && int.TryParse(match.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+                && value > 0)
+            {
+                return value;
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> EnumerateStringValues(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            var value = element.GetString();
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                yield return value;
+            }
+
+            yield break;
+        }
+
+        if (element.ValueKind == JsonValueKind.Number)
+        {
+            yield return element.GetRawText();
+            yield break;
+        }
+
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                foreach (var value in EnumerateStringValues(item))
+                {
+                    yield return value;
+                }
+            }
+        }
+    }
+
+    private static string? TryFindDifficultyLabel(string? bodyText)
+    {
+        if (string.IsNullOrWhiteSpace(bodyText))
+        {
+            return null;
+        }
+
+        foreach (var rawLine in bodyText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0 || line.Length > 160)
+            {
+                continue;
+            }
+
+            if (RecipeTextDocumentExtractor.TryParseDifficultyLabel(line, out var label))
+            {
+                return label;
+            }
+        }
+
+        return null;
     }
 
     private static string? GetStringProperty(JsonElement element, string propertyName)

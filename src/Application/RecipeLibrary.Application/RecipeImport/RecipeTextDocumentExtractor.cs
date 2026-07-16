@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using System.Text.RegularExpressions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Domain.ValueObjects;
@@ -7,7 +6,7 @@ using RecipeLibrary.Domain.ValueObjects;
 namespace RecipeLibrary.Application.RecipeImport;
 
 /// <summary>
-/// Extracts recipe document sections from normalized plain text (clean-data format).
+/// Extracts recipe document sections from normalized plain text (clean-data format and noisy scrapes).
 /// </summary>
 public static class RecipeTextDocumentExtractor
 {
@@ -26,6 +25,8 @@ public static class RecipeTextDocumentExtractor
         "instructies",
         "stappen",
         "instructions",
+        "method",
+        "directions",
     ];
 
     private static readonly string[] IntroHeaders =
@@ -36,8 +37,97 @@ public static class RecipeTextDocumentExtractor
         "description",
     ];
 
+    private static readonly string[] FooterSectionHeaders =
+    [
+        "tips",
+        "tip",
+        "beoordelingen",
+        "reviews",
+        "handig",
+        "veelgestelde vragen",
+        "faq",
+        "gerelateerd",
+        "related",
+        "serveer met",
+        "voedingswaarde",
+        "nutrition",
+        "opmerkingen",
+        "comments",
+        "notities",
+        "notes",
+    ];
+
+    private static readonly string[] ChromeLinePrefixes =
+    [
+        "markeer als",
+        "check off",
+        "print recept",
+        "print recipe",
+        "kookstand",
+        "cook mode",
+        "recept opslaan",
+        "save recipe",
+        "of deel",
+        "share via",
+        "direct in je",
+        "raak dit",
+        "stuur dit",
+        "bewaar in",
+        "e-mail",
+        "email",
+        "e-mailadres",
+        "emailadres",
+        "merknamen in",
+        "affiliate",
+        "zet de kookstand",
+        "ga naar",
+        "naar mijn",
+        "scroll naar",
+        "laatst bijgewerkt",
+        "gemaakt door",
+        "opgeslagen",
+        "aanmelden",
+        "zoeken",
+    ];
+
+    private static readonly HashSet<string> ChromeExactLines = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "whatsapp",
+        "facebook",
+        "pinterest",
+        "instagram",
+        "tiktok",
+        "youtube",
+        "home",
+        "recepten",
+        "vegan recept",
+        "vegetarisch recept",
+        "lactose arm recept",
+        "lactosevrij recept",
+    };
+
     private static readonly Regex TimePattern = new(
         @"^(?:(?<minutes>\d+)\s*M(?:in(?:uten)?)?|(?<hours>\d+)\s*U(?:ur)?(?:\s*(?<minutes2>\d+)\s*M(?:in(?:uten)?)?)?)$",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex ServingsPattern = new(
+        @"^(?:voor\s+)?(?<count>\d+)\s*(?:personen|persoon|porties|portie|servings|serving|stuks|stuk)?$",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex DifficultyLabeledPattern = new(
+        @"(?:moeilijkheidsgraad|difficulty|niveau)[^.\n]{0,60}:\s*(?<level>makkelijk|gemiddeld|moeilijk|easy|medium|hard|normaal)\b",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex DifficultyTrailingPattern = new(
+        @"\b(?<level>makkelijk|gemiddeld|moeilijk|easy|medium|hard|normaal)\s*\.?$",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex StepCaptionNoisePattern = new(
+        @"(?:stap|step)\s*\d+",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex MediaFilePattern = new(
+        @"\.(?:png|jpe?g|webp|gif|svg)(?:\b|$)",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public static RecipeTextDocument Extract(string plainText)
@@ -59,23 +149,21 @@ public static class RecipeTextDocumentExtractor
         string? description = null;
         int? cookingMinutes = null;
         int? difficulty = null;
+        int? servings = null;
         var ingredientLines = new List<string>();
         var instructionLines = new List<string>();
         var introBuffer = new List<string>();
 
         var section = Section.Preamble;
         var inIntroLabeled = false;
+        var seenRecipeMeta = false;
+        var ingredientsClosed = false;
 
         for (var i = 0; i < rawLines.Count; i++)
         {
             var line = rawLines[i].Trim();
             if (line.Length == 0)
             {
-                if (section == Section.Instructions && instructionLines.Count > 0)
-                {
-                    // Keep paragraph breaks as separate steps only when content follows; blank ignored.
-                }
-
                 continue;
             }
 
@@ -94,9 +182,11 @@ public static class RecipeTextDocumentExtractor
             if (TryGetLabeledHeader(line, IngredientSectionHeaders, out var ingredientTitle))
             {
                 section = Section.Ingredients;
+                ingredientsClosed = false;
                 if (!string.IsNullOrWhiteSpace(ingredientTitle))
                 {
-                    title ??= ingredientTitle.Trim();
+                    // Section titles are more specific than preamble headings.
+                    title = ingredientTitle.Trim();
                 }
 
                 continue;
@@ -113,17 +203,36 @@ public static class RecipeTextDocumentExtractor
                 continue;
             }
 
+            if (IsFooterSectionHeader(line))
+            {
+                if (section is Section.Ingredients or Section.Instructions)
+                {
+                    section = Section.Done;
+                }
+
+                continue;
+            }
+
             if (section is Section.Preamble or Section.Intro)
             {
                 if (TryParseTime(line, out var minutes))
                 {
                     cookingMinutes = minutes;
+                    seenRecipeMeta = true;
                     continue;
                 }
 
                 if (TryParseDifficulty(line, out var diff))
                 {
                     difficulty = diff;
+                    seenRecipeMeta = true;
+                    continue;
+                }
+
+                if (TryParseServings(line, out var parsedServings))
+                {
+                    servings = parsedServings;
+                    seenRecipeMeta = true;
                     continue;
                 }
             }
@@ -131,16 +240,44 @@ public static class RecipeTextDocumentExtractor
             switch (section)
             {
                 case Section.Intro:
-                    introBuffer.Add(line);
+                    if (!IsChromeLine(line))
+                    {
+                        introBuffer.Add(line);
+                    }
+
                     break;
                 case Section.Ingredients:
-                    ingredientLines.Add(StripBullet(line));
+                    if (ingredientsClosed)
+                    {
+                        break;
+                    }
+
+                    if (IsLikelyIngredientLine(line))
+                    {
+                        ingredientLines.Add(StripBullet(line));
+                    }
+                    else if (IsChromeLine(line))
+                    {
+                        break;
+                    }
+                    else if (ingredientLines.Count > 0)
+                    {
+                        ingredientsClosed = true;
+                    }
+
                     break;
                 case Section.Instructions:
-                    instructionLines.Add(StripNumberPrefix(line));
+                    if (IsLikelyInstructionLine(line))
+                    {
+                        instructionLines.Add(StripNumberPrefix(line));
+                    }
+
+                    break;
+                case Section.Done:
                     break;
                 default:
-                    if (!inIntroLabeled)
+                    // Unlabeled preamble: keep prose only until time/difficulty/servings meta appears.
+                    if (!inIntroLabeled && !seenRecipeMeta && !IsChromeLine(line))
                     {
                         introBuffer.Add(line);
                     }
@@ -161,10 +298,9 @@ public static class RecipeTextDocumentExtractor
                 }
             }
 
-            if (introBuffer.Count > 0)
-            {
-                description = string.Join(" ", introBuffer).Trim();
-            }
+            description = inIntroLabeled
+                ? string.Join(" ", introBuffer).Trim()
+                : SelectBestDescription(introBuffer);
         }
 
         if (ingredientLines.Count == 0)
@@ -174,7 +310,7 @@ public static class RecipeTextDocumentExtractor
                 rawLines
                     .Select(x => x.Trim())
                     .Where(x => x.Length > 0)
-                    .Where(LooksLikeIngredientLine)
+                    .Where(IsLikelyIngredientLine)
                     .Select(StripBullet));
         }
 
@@ -189,10 +325,32 @@ public static class RecipeTextDocumentExtractor
             Description = description,
             CookingTimeMinutes = cookingMinutes,
             Difficulty = difficulty,
+            Servings = servings,
             IngredientLines = ingredientLines,
             Steps = steps,
             Warnings = warnings,
         };
+    }
+
+    /// <summary>
+    /// Returns a canonical difficulty label (e.g. Makkelijk) when the line expresses difficulty.
+    /// </summary>
+    public static bool TryParseDifficultyLabel(string line, out string label)
+    {
+        label = string.Empty;
+        if (!TryParseDifficulty(line, out var difficulty))
+        {
+            return false;
+        }
+
+        label = difficulty switch
+        {
+            (int)Difficulty.Easy => "Makkelijk",
+            (int)Difficulty.Medium => "Gemiddeld",
+            (int)Difficulty.Hard => "Moeilijk",
+            _ => string.Empty,
+        };
+        return label.Length > 0;
     }
 
     private enum Section
@@ -201,6 +359,7 @@ public static class RecipeTextDocumentExtractor
         Intro,
         Ingredients,
         Instructions,
+        Done,
     }
 
     private static bool TryGetLabeledHeader(string line, string[] headers, out string remainder)
@@ -217,6 +376,26 @@ public static class RecipeTextDocumentExtractor
             if (line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
                 remainder = line[prefix.Length..].Trim();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsFooterSectionHeader(string line)
+    {
+        var normalized = line.Trim().TrimEnd(':').Trim();
+        foreach (var header in FooterSectionHeaders)
+        {
+            if (normalized.Equals(header, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (normalized.StartsWith(header + " ", StringComparison.OrdinalIgnoreCase)
+                && normalized.Length <= header.Length + 24)
+            {
                 return true;
             }
         }
@@ -250,8 +429,40 @@ public static class RecipeTextDocumentExtractor
     private static bool TryParseDifficulty(string line, out int difficulty)
     {
         difficulty = 0;
-        var normalized = line.Trim().ToLowerInvariant();
-        difficulty = normalized switch
+        var normalized = line.Trim();
+        if (normalized.Length == 0)
+        {
+            return false;
+        }
+
+        if (TryMapDifficultyWord(normalized.ToLowerInvariant(), out difficulty))
+        {
+            return true;
+        }
+
+        var labeled = DifficultyLabeledPattern.Match(normalized);
+        if (labeled.Success && TryMapDifficultyWord(labeled.Groups["level"].Value.ToLowerInvariant(), out difficulty))
+        {
+            return true;
+        }
+
+        if (normalized.Length <= 120)
+        {
+            var trailing = DifficultyTrailingPattern.Match(normalized);
+            if (trailing.Success
+                && TryMapDifficultyWord(trailing.Groups["level"].Value.ToLowerInvariant(), out difficulty)
+                && (normalized.Contains(':', StringComparison.Ordinal) || normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length <= 4))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryMapDifficultyWord(string word, out int difficulty)
+    {
+        difficulty = word switch
         {
             "makkelijk" or "easy" => (int)Difficulty.Easy,
             "gemiddeld" or "medium" or "normaal" => (int)Difficulty.Medium,
@@ -261,21 +472,158 @@ public static class RecipeTextDocumentExtractor
         return difficulty != 0;
     }
 
+    private static bool TryParseServings(string line, out int servings)
+    {
+        servings = 0;
+        var match = ServingsPattern.Match(line.Trim());
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        servings = int.Parse(match.Groups["count"].Value, CultureInfo.InvariantCulture);
+        return servings > 0 && servings <= 100;
+    }
+
+    private static string? SelectBestDescription(IReadOnlyList<string> lines)
+    {
+        var prose = lines
+            .Select(x => x.Trim())
+            .Where(x => x.Length >= 80)
+            .Where(x => x.Contains('.', StringComparison.Ordinal))
+            .Where(x => !IsChromeLine(x))
+            .OrderByDescending(x => x.Length)
+            .FirstOrDefault();
+
+        return string.IsNullOrWhiteSpace(prose) ? null : prose;
+    }
+
+    private static bool IsLikelyIngredientLine(string line)
+    {
+        if (IsChromeLine(line) || MediaFilePattern.IsMatch(line) || line.Contains('€'))
+        {
+            return false;
+        }
+
+        var trimmed = StripBullet(line);
+        if (LooksLikeMeasuredOrToTasteIngredient(trimmed))
+        {
+            return true;
+        }
+
+        return LooksLikeBareIngredientName(trimmed);
+    }
+
+    private static bool LooksLikeMeasuredOrToTasteIngredient(string trimmed) =>
+        Regex.IsMatch(
+            trimmed,
+            @"^(\d+(?:[.,]\d+)?|\d+\s*/\s*\d+|\d+\s*-\s*\d+|snuf|snufje|snufjes|handje|handjes|beetje|teen|teentje)\b",
+            RegexOptions.IgnoreCase)
+        || trimmed.Contains(" naar smaak", StringComparison.OrdinalIgnoreCase);
+
+    private static bool LooksLikeBareIngredientName(string trimmed)
+    {
+        if (trimmed.Length is 0 or > 60)
+        {
+            return false;
+        }
+
+        if (trimmed.Contains('.', StringComparison.Ordinal) || trimmed.Contains('?', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (trimmed.Contains("http", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        // Brand/store slugs and mashed UI tokens (e.g. "albert-heijnjumbo").
+        if (!trimmed.Contains(' ', StringComparison.Ordinal)
+            && (trimmed.Contains('-', StringComparison.Ordinal) || trimmed.Length > 18))
+        {
+            return false;
+        }
+
+        // Measured lines without a leading quantity word are handled elsewhere; reject digits here
+        // so UI chrome with numbers is not treated as a bare name.
+        if (Regex.IsMatch(trimmed, @"\d"))
+        {
+            return false;
+        }
+
+        var words = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return words.Length is >= 1 and <= 6;
+    }
+
+    private static bool IsLikelyInstructionLine(string line)
+    {
+        if (IsChromeLine(line) || MediaFilePattern.IsMatch(line) || line.Contains('€'))
+        {
+            return false;
+        }
+
+        var trimmed = StripNumberPrefix(line);
+        if (trimmed.Length < 8)
+        {
+            return false;
+        }
+
+        var stepHits = StepCaptionNoisePattern.Matches(trimmed);
+        if (stepHits.Count >= 2)
+        {
+            return false;
+        }
+
+        if (stepHits.Count == 1 && trimmed.Length < 40)
+        {
+            return false;
+        }
+
+        return trimmed.Contains(' ', StringComparison.Ordinal);
+    }
+
+    private static bool IsChromeLine(string line)
+    {
+        var normalized = line.Trim();
+        if (normalized.Length == 0)
+        {
+            return false;
+        }
+
+        if (ChromeExactLines.Contains(normalized))
+        {
+            return true;
+        }
+
+        var lower = normalized.ToLowerInvariant();
+        foreach (var prefix in ChromeLinePrefixes)
+        {
+            if (lower.StartsWith(prefix, StringComparison.Ordinal) || lower.Contains(prefix, StringComparison.Ordinal))
+            {
+                // Avoid treating long instructional prose as chrome when it merely contains a short token.
+                if (prefix.Length <= 4 && normalized.Length > 40)
+                {
+                    continue;
+                }
+
+                if (normalized.Length > 180 && !lower.StartsWith(prefix, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static string StripBullet(string line) =>
         line.TrimStart('-', '•', '*', '▢', ' ').Trim();
 
     private static string StripNumberPrefix(string line) =>
         Regex.Replace(line, @"^\d+[\.)]\s*", string.Empty).Trim();
-
-    private static bool LooksLikeIngredientLine(string line)
-    {
-        var trimmed = StripBullet(line);
-        return Regex.IsMatch(
-                   trimmed,
-                   @"^(\d+(?:[.,]\d+)?|\d+\s*/\s*\d+|\d+\s*-\s*\d+|snuf|snufje|snufjes|handje|handjes|beetje)\b",
-                   RegexOptions.IgnoreCase)
-               || trimmed.Contains(" naar smaak", StringComparison.OrdinalIgnoreCase);
-    }
 }
 
 public sealed class RecipeTextDocument
