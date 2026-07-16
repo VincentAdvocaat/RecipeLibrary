@@ -51,6 +51,11 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<ImportRecipeContentQuery, ImportRecipeResult>, ImportRecipeContentQueryHandler>();
         services.AddScoped<IQueryHandler<ImportRecipeFromUrlQuery, ImportRecipeResult>, ImportRecipeFromUrlQueryHandler>();
         services.AddScoped<IQueryHandler<ImportRecipeFromImageQuery, ImportRecipeResult>, ImportRecipeFromImageQueryHandler>();
+        services.AddScoped<ICommandHandler<CreateRecipeImportImageSessionCommand, CreateRecipeImportImageSessionResult>, CreateRecipeImportImageSessionCommandHandler>();
+        services.AddScoped<ICommandHandler<AddRecipeImportImageCommand, AddRecipeImportImageResult>, AddRecipeImportImageCommandHandler>();
+        services.AddScoped<ICommandHandler<RemoveRecipeImportImageCommand, RemoveRecipeImportImageResult>, RemoveRecipeImportImageCommandHandler>();
+        services.AddScoped<ICommandHandler<DeleteRecipeImportImageSessionCommand, DeleteRecipeImportImageSessionResult>, DeleteRecipeImportImageSessionCommandHandler>();
+        services.AddScoped<IQueryHandler<ProcessRecipeImportImageSessionQuery, ImportRecipeResult>, ProcessRecipeImportImageSessionQueryHandler>();
 
         services.AddScoped<IQueryHandler<GetOrCreateShoppingListGroupQuery, GetOrCreateShoppingListGroupResult>, GetOrCreateShoppingListGroupQueryHandler>();
         services.AddScoped<IQueryHandler<GetNextShoppingListNameQuery, GetNextShoppingListNameResult>, GetNextShoppingListNameQueryHandler>();

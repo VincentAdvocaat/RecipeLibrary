@@ -20,4 +20,7 @@ public sealed class AzureBlobRecipeFileStorageOptions
 
     /// <summary>Blob container for recipe images.</summary>
     public string ContainerName { get; set; } = "recipe-images";
+
+    /// <summary>Blob container for short-lived OCR import staging images.</summary>
+    public string StagingContainerName { get; set; } = "recipe-import-staging";
 }

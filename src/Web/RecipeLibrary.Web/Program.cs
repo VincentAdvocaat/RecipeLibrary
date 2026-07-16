@@ -315,6 +315,183 @@ app.MapPost("/recipes/import-image", async (
     }
 }).DisableAntiforgery().ApplyAuth(authEnabled);
 
+app.MapPost("/recipes/import-image/sessions", async (
+    ICommandBus commandBus,
+    IShoppingListUserContext userContext,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var result = await commandBus.SendAsync<CreateRecipeImportImageSessionCommand, CreateRecipeImportImageSessionResult>(
+            new CreateRecipeImportImageSessionCommand { OwnerKey = userContext.OwnerUserId ?? string.Empty },
+            ct);
+        return Results.Ok(result);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+}).DisableAntiforgery().ApplyAuth(authEnabled);
+
+app.MapPost("/recipes/import-image/sessions/{sessionId}/images", async (
+    string sessionId,
+    HttpRequest request,
+    ICommandBus commandBus,
+    IShoppingListUserContext userContext,
+    Microsoft.Extensions.Options.IOptions<RecipeImportOptions> importOptions,
+    CancellationToken ct) =>
+{
+    try
+    {
+        if (!request.HasFormContentType)
+        {
+            return Results.BadRequest("Expected multipart form data.");
+        }
+
+        var maxBytes = importOptions.Value.Ocr.MaxImageBytes;
+        var form = await request.ReadFormAsync(ct);
+        var file = form.Files.GetFile("file");
+        if (file is null || file.Length == 0)
+        {
+            return Results.BadRequest("Image file is required.");
+        }
+
+        if (file.Length > maxBytes)
+        {
+            return Results.BadRequest($"Image exceeds maximum size of {maxBytes} bytes.");
+        }
+
+        await using var stream = file.OpenReadStream();
+        using var memory = new MemoryStream(capacity: (int)Math.Min(file.Length, maxBytes));
+        await stream.CopyToAsync(memory, ct);
+
+        var result = await commandBus.SendAsync<AddRecipeImportImageCommand, AddRecipeImportImageResult>(
+            new AddRecipeImportImageCommand
+            {
+                SessionId = sessionId,
+                OwnerKey = userContext.OwnerUserId ?? string.Empty,
+                ImageBytes = memory.ToArray(),
+                ContentType = file.ContentType ?? string.Empty,
+                FileName = file.FileName ?? string.Empty,
+            },
+            ct);
+        return Results.Ok(result);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+}).DisableAntiforgery().ApplyAuth(authEnabled);
+
+app.MapDelete("/recipes/import-image/sessions/{sessionId}/images/{imageId}", async (
+    string sessionId,
+    string imageId,
+    ICommandBus commandBus,
+    IShoppingListUserContext userContext,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var result = await commandBus.SendAsync<RemoveRecipeImportImageCommand, RemoveRecipeImportImageResult>(
+            new RemoveRecipeImportImageCommand
+            {
+                SessionId = sessionId,
+                ImageId = imageId,
+                OwnerKey = userContext.OwnerUserId ?? string.Empty,
+            },
+            ct);
+        return Results.Ok(result);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+}).DisableAntiforgery().ApplyAuth(authEnabled);
+
+app.MapPost("/recipes/import-image/sessions/{sessionId}/process", async (
+    string sessionId,
+    ProcessImportImageSessionRequest? body,
+    IQueryBus queryBus,
+    IShoppingListUserContext userContext,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var result = await queryBus.QueryAsync<ProcessRecipeImportImageSessionQuery, ImportRecipeResult>(
+            new ProcessRecipeImportImageSessionQuery
+            {
+                SessionId = sessionId,
+                OwnerKey = userContext.OwnerUserId ?? string.Empty,
+                Language = body?.Language ?? "nld",
+            },
+            ct);
+        return Results.Ok(result);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+}).DisableAntiforgery().ApplyAuth(authEnabled);
+
+app.MapDelete("/recipes/import-image/sessions/{sessionId}", async (
+    string sessionId,
+    ICommandBus commandBus,
+    IShoppingListUserContext userContext,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var result = await commandBus.SendAsync<DeleteRecipeImportImageSessionCommand, DeleteRecipeImportImageSessionResult>(
+            new DeleteRecipeImportImageSessionCommand
+            {
+                SessionId = sessionId,
+                OwnerKey = userContext.OwnerUserId ?? string.Empty,
+            },
+            ct);
+        return Results.Ok(result);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+}).DisableAntiforgery().ApplyAuth(authEnabled);
+
 app.MapGet("/ingredients/search", async (string q, IQueryBus queryBus, CancellationToken ct) =>
 {
     var result = await queryBus.QueryAsync<SearchIngredientsQuery, IReadOnlyList<IngredientLookupItem>>(
@@ -435,5 +612,10 @@ file static class AuthEndpointExtensions
 public sealed class AddIngredientTagsRequest
 {
     public IReadOnlyList<string> Tags { get; init; } = [];
+}
+
+public sealed class ProcessImportImageSessionRequest
+{
+    public string Language { get; init; } = "nld";
 }
 

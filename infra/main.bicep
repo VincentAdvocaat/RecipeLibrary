@@ -100,11 +100,53 @@ resource recipeImagesContainer 'Microsoft.Storage/storageAccounts/blobServices/c
   }
 }
 
+resource recipeImportStagingContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: 'recipe-import-staging'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
 resource dataProtectionContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobService
   name: 'dataprotection'
   properties: {
     publicAccess: 'None'
+  }
+}
+
+// Day-granularity safety net only; app deletes staging after process/cancel and after 30 min TTL.
+resource stagingLifecyclePolicy 'Microsoft.Storage/storageAccounts/managementPolicies@2023-01-01' = {
+  parent: storageAccount
+  name: 'default'
+  properties: {
+    policy: {
+      rules: [
+        {
+          enabled: true
+          name: 'delete-recipe-import-staging-after-1-day'
+          type: 'Lifecycle'
+          definition: {
+            filters: {
+              blobTypes: [
+                'blockBlob'
+              ]
+              prefixMatch: [
+                '${recipeImportStagingContainer.name}/'
+              ]
+            }
+            actions: {
+              baseBlob: {
+                delete: {
+                  daysAfterModificationGreaterThan: 1
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
   }
 }
 
@@ -251,6 +293,18 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: recipeImagesContainer.name
             }
             {
+              name: 'RecipeFileStorage__AzureBlob__StagingContainerName'
+              value: recipeImportStagingContainer.name
+            }
+            {
+              name: 'RecipeImport__Ocr__StagingTtlMinutes'
+              value: '30'
+            }
+            {
+              name: 'RecipeImport__Ocr__MaxImagesPerSession'
+              value: '5'
+            }
+            {
               name: 'DataProtection__ApplicationName'
               value: '${projectName}-${environment}'
             }
@@ -319,4 +373,5 @@ output sqlServerFqdn string = sqlFqdn
 output sqlDatabaseName string = sqlDb.name
 output storageAccountName string = storageAccount.name
 output recipeImagesContainerName string = recipeImagesContainer.name
+output recipeImportStagingContainerName string = recipeImportStagingContainer.name
 output dataProtectionContainerName string = dataProtectionContainer.name

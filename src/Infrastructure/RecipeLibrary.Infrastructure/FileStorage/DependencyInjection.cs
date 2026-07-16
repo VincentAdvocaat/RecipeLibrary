@@ -58,6 +58,15 @@ public static class FileStorageServiceRegistration
         });
         services.AddScoped<LocalRecipeFileStorage>();
 
+        services.AddScoped<IRecipeImportStagingStore>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<RecipeFileStorageOptions>>().Value;
+            return string.Equals(options.Provider, "AzureBlob", StringComparison.OrdinalIgnoreCase)
+                ? ActivatorUtilities.CreateInstance<AzureBlobRecipeImportStagingStore>(sp)
+                : ActivatorUtilities.CreateInstance<LocalRecipeImportStagingStore>(sp);
+        });
+        services.AddHostedService<RecipeImportStagingCleanupService>();
+
         return services;
     }
 }

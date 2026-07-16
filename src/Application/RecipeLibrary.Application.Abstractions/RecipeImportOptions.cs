@@ -39,4 +39,10 @@ public sealed class RecipeImportOcrOptions
     public string TessDataPath { get; init; } = string.Empty;
 
     public int MaxImageBytes { get; init; } = 8 * 1024 * 1024;
+
+    /// <summary>How long staging images are kept before BackgroundService cleanup.</summary>
+    public int StagingTtlMinutes { get; init; } = 30;
+
+    /// <summary>Maximum number of photos allowed in one OCR import session.</summary>
+    public int MaxImagesPerSession { get; init; } = 5;
 }

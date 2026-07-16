@@ -91,6 +91,9 @@
   <data name="RecipeCreate.PhotoImport.Language.Dutch" xml:space="preserve"><value>Nederlands</value></data>
   <data name="RecipeCreate.PhotoImport.Language.English" xml:space="preserve"><value>English</value></data>
   <data name="RecipeCreate.PhotoImport.Error.NoFile" xml:space="preserve"><value>Kies een foto om te importeren.</value></data>
+  <data name="RecipeCreate.PhotoImport.Multiple.Hint" xml:space="preserve"><value>Je kunt tot {0} foto's of screenshots toevoegen. Ze worden op volgorde verwerkt.</value></data>
+  <data name="RecipeCreate.PhotoImport.RemoveButton" xml:space="preserve"><value>Verwijderen</value></data>
+  <data name="RecipeCreate.PhotoImport.Error.MaxImages" xml:space="preserve"><value>Je kunt maximaal {0} foto's toevoegen.</value></data>
   <data name="RecipeCreate.Import.Responsibility.Hint" xml:space="preserve"><value>Importeer alleen tekst, screenshots of links die je mag gebruiken. Jij bent verantwoordelijk voor de content die je toevoegt.</value></data>
   <data name="RecipeCreate.Import.ReviewBanner" xml:space="preserve"><value>We hebben dit recept voor je ingevuld. Check even of alles klopt vóór je opslaat.</value></data>
   <data name="RecipeCreate.Import.Ingredient.CheckHint" xml:space="preserve"><value>Check even of dit klopt.</value></data>

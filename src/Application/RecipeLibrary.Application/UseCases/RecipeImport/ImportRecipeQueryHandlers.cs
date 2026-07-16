@@ -135,7 +135,7 @@ public sealed class ImportRecipeFromImageQueryHandler(
             ? "image/jpeg"
             : contentType;
 
-    private static string NormalizeLanguage(string? language)
+    internal static string NormalizeLanguage(string? language)
     {
         var value = (language ?? string.Empty).Trim().ToLowerInvariant();
         return value switch

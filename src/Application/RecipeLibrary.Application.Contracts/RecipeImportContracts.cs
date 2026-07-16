@@ -47,6 +47,78 @@ public sealed class ImportRecipeFromImageQuery : IQuery<ImportRecipeResult>
     public string Language { get; init; } = "nld";
 }
 
+public sealed class CreateRecipeImportImageSessionCommand : ICommand<CreateRecipeImportImageSessionResult>
+{
+    public string OwnerKey { get; init; } = string.Empty;
+}
+
+public sealed class CreateRecipeImportImageSessionResult
+{
+    public string SessionId { get; init; } = string.Empty;
+
+    public DateTimeOffset ExpiresUtc { get; init; }
+}
+
+public sealed class AddRecipeImportImageCommand : ICommand<AddRecipeImportImageResult>
+{
+    public string SessionId { get; init; } = string.Empty;
+
+    public string OwnerKey { get; init; } = string.Empty;
+
+    public byte[] ImageBytes { get; init; } = [];
+
+    public string ContentType { get; init; } = string.Empty;
+
+    public string FileName { get; init; } = string.Empty;
+}
+
+public sealed class AddRecipeImportImageResult
+{
+    public string ImageId { get; init; } = string.Empty;
+
+    public int Order { get; init; }
+
+    public string FileName { get; init; } = string.Empty;
+
+    public int ImageCount { get; init; }
+}
+
+public sealed class RemoveRecipeImportImageCommand : ICommand<RemoveRecipeImportImageResult>
+{
+    public string SessionId { get; init; } = string.Empty;
+
+    public string OwnerKey { get; init; } = string.Empty;
+
+    public string ImageId { get; init; } = string.Empty;
+}
+
+public sealed class RemoveRecipeImportImageResult
+{
+    public int ImageCount { get; init; }
+}
+
+public sealed class DeleteRecipeImportImageSessionCommand : ICommand<DeleteRecipeImportImageSessionResult>
+{
+    public string SessionId { get; init; } = string.Empty;
+
+    public string OwnerKey { get; init; } = string.Empty;
+}
+
+public sealed class DeleteRecipeImportImageSessionResult
+{
+    public bool Deleted { get; init; }
+}
+
+public sealed class ProcessRecipeImportImageSessionQuery : IQuery<ImportRecipeResult>
+{
+    public string SessionId { get; init; } = string.Empty;
+
+    public string OwnerKey { get; init; } = string.Empty;
+
+    /// <summary>Tesseract language code: nld or eng.</summary>
+    public string Language { get; init; } = "nld";
+}
+
 public sealed class ImportRecipeResult
 {
     public string? Title { get; init; }
