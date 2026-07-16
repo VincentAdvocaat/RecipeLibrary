@@ -1,23 +1,70 @@
-@* Molecule: whole-number quantity input (invariant display, no decimal comma). *@
+@* Molecule: quantity input — whole numbers, or whole + culinary fraction for tsp/tbsp. *@
 @namespace RecipeLibrary.Components.Molecules
 
-<input type="number"
-       class="@CssClass"
-       min="1"
-       step="1"
-       inputmode="numeric"
-       value="@_displayValue"
-       @onchange="OnChangeAsync" />
+@if (_allowsDecimals)
+{
+    <div class="flex gap-1 min-w-0">
+        <input type="number"
+               class="@CssClass"
+               min="0"
+               step="1"
+               inputmode="numeric"
+               aria-label="@L["RecipeCreate.Ingredient.Quantity.Whole.AriaLabel"]"
+               value="@_whole"
+               @onchange="OnWholeChangedAsync" />
+        <select class="@CssClass"
+                aria-label="@L["RecipeCreate.Ingredient.Quantity.Fraction.AriaLabel"]"
+                value="@_fractionKey"
+                @onchange="OnFractionChangedAsync">
+            @foreach (var option in CulinaryQuantityFractions.SelectOptions)
+            {
+                <option value="@option.Key">@option.Label</option>
+            }
+        </select>
+    </div>
+}
+else
+{
+    <input type="number"
+           class="@CssClass"
+           min="1"
+           step="1"
+           inputmode="numeric"
+           value="@_wholeDisplay"
+           @onchange="OnIntegerChangedAsync" />
+}
 
 @code {
     [Parameter] public decimal Quantity { get; set; } = 1;
     [Parameter] public EventCallback<decimal> QuantityChanged { get; set; }
     [Parameter] public EventCallback QuantityChangedAfter { get; set; }
+    [Parameter] public string? UnitName { get; set; }
     [Parameter] public string? CssClass { get; set; }
 
-    private int _displayValue => (int)decimal.Round(Quantity, 0, MidpointRounding.AwayFromZero);
+    private bool _allowsDecimals;
+    private int _whole;
+    private string _fractionKey = "0";
+    private int _wholeDisplay = 1;
 
-    private async Task OnChangeAsync(ChangeEventArgs e)
+    protected override void OnParametersSet()
+    {
+        _allowsDecimals = UnitRules.TryParse(UnitName, out var unit) && UnitRules.AllowsDecimals(unit);
+
+        if (_allowsDecimals)
+        {
+            var (whole, fraction) = CulinaryQuantityFractions.Split(Quantity <= 0 ? 1m : Quantity);
+            _whole = whole;
+            _fractionKey = CulinaryQuantityFractions.FractionKey(fraction);
+        }
+        else
+        {
+            _wholeDisplay = Quantity <= 0
+                ? 1
+                : (int)decimal.Round(Quantity, 0, MidpointRounding.AwayFromZero);
+        }
+    }
+
+    private async Task OnIntegerChangedAsync(ChangeEventArgs e)
     {
         var raw = e.Value?.ToString();
         if (!int.TryParse(raw, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
@@ -31,7 +78,59 @@
             return;
         }
 
-        Quantity = parsed;
+        await SetQuantityAsync(parsed);
+    }
+
+    private async Task OnWholeChangedAsync(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString();
+        if (!int.TryParse(raw, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+            && !int.TryParse(raw, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.CurrentCulture, out parsed))
+        {
+            return;
+        }
+
+        if (parsed < 0)
+        {
+            return;
+        }
+
+        if (!CulinaryQuantityFractions.TryParseFractionKey(_fractionKey, out var fraction))
+        {
+            fraction = 0m;
+        }
+
+        var combined = CulinaryQuantityFractions.Combine(parsed, fraction);
+        if (combined <= 0)
+        {
+            return;
+        }
+
+        _whole = parsed;
+        await SetQuantityAsync(combined);
+    }
+
+    private async Task OnFractionChangedAsync(ChangeEventArgs e)
+    {
+        var key = e.Value?.ToString() ?? "0";
+        if (!CulinaryQuantityFractions.TryParseFractionKey(key, out var fraction))
+        {
+            return;
+        }
+
+        var combined = CulinaryQuantityFractions.Combine(_whole, fraction);
+        if (combined <= 0)
+        {
+            return;
+        }
+
+        _fractionKey = key;
+        await SetQuantityAsync(combined);
+    }
+
+    private async Task SetQuantityAsync(decimal quantity)
+    {
+        Quantity = quantity;
         await QuantityChanged.InvokeAsync(Quantity);
         await QuantityChangedAfter.InvokeAsync();
     }

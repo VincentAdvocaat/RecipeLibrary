@@ -108,6 +108,8 @@
   <data name="RecipeCreate.Ingredient.Preparation.Label" xml:space="preserve"><value>Bereiding</value></data>
   <data name="RecipeCreate.Ingredient.Preparation.Placeholder" xml:space="preserve"><value>bijv. fijn gesneden, in blokjes</value></data>
   <data name="RecipeCreate.Ingredient.Quantity.Label" xml:space="preserve"><value>Hoeveelheid</value></data>
+  <data name="RecipeCreate.Ingredient.Quantity.Whole.AriaLabel" xml:space="preserve"><value>Hele hoeveelheid</value></data>
+  <data name="RecipeCreate.Ingredient.Quantity.Fraction.AriaLabel" xml:space="preserve"><value>Fractionele hoeveelheid</value></data>
   <data name="RecipeCreate.Ingredient.Quantity.Invalid" xml:space="preserve"><value>Hoeveelheid moet groter dan 0 zijn.</value></data>
   <data name="RecipeCreate.Ingredient.Unit.Label" xml:space="preserve"><value>Eenheid</value></data>
   <data name="RecipeCreate.Ingredient.Unit.Required" xml:space="preserve"><value>Eenheid is verplicht.</value></data>

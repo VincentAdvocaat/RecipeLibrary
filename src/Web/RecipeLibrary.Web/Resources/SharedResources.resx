@@ -108,6 +108,8 @@
   <data name="RecipeCreate.Ingredient.Preparation.Label" xml:space="preserve"><value>Preparation</value></data>
   <data name="RecipeCreate.Ingredient.Preparation.Placeholder" xml:space="preserve"><value>e.g. finely chopped, in cubes</value></data>
   <data name="RecipeCreate.Ingredient.Quantity.Label" xml:space="preserve"><value>Quantity</value></data>
+  <data name="RecipeCreate.Ingredient.Quantity.Whole.AriaLabel" xml:space="preserve"><value>Whole number quantity</value></data>
+  <data name="RecipeCreate.Ingredient.Quantity.Fraction.AriaLabel" xml:space="preserve"><value>Fractional quantity</value></data>
   <data name="RecipeCreate.Ingredient.Quantity.Invalid" xml:space="preserve"><value>Quantity must be greater than 0.</value></data>
   <data name="RecipeCreate.Ingredient.Unit.Label" xml:space="preserve"><value>Unit</value></data>
   <data name="RecipeCreate.Ingredient.Unit.Required" xml:space="preserve"><value>Unit is required.</value></data>

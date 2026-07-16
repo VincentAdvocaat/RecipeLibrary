@@ -4,21 +4,47 @@ using RecipeLibrary.Domain.ValueObjects;
 namespace RecipeLibrary.Application.Ingredients;
 
 /// <summary>
-/// Normalizes and formats ingredient quantities as whole numbers (invariant, no decimal separator).
+/// Normalizes and formats ingredient quantities (whole numbers, or culinary fractions for tsp/tbsp).
 /// </summary>
 public static class IngredientQuantityFormatter
 {
-    public static decimal Normalize(decimal quantity, Unit unit) =>
-        decimal.Round(quantity, 0, MidpointRounding.AwayFromZero);
+    public static decimal Normalize(decimal quantity, Unit unit)
+    {
+        if (UnitRules.AllowsDecimals(unit))
+        {
+            return CulinaryQuantityFractions.SnapToNearest(quantity);
+        }
 
-    public static string Format(decimal quantity, Unit unit) =>
-        ((long)Normalize(quantity, unit)).ToString(CultureInfo.InvariantCulture);
+        return decimal.Round(quantity, 0, MidpointRounding.AwayFromZero);
+    }
+
+    public static string Format(decimal quantity, Unit unit)
+    {
+        var normalized = Normalize(quantity, unit);
+        if (UnitRules.AllowsDecimals(unit))
+        {
+            return CulinaryQuantityFractions.FormatMixed(normalized);
+        }
+
+        return ((long)normalized).ToString(CultureInfo.InvariantCulture);
+    }
 
     public static void ValidateQuantity(decimal quantity, Unit unit)
     {
         if (quantity <= 0)
         {
             throw new ArgumentException("Ingredient quantity must be greater than 0.");
+        }
+
+        if (UnitRules.AllowsDecimals(unit))
+        {
+            if (!CulinaryQuantityFractions.TrySnap(quantity, out var snapped) || snapped <= 0)
+            {
+                throw new ArgumentException(
+                    $"Quantity must be a culinary fraction (¼, ⅓, ½, ⅔, ¾) for unit '{unit}'.");
+            }
+
+            return;
         }
 
         var normalized = Normalize(quantity, unit);

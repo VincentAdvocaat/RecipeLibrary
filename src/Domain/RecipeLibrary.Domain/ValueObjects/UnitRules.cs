@@ -10,9 +10,10 @@ public static class UnitRules
             .Where(n => n != nameof(Unit.Unknown))
             .ToArray();
 
-    public static bool AllowsDecimals(Unit unit) => false;
+    public static bool AllowsDecimals(Unit unit) =>
+        unit is Unit.Teaspoon or Unit.Tablespoon;
 
-    public static decimal InputStep(Unit unit) => 1m;
+    public static decimal InputStep(Unit unit) => AllowsDecimals(unit) ? 0.25m : 1m;
 
     public static bool TryParse(string? value, out Unit unit)
     {
