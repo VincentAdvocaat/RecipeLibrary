@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Azure;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -9,6 +10,7 @@ namespace RecipeLibrary.Infrastructure.FileStorage;
 
 public sealed class AzureBlobRecipeImportStagingStore : IRecipeImportStagingStore
 {
+    private const int MaxOptimisticRetries = 5;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -54,20 +56,14 @@ public sealed class AzureBlobRecipeImportStagingStore : IRecipeImportStagingStor
             Images = [],
         };
 
-        await WriteSessionAsync(session, ct);
+        await WriteSessionAsync(session, ifMatch: null, ct);
         return session;
     }
 
     public async Task<RecipeImportStagingSession?> GetSessionAsync(string sessionId, CancellationToken ct = default)
     {
-        var blob = _container.GetBlobClient(SessionMarkerKey(sessionId));
-        if (!await blob.ExistsAsync(ct))
-        {
-            return null;
-        }
-
-        await using var stream = await blob.OpenReadAsync(cancellationToken: ct);
-        return await JsonSerializer.DeserializeAsync<RecipeImportStagingSession>(stream, JsonOptions, ct);
+        var loaded = await TryLoadSessionAsync(sessionId, ct);
+        return loaded?.Session;
     }
 
     public async Task<RecipeImportStagingImage> AddImageAsync(
@@ -79,44 +75,85 @@ public sealed class AzureBlobRecipeImportStagingStore : IRecipeImportStagingStor
         int maxImages,
         CancellationToken ct = default)
     {
-        var session = await RequireActiveSessionAsync(sessionId, ownerKey, ct);
-        if (session.Images.Count >= maxImages)
+        // Buffer once so optimistic retries can re-upload after a conflicting session write.
+        await using var buffered = new MemoryStream();
+        await content.CopyToAsync(buffered, ct);
+        var payload = buffered.ToArray();
+
+        for (var attempt = 0; attempt < MaxOptimisticRetries; attempt++)
         {
-            throw new ArgumentException($"A maximum of {maxImages} images is allowed per import session.");
+            var loaded = await TryLoadSessionAsync(sessionId, ct)
+                ?? throw new InvalidOperationException("Import session was not found or has expired.");
+            EnsureActiveOwner(loaded.Session, ownerKey);
+
+            if (loaded.Session.Images.Count >= maxImages)
+            {
+                throw new ArgumentException($"A maximum of {maxImages} images is allowed per import session.");
+            }
+
+            var ext = NormalizeExtension(fileName, contentType);
+            var imageId = Guid.NewGuid().ToString("N");
+            var order = loaded.Session.Images.Count == 0 ? 1 : loaded.Session.Images.Max(x => x.Order) + 1;
+            var blobName = ImageBlobKey(sessionId, order, imageId, ext);
+            var blob = _container.GetBlobClient(blobName);
+            await using (var uploadStream = new MemoryStream(payload, writable: false))
+            {
+                await blob.UploadAsync(
+                    uploadStream,
+                    new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = contentType } },
+                    ct);
+            }
+
+            var image = new RecipeImportStagingImage
+            {
+                ImageId = imageId,
+                Order = order,
+                FileName = string.IsNullOrWhiteSpace(fileName) ? Path.GetFileName(blobName) : fileName.Trim(),
+                ContentType = contentType,
+                CreatedUtc = DateTimeOffset.UtcNow,
+            };
+            loaded.Session.Images.Add(image);
+
+            try
+            {
+                await WriteSessionAsync(loaded.Session, loaded.ETag, ct);
+                return image;
+            }
+            catch (RequestFailedException ex) when (ex.Status == 412)
+            {
+                await _container.DeleteBlobIfExistsAsync(blobName, cancellationToken: ct);
+            }
         }
 
-        var ext = NormalizeExtension(fileName, contentType);
-        var imageId = Guid.NewGuid().ToString("N");
-        var order = session.Images.Count == 0 ? 1 : session.Images.Max(x => x.Order) + 1;
-        var blobName = ImageBlobKey(sessionId, order, imageId, ext);
-        var blob = _container.GetBlobClient(blobName);
-        await blob.UploadAsync(
-            content,
-            new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = contentType } },
-            ct);
-
-        var image = new RecipeImportStagingImage
-        {
-            ImageId = imageId,
-            Order = order,
-            FileName = string.IsNullOrWhiteSpace(fileName) ? Path.GetFileName(blobName) : fileName.Trim(),
-            ContentType = contentType,
-            CreatedUtc = DateTimeOffset.UtcNow,
-        };
-        session.Images.Add(image);
-        await WriteSessionAsync(session, ct);
-        return image;
+        throw new InvalidOperationException("Could not update the import session due to concurrent changes. Please retry.");
     }
 
     public async Task RemoveImageAsync(string sessionId, string ownerKey, string imageId, CancellationToken ct = default)
     {
-        var session = await RequireActiveSessionAsync(sessionId, ownerKey, ct);
-        var image = session.Images.FirstOrDefault(x => string.Equals(x.ImageId, imageId, StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException("Staged image was not found.");
+        for (var attempt = 0; attempt < MaxOptimisticRetries; attempt++)
+        {
+            var loaded = await TryLoadSessionAsync(sessionId, ct)
+                ?? throw new InvalidOperationException("Import session was not found or has expired.");
+            EnsureActiveOwner(loaded.Session, ownerKey);
 
-        session.Images.Remove(image);
-        await DeleteImageBlobsAsync(sessionId, image.ImageId, ct);
-        await WriteSessionAsync(session, ct);
+            var image = loaded.Session.Images.FirstOrDefault(x => string.Equals(x.ImageId, imageId, StringComparison.OrdinalIgnoreCase))
+                ?? throw new InvalidOperationException("Staged image was not found.");
+
+            loaded.Session.Images.Remove(image);
+
+            try
+            {
+                await WriteSessionAsync(loaded.Session, loaded.ETag, ct);
+                await DeleteImageBlobsAsync(sessionId, image.ImageId, ct);
+                return;
+            }
+            catch (RequestFailedException ex) when (ex.Status == 412)
+            {
+                // Retry with the latest session marker.
+            }
+        }
+
+        throw new InvalidOperationException("Could not update the import session due to concurrent changes. Please retry.");
     }
 
     public async Task<(Stream Stream, string ContentType)?> OpenImageAsync(
@@ -125,8 +162,11 @@ public sealed class AzureBlobRecipeImportStagingStore : IRecipeImportStagingStor
         string imageId,
         CancellationToken ct = default)
     {
-        var session = await RequireActiveSessionAsync(sessionId, ownerKey, ct);
-        var image = session.Images.FirstOrDefault(x => string.Equals(x.ImageId, imageId, StringComparison.OrdinalIgnoreCase));
+        var loaded = await TryLoadSessionAsync(sessionId, ct)
+            ?? throw new InvalidOperationException("Import session was not found or has expired.");
+        EnsureActiveOwner(loaded.Session, ownerKey);
+
+        var image = loaded.Session.Images.FirstOrDefault(x => string.Equals(x.ImageId, imageId, StringComparison.OrdinalIgnoreCase));
         if (image is null)
         {
             return null;
@@ -189,14 +229,30 @@ public sealed class AzureBlobRecipeImportStagingStore : IRecipeImportStagingStor
         return removed;
     }
 
-    private async Task<RecipeImportStagingSession> RequireActiveSessionAsync(
+    private async Task<(RecipeImportStagingSession Session, ETag ETag)?> TryLoadSessionAsync(
         string sessionId,
-        string ownerKey,
         CancellationToken ct)
     {
-        var session = await GetSessionAsync(sessionId, ct)
-            ?? throw new InvalidOperationException("Import session was not found or has expired.");
+        var blob = _container.GetBlobClient(SessionMarkerKey(sessionId));
+        try
+        {
+            var response = await blob.DownloadContentAsync(ct);
+            var session = response.Value.Content.ToObjectFromJson<RecipeImportStagingSession>(JsonOptions);
+            if (session is null)
+            {
+                return null;
+            }
 
+            return (session, response.Value.Details.ETag);
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return null;
+        }
+    }
+
+    private static void EnsureActiveOwner(RecipeImportStagingSession session, string ownerKey)
+    {
         if (!string.IsNullOrEmpty(session.OwnerKey)
             && !string.Equals(session.OwnerKey, ownerKey ?? string.Empty, StringComparison.Ordinal))
         {
@@ -207,17 +263,22 @@ public sealed class AzureBlobRecipeImportStagingStore : IRecipeImportStagingStor
         {
             throw new InvalidOperationException("Import session has expired.");
         }
-
-        return session;
     }
 
-    private async Task WriteSessionAsync(RecipeImportStagingSession session, CancellationToken ct)
+    private async Task WriteSessionAsync(RecipeImportStagingSession session, ETag? ifMatch, CancellationToken ct)
     {
         var blob = _container.GetBlobClient(SessionMarkerKey(session.SessionId));
         await using var stream = new MemoryStream();
         await JsonSerializer.SerializeAsync(stream, session, JsonOptions, ct);
         stream.Position = 0;
-        await blob.UploadAsync(stream, overwrite: true, cancellationToken: ct);
+
+        var options = new BlobUploadOptions();
+        if (ifMatch is { } etag)
+        {
+            options.Conditions = new BlobRequestConditions { IfMatch = etag };
+        }
+
+        await blob.UploadAsync(stream, options, ct);
     }
 
     private async Task DeleteImageBlobsAsync(string sessionId, string imageId, CancellationToken ct)

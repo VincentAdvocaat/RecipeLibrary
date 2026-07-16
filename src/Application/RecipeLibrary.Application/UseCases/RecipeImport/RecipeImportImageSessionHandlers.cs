@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
@@ -128,7 +129,8 @@ public sealed class DeleteRecipeImportImageSessionCommandHandler(IRecipeImportSt
 public sealed class ProcessRecipeImportImageSessionQueryHandler(
     IRecipeImportStagingStore stagingStore,
     IRecipeImageTextExtractor imageTextExtractor,
-    RecipeImportService recipeImportService)
+    RecipeImportService recipeImportService,
+    ILogger<ProcessRecipeImportImageSessionQueryHandler> logger)
     : IQueryHandler<ProcessRecipeImportImageSessionQuery, ImportRecipeResult>
 {
     public async Task<ImportRecipeResult> HandleAsync(
@@ -192,9 +194,12 @@ public sealed class ProcessRecipeImportImageSessionQueryHandler(
             {
                 await stagingStore.DeleteSessionAsync(sessionId, CancellationToken.None);
             }
-            catch
+            catch (Exception ex)
             {
-                // BackgroundService / lifecycle catch leftovers.
+                logger.LogWarning(
+                    ex,
+                    "Failed to delete recipe import staging session {SessionId} after processing; leftovers rely on TTL cleanup.",
+                    sessionId);
             }
         }
     }

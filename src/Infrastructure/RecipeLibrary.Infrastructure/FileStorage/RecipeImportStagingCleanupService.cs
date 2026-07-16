@@ -14,11 +14,11 @@ public sealed class RecipeImportStagingCleanupService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Run once at startup so leftovers are cleared after a restart, then every Interval.
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await Task.Delay(Interval, stoppingToken);
                 using var scope = scopeFactory.CreateScope();
                 var store = scope.ServiceProvider.GetRequiredService<IRecipeImportStagingStore>();
                 var removed = await store.DeleteExpiredSessionsAsync(stoppingToken);
@@ -34,6 +34,15 @@ public sealed class RecipeImportStagingCleanupService(
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Failed to clean up expired recipe import staging sessions.");
+            }
+
+            try
+            {
+                await Task.Delay(Interval, stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
             }
         }
     }

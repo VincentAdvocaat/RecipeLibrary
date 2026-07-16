@@ -488,9 +488,27 @@
     private async Task OnPhotosSelected(InputFileChangeEventArgs e)
     {
         _importError = null;
-        var files = e.GetMultipleFiles(ImportOptions.Value.Ocr.MaxImagesPerSession);
-        if (files.Count == 0)
+        var maxImages = ImportOptions.Value.Ocr.MaxImagesPerSession;
+        var maxBytes = ImportOptions.Value.Ocr.MaxImageBytes;
+        if (e.FileCount == 0)
         {
+            return;
+        }
+
+        if (e.FileCount > maxImages)
+        {
+            _importError = L["RecipeCreate.PhotoImport.Error.MaxImages", maxImages];
+            return;
+        }
+
+        IReadOnlyList<IBrowserFile> files;
+        try
+        {
+            files = e.GetMultipleFiles(maxImages);
+        }
+        catch (InvalidOperationException)
+        {
+            _importError = L["RecipeCreate.PhotoImport.Error.MaxImages", maxImages];
             return;
         }
 
@@ -500,13 +518,19 @@
             await EnsurePhotoSessionAsync();
             foreach (var file in files)
             {
-                if (_stagedPhotos.Count >= ImportOptions.Value.Ocr.MaxImagesPerSession)
+                if (_stagedPhotos.Count >= maxImages)
                 {
-                    _importError = L["RecipeCreate.PhotoImport.Error.MaxImages", ImportOptions.Value.Ocr.MaxImagesPerSession];
+                    _importError = L["RecipeCreate.PhotoImport.Error.MaxImages", maxImages];
                     break;
                 }
 
-                await using var fileStream = file.OpenReadStream(maxAllowedSize: ImportOptions.Value.Ocr.MaxImageBytes);
+                if (file.Size > maxBytes)
+                {
+                    _importError = L["RecipeCreate.PhotoImport.Error.TooLarge"];
+                    break;
+                }
+
+                await using var fileStream = file.OpenReadStream(maxAllowedSize: maxBytes);
                 using var content = new MultipartFormDataContent();
                 var streamContent = new StreamContent(fileStream);
                 streamContent.Headers.ContentType = new MediaTypeHeaderValue(
@@ -534,6 +558,10 @@
                     Order = added.Order,
                 });
             }
+        }
+        catch (IOException)
+        {
+            _importError = L["RecipeCreate.PhotoImport.Error.TooLarge"];
         }
         catch (Exception ex)
         {
@@ -603,6 +631,11 @@
             var response = await Http.PostAsJsonAsync(
                 $"/recipes/import-image/sessions/{_photoSessionId}/process",
                 new ProcessImportImageSessionRequest { Language = _ocrLanguage });
+
+            // Server always deletes the staging session in a finally block.
+            _photoSessionId = null;
+            _stagedPhotos.Clear();
+
             if (!response.IsSuccessStatusCode)
             {
                 _importError = await response.Content.ReadAsStringAsync();
@@ -616,8 +649,6 @@
                 return;
             }
 
-            _photoSessionId = null;
-            _stagedPhotos.Clear();
             CompleteImport(result);
         }
         catch (Exception ex)

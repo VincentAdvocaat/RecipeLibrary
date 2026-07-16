@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using RecipeLibrary.Application.Abstractions;
@@ -12,6 +13,7 @@ public sealed class LocalRecipeImportStagingStore(IOptions<RecipeFileStorageOpti
     {
         ".jpg", ".jpeg", ".png", ".webp",
     };
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> SessionLocks = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly string _root = ResolveRoot(options.Value);
 
@@ -48,55 +50,58 @@ public sealed class LocalRecipeImportStagingStore(IOptions<RecipeFileStorageOpti
         return await JsonSerializer.DeserializeAsync<RecipeImportStagingSession>(stream, JsonOptions, ct);
     }
 
-    public async Task<RecipeImportStagingImage> AddImageAsync(
+    public Task<RecipeImportStagingImage> AddImageAsync(
         string sessionId,
         string ownerKey,
         Stream content,
         string fileName,
         string contentType,
         int maxImages,
-        CancellationToken ct = default)
-    {
-        var session = await RequireActiveSessionAsync(sessionId, ownerKey, ct);
-        if (session.Images.Count >= maxImages)
+        CancellationToken ct = default) =>
+        WithSessionLockAsync(sessionId, async () =>
         {
-            throw new ArgumentException($"A maximum of {maxImages} images is allowed per import session.");
-        }
+            var session = await RequireActiveSessionAsync(sessionId, ownerKey, ct);
+            if (session.Images.Count >= maxImages)
+            {
+                throw new ArgumentException($"A maximum of {maxImages} images is allowed per import session.");
+            }
 
-        var ext = NormalizeExtension(fileName, contentType);
-        var imageId = Guid.NewGuid().ToString("N");
-        var order = session.Images.Count == 0 ? 1 : session.Images.Max(x => x.Order) + 1;
-        var storageName = $"{order:D2}_{imageId}{ext}";
-        var imagePath = Path.Combine(GetSessionDir(sessionId), storageName);
+            var ext = NormalizeExtension(fileName, contentType);
+            var imageId = Guid.NewGuid().ToString("N");
+            var order = session.Images.Count == 0 ? 1 : session.Images.Max(x => x.Order) + 1;
+            var storageName = $"{order:D2}_{imageId}{ext}";
+            var imagePath = Path.Combine(GetSessionDir(sessionId), storageName);
 
-        await using (var file = File.Create(imagePath))
+            await using (var file = File.Create(imagePath))
+            {
+                await content.CopyToAsync(file, ct);
+            }
+
+            var image = new RecipeImportStagingImage
+            {
+                ImageId = imageId,
+                Order = order,
+                FileName = string.IsNullOrWhiteSpace(fileName) ? storageName : fileName.Trim(),
+                ContentType = contentType,
+                CreatedUtc = DateTimeOffset.UtcNow,
+            };
+            session.Images.Add(image);
+            await WriteSessionAsync(session, ct);
+            return image;
+        }, ct);
+
+    public Task RemoveImageAsync(string sessionId, string ownerKey, string imageId, CancellationToken ct = default) =>
+        WithSessionLockAsync(sessionId, async () =>
         {
-            await content.CopyToAsync(file, ct);
-        }
+            var session = await RequireActiveSessionAsync(sessionId, ownerKey, ct);
+            var image = session.Images.FirstOrDefault(x => string.Equals(x.ImageId, imageId, StringComparison.OrdinalIgnoreCase))
+                ?? throw new InvalidOperationException("Staged image was not found.");
 
-        var image = new RecipeImportStagingImage
-        {
-            ImageId = imageId,
-            Order = order,
-            FileName = string.IsNullOrWhiteSpace(fileName) ? storageName : fileName.Trim(),
-            ContentType = contentType,
-            CreatedUtc = DateTimeOffset.UtcNow,
-        };
-        session.Images.Add(image);
-        await WriteSessionAsync(session, ct);
-        return image;
-    }
-
-    public async Task RemoveImageAsync(string sessionId, string ownerKey, string imageId, CancellationToken ct = default)
-    {
-        var session = await RequireActiveSessionAsync(sessionId, ownerKey, ct);
-        var image = session.Images.FirstOrDefault(x => string.Equals(x.ImageId, imageId, StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException("Staged image was not found.");
-
-        session.Images.Remove(image);
-        DeleteImageFile(sessionId, image);
-        await WriteSessionAsync(session, ct);
-    }
+            session.Images.Remove(image);
+            DeleteImageFile(sessionId, image);
+            await WriteSessionAsync(session, ct);
+            return 0;
+        }, ct);
 
     public async Task<(Stream Stream, string ContentType)?> OpenImageAsync(
         string sessionId,
@@ -121,17 +126,18 @@ public sealed class LocalRecipeImportStagingStore(IOptions<RecipeFileStorageOpti
         return (stream, image.ContentType);
     }
 
-    public Task DeleteSessionAsync(string sessionId, CancellationToken ct = default)
-    {
-        ct.ThrowIfCancellationRequested();
-        var dir = GetSessionDir(sessionId);
-        if (Directory.Exists(dir))
+    public Task DeleteSessionAsync(string sessionId, CancellationToken ct = default) =>
+        WithSessionLockAsync(sessionId, () =>
         {
-            Directory.Delete(dir, recursive: true);
-        }
+            ct.ThrowIfCancellationRequested();
+            var dir = GetSessionDir(sessionId);
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
 
-        return Task.CompletedTask;
-    }
+            return Task.FromResult(0);
+        }, ct);
 
     public async Task<int> DeleteExpiredSessionsAsync(CancellationToken ct = default)
     {
@@ -152,6 +158,21 @@ public sealed class LocalRecipeImportStagingStore(IOptions<RecipeFileStorageOpti
         }
 
         return removed;
+    }
+
+    private async Task<T> WithSessionLockAsync<T>(string sessionId, Func<Task<T>> action, CancellationToken ct)
+    {
+        var key = SanitizeSessionId(sessionId);
+        var gate = SessionLocks.GetOrAdd(key, static _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        try
+        {
+            return await action();
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     private async Task<RecipeImportStagingSession> RequireActiveSessionAsync(

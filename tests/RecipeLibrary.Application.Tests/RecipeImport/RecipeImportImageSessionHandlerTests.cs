@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
@@ -22,7 +23,8 @@ public sealed class RecipeImportImageSessionHandlerTests
         var sut = new ProcessRecipeImportImageSessionQueryHandler(
             store,
             extractor,
-            CreateService());
+            CreateService(),
+            NullLogger<ProcessRecipeImportImageSessionQueryHandler>.Instance);
 
         var result = await sut.HandleAsync(new ProcessRecipeImportImageSessionQuery
         {
@@ -46,7 +48,8 @@ public sealed class RecipeImportImageSessionHandlerTests
         var sut = new ProcessRecipeImportImageSessionQueryHandler(
             store,
             new SequencingExtractor([""]),
-            CreateService());
+            CreateService(),
+            NullLogger<ProcessRecipeImportImageSessionQueryHandler>.Instance);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             sut.HandleAsync(new ProcessRecipeImportImageSessionQuery
@@ -98,7 +101,8 @@ public sealed class RecipeImportImageSessionHandlerTests
         var sut = new ProcessRecipeImportImageSessionQueryHandler(
             store,
             new SequencingExtractor(["x"]),
-            CreateService());
+            CreateService(),
+            NullLogger<ProcessRecipeImportImageSessionQueryHandler>.Instance);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             sut.HandleAsync(new ProcessRecipeImportImageSessionQuery
