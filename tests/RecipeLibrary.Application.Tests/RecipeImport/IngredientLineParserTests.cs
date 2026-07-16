@@ -47,6 +47,67 @@ public sealed class IngredientLineParserTests
     {
         var result = _sut.Parse("1/2 tl zout");
 
+        Assert.Equal(0.5m, result.Quantity);
+        Assert.Equal(nameof(Unit.Teaspoon), result.Unit);
+        Assert.Equal("zout", result.Name);
+    }
+
+    [Fact]
+    public void Parse_ParsesMixedNumberWithSpace()
+    {
+        var result = _sut.Parse("1 1/2 tl suiker");
+
+        Assert.Equal(1.5m, result.Quantity);
+        Assert.Equal(nameof(Unit.Teaspoon), result.Unit);
+        Assert.Equal("suiker", result.Name);
+    }
+
+    [Fact]
+    public void Parse_ParsesUnicodeMixedTeaspoon()
+    {
+        var result = _sut.Parse("1½ tl zout");
+
+        Assert.Equal(1.5m, result.Quantity);
+        Assert.Equal(nameof(Unit.Teaspoon), result.Unit);
+        Assert.Equal("zout", result.Name);
+    }
+
+    [Fact]
+    public void Parse_ParsesPlusMixedNumber()
+    {
+        var result = _sut.Parse("1+1/2 el boter");
+
+        Assert.Equal(1.5m, result.Quantity);
+        Assert.Equal(nameof(Unit.Tablespoon), result.Unit);
+        Assert.Equal("boter", result.Name);
+    }
+
+    [Fact]
+    public void Parse_ParsesOneThirdTeaspoon()
+    {
+        var result = _sut.Parse("1/3 tl zout");
+
+        Assert.Equal(CulinaryQuantityFractions.Third, result.Quantity);
+        Assert.Equal(nameof(Unit.Teaspoon), result.Unit);
+        Assert.Equal("zout", result.Name);
+    }
+
+    [Fact]
+    public void Parse_ParsesUnicodeOneThird()
+    {
+        var result = _sut.Parse("⅓ tl peper");
+
+        Assert.Equal(CulinaryQuantityFractions.Third, result.Quantity);
+        Assert.Equal(nameof(Unit.Teaspoon), result.Unit);
+        Assert.Equal("peper", result.Name);
+    }
+
+    [Fact]
+    public void Parse_DoesNotSilentlySnapNonCulinaryFraction_ForTeaspoon()
+    {
+        var result = _sut.Parse("1/7 tl zout");
+
+        Assert.Equal(1m / 7m, result.Quantity);
         Assert.Equal(nameof(Unit.Teaspoon), result.Unit);
         Assert.Equal("zout", result.Name);
     }

@@ -1664,6 +1664,10 @@ h1:focus {
     grid-template-columns: minmax(0,1fr) minmax(0,1fr) 6rem 8rem auto;
   }
 
+  .sm\:grid-cols-\[minmax\(0\2c 1fr\)_minmax\(0\2c 1fr\)_minmax\(9rem\2c 11rem\)_8rem_auto\] {
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(9rem,11rem) 8rem auto;
+  }
+
   .sm\:flex-row {
     flex-direction: row;
   }

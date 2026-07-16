@@ -8,7 +8,11 @@ namespace RecipeLibrary.Application.Ingredients;
 public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
 {
     private static readonly Regex QuantityPattern = new(
-        @"^(?<value>\d+(?:[.,]\d+)?|\d+\s*/\s*\d+|\d+\s*-\s*\d+)$",
+        @"^(?<value>\d+(?:[.,]\d+)?|\d+\s*/\s*\d+|\d+\s*\+\s*\d+\s*/\s*\d+|\d+\s*-\s*\d+)$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex MixedPlusPattern = new(
+        @"(\d+)\s*\+\s*(\d+)\s*/\s*(\d+)",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public ParsedIngredientLine Parse(string? rawLine)
@@ -51,6 +55,13 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
 
         index++;
 
+        if (index < tokens.Count
+            && TryParseProperFractionToken(tokens[index], out var extraFraction))
+        {
+            quantity += extraFraction;
+            index++;
+        }
+
         Unit unit = Unit.Piece;
         decimal unitMultiplier = 1m;
         var hasExplicitUnit = false;
@@ -66,7 +77,19 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         var remainder = string.Join(' ', tokens.Skip(index)).Trim();
         var (name, explicitPrep) = SplitNameAndPreparation(remainder);
         var resolved = lineResolver.Resolve(name, explicitPrep);
-        var finalQuantity = IngredientQuantityFormatter.Normalize(quantity * unitMultiplier, unit);
+        var scaled = quantity * unitMultiplier;
+        // Culinary units: snap only within tolerance so e.g. 1/7 is not silently changed to ¼.
+        decimal finalQuantity;
+        if (UnitRules.AllowsCulinaryFractions(unit))
+        {
+            finalQuantity = CulinaryQuantityFractions.TrySnap(scaled, out var snapped)
+                ? snapped
+                : scaled;
+        }
+        else
+        {
+            finalQuantity = IngredientQuantityFormatter.Normalize(scaled, unit);
+        }
 
         var confidence = hasExplicitUnit && resolved.DisplayName.Length > 0
             ? 0.95m
@@ -152,26 +175,55 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         var value = raw.Trim();
         value = value.TrimStart('-', '•', '*', '▢', ' ');
         value = ReplaceUnicodeFractions(value);
+        value = NormalizeMixedPlus(value);
         return value.Trim();
     }
 
     private static string ReplaceUnicodeFractions(string value)
     {
-        value = value.Replace("½", " 0.5 ", StringComparison.Ordinal);
-        value = value.Replace("¼", " 0.25 ", StringComparison.Ordinal);
-        value = value.Replace("¾", " 0.75 ", StringComparison.Ordinal);
-        value = value.Replace("⅓", " 0.333 ", StringComparison.Ordinal);
-        value = value.Replace("⅔", " 0.667 ", StringComparison.Ordinal);
+        value = ReplaceMixedUnicode(value, '¼', CulinaryQuantityFractions.Quarter);
+        value = ReplaceMixedUnicode(value, '½', CulinaryQuantityFractions.Half);
+        value = ReplaceMixedUnicode(value, '¾', CulinaryQuantityFractions.ThreeQuarters);
+        value = ReplaceMixedUnicode(value, '⅓', CulinaryQuantityFractions.Third);
+        value = ReplaceMixedUnicode(value, '⅔', CulinaryQuantityFractions.TwoThirds);
 
-        var mixedMatch = Regex.Match(value, @"(\d+)\s*½");
-        if (mixedMatch.Success)
-        {
-            var whole = decimal.Parse(mixedMatch.Groups[1].Value, CultureInfo.InvariantCulture);
-            value = value.Replace(mixedMatch.Value, (whole + 0.5m).ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
-        }
+        value = value.Replace("¼", " 1/4 ", StringComparison.Ordinal);
+        value = value.Replace("½", " 1/2 ", StringComparison.Ordinal);
+        value = value.Replace("¾", " 3/4 ", StringComparison.Ordinal);
+        value = value.Replace("⅓", " 1/3 ", StringComparison.Ordinal);
+        value = value.Replace("⅔", " 2/3 ", StringComparison.Ordinal);
 
         return Regex.Replace(value, @"\s+", " ").Trim();
     }
+
+    private static string ReplaceMixedUnicode(string value, char vulgar, decimal fraction)
+    {
+        return Regex.Replace(
+            value,
+            $@"(\d+)\s*{Regex.Escape(vulgar.ToString())}",
+            match =>
+            {
+                var whole = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+                return " " + (whole + fraction).ToString(CultureInfo.InvariantCulture) + " ";
+            },
+            RegexOptions.CultureInvariant);
+    }
+
+    private static string NormalizeMixedPlus(string value) =>
+        MixedPlusPattern.Replace(
+            value,
+            match =>
+            {
+                var whole = decimal.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+                var numerator = decimal.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+                var denominator = decimal.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
+                if (denominator == 0)
+                {
+                    return match.Value;
+                }
+
+                return " " + (whole + (numerator / denominator)).ToString(CultureInfo.InvariantCulture) + " ";
+            });
 
     private static List<string> Tokenize(string normalized)
     {
@@ -197,19 +249,23 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
 
         var value = match.Groups["value"].Value.Replace(" ", string.Empty, StringComparison.Ordinal);
 
-        if (value.Contains('/', StringComparison.Ordinal))
+        if (value.Contains('+', StringComparison.Ordinal))
         {
-            var fractionParts = value.Split('/');
-            if (fractionParts.Length == 2
-                && decimal.TryParse(fractionParts[0], NumberStyles.Number, CultureInfo.InvariantCulture, out var numerator)
-                && decimal.TryParse(fractionParts[1], NumberStyles.Number, CultureInfo.InvariantCulture, out var denominator)
-                && denominator != 0)
+            var plusParts = value.Split('+', 2);
+            if (plusParts.Length == 2
+                && decimal.TryParse(plusParts[0], NumberStyles.Number, CultureInfo.InvariantCulture, out var whole)
+                && TryParseFractionLiteral(plusParts[1], out var fractionPart))
             {
-                quantity = numerator / denominator;
+                quantity = whole + fractionPart;
                 return true;
             }
 
             return false;
+        }
+
+        if (value.Contains('/', StringComparison.Ordinal))
+        {
+            return TryParseFractionLiteral(value, out quantity);
         }
 
         if (value.Contains('-', StringComparison.Ordinal))
@@ -229,6 +285,39 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
 
         var normalized = value.Replace(',', '.');
         return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out quantity);
+    }
+
+    private static bool TryParseProperFractionToken(string token, out decimal fraction)
+    {
+        fraction = 0m;
+        if (!TryParseFractionLiteral(token, out var value))
+        {
+            return false;
+        }
+
+        if (value <= 0m || value >= 1m)
+        {
+            return false;
+        }
+
+        fraction = value;
+        return true;
+    }
+
+    private static bool TryParseFractionLiteral(string value, out decimal quantity)
+    {
+        quantity = 0m;
+        var fractionParts = value.Split('/');
+        if (fractionParts.Length == 2
+            && decimal.TryParse(fractionParts[0], NumberStyles.Number, CultureInfo.InvariantCulture, out var numerator)
+            && decimal.TryParse(fractionParts[1], NumberStyles.Number, CultureInfo.InvariantCulture, out var denominator)
+            && denominator != 0)
+        {
+            quantity = numerator / denominator;
+            return true;
+        }
+
+        return false;
     }
 
     private static (string Name, string? Preparation) SplitNameAndPreparation(string remainder)

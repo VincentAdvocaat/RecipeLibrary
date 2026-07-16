@@ -1,5 +1,6 @@
 using Bunit;
 using RecipeLibrary.Components.Molecules;
+using RecipeLibrary.Domain.ValueObjects;
 using Xunit;
 
 namespace RecipeLibrary.Web.ComponentTests;
@@ -12,6 +13,7 @@ public sealed class IngredientQuantityInputTests : ComponentTestContext
         decimal quantity = 1;
         var cut = RenderComponent<IngredientQuantityInput>(parameters => parameters
             .Add(p => p.Quantity, quantity)
+            .Add(p => p.UnitName, nameof(Unit.Gram))
             .Add(p => p.QuantityChanged, EventCallback.Factory.Create<decimal>(this, v => quantity = v)));
 
         cut.Find("input").Change("3");
@@ -20,15 +22,58 @@ public sealed class IngredientQuantityInputTests : ComponentTestContext
     }
 
     [Fact]
-    public void IgnoresValuesBelowOne()
+    public void IgnoresValuesBelowOne_ForWholeNumberUnits()
     {
         decimal quantity = 5;
         var cut = RenderComponent<IngredientQuantityInput>(parameters => parameters
             .Add(p => p.Quantity, quantity)
+            .Add(p => p.UnitName, nameof(Unit.Gram))
             .Add(p => p.QuantityChanged, EventCallback.Factory.Create<decimal>(this, v => quantity = v)));
 
         cut.Find("input").Change("0");
 
         Assert.Equal(5, quantity);
+    }
+
+    [Fact]
+    public async Task CulinaryUnit_FractionSelect_SetsOneAndAHalf()
+    {
+        decimal quantity = 1;
+        var cut = RenderComponent<IngredientQuantityInput>(parameters => parameters
+            .Add(p => p.Quantity, quantity)
+            .Add(p => p.UnitName, nameof(Unit.Teaspoon))
+            .Add(p => p.QuantityChanged, EventCallback.Factory.Create<decimal>(this, v => quantity = v)));
+
+        Assert.NotEmpty(cut.FindAll("select"));
+
+        cut.Find("select").Change("1/2");
+
+        Assert.Equal(1.5m, quantity);
+    }
+
+    [Fact]
+    public async Task CulinaryUnit_WholeZeroWithHalf_SetsHalf()
+    {
+        decimal quantity = 1;
+        var cut = RenderComponent<IngredientQuantityInput>(parameters => parameters
+            .Add(p => p.Quantity, quantity)
+            .Add(p => p.UnitName, nameof(Unit.Teaspoon))
+            .Add(p => p.QuantityChanged, EventCallback.Factory.Create<decimal>(this, v => quantity = v)));
+
+        cut.Find("select").Change("1/2");
+        cut.Find("input").Change("0");
+
+        Assert.Equal(0.5m, quantity);
+    }
+
+    [Fact]
+    public void GramUnit_DoesNotRenderFractionSelect()
+    {
+        var cut = RenderComponent<IngredientQuantityInput>(parameters => parameters
+            .Add(p => p.Quantity, 2m)
+            .Add(p => p.UnitName, nameof(Unit.Gram)));
+
+        Assert.Empty(cut.FindAll("select"));
+        Assert.Single(cut.FindAll("input"));
     }
 }

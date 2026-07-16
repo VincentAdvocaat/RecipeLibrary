@@ -10,9 +10,17 @@ public static class UnitRules
             .Where(n => n != nameof(Unit.Unknown))
             .ToArray();
 
-    public static bool AllowsDecimals(Unit unit) => false;
+    /// <summary>
+    /// Teaspoon and tablespoon allow discrete culinary fractions (¼, ⅓, ½, ⅔, ¾).
+    /// </summary>
+    public static bool AllowsCulinaryFractions(Unit unit) =>
+        unit is Unit.Teaspoon or Unit.Tablespoon;
 
-    public static decimal InputStep(Unit unit) => 1m;
+    /// <summary>
+    /// Smallest culinary fractional step (¼). Thirds are also allowed via the fraction select.
+    /// </summary>
+    public static decimal InputStep(Unit unit) =>
+        AllowsCulinaryFractions(unit) ? 0.25m : 1m;
 
     public static bool TryParse(string? value, out Unit unit)
     {
