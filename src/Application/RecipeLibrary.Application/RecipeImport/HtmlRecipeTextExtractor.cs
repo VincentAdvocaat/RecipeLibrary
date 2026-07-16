@@ -83,11 +83,28 @@ public sealed class HtmlRecipeTextExtractor
             sb.AppendLine();
         }
 
-        var combinedMinutes = (prep ?? 0) + (cook ?? 0);
-        var totalMinutes = total ?? (combinedMinutes > 0 ? combinedMinutes : null);
-        if (totalMinutes is > 0)
+        // Keep prep/cook distinct so the text parser can populate both fields.
+        var wroteSplitTimes = false;
+        if (prep is > 0)
         {
-            sb.AppendLine($"{totalMinutes.Value} M");
+            sb.AppendLine($"Bereidingstijd: {prep.Value} M");
+            wroteSplitTimes = true;
+        }
+
+        if (cook is > 0)
+        {
+            sb.AppendLine($"Kooktijd: {cook.Value} M");
+            wroteSplitTimes = true;
+        }
+
+        if (!wroteSplitTimes)
+        {
+            var combinedMinutes = (prep ?? 0) + (cook ?? 0);
+            var totalMinutes = total ?? (combinedMinutes > 0 ? combinedMinutes : null);
+            if (totalMinutes is > 0)
+            {
+                sb.AppendLine($"{totalMinutes.Value} M");
+            }
         }
 
         var difficultyLabel = TryFindDifficultyLabel(bodyText);

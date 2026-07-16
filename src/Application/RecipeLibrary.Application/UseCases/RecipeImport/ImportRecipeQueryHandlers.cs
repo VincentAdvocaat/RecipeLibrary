@@ -26,11 +26,7 @@ public sealed class ImportRecipeFromUrlQueryHandler(
             throw new ArgumentException("URL is required.");
         }
 
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
-            || uri.Scheme is not "http" and not "https")
-        {
-            throw new ArgumentException("URL must be an absolute http or https address.");
-        }
+        await RecipeImportUrlSafety.EnsurePublicHttpUrlAsync(url, ct);
 
         var html = await contentFetcher.FetchHtmlAsync(url, ct);
         var text = recipeImportService.HtmlToRecipeText(html);

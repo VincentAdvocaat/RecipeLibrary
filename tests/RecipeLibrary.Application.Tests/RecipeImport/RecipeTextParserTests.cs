@@ -37,7 +37,8 @@ public sealed class RecipeTextParserTests
         Assert.Equal(200, result.Ingredients[0].Quantity);
         Assert.Equal("Gram", result.Ingredients[0].Unit);
         Assert.True(result.Steps.Count >= 2);
-        Assert.Equal(35, result.CookingTimeMinutes);
+        Assert.Equal(15, result.PreparationTimeMinutes);
+        Assert.Equal(20, result.CookingTimeMinutes);
     }
 
     private static string GetFixturePath(string fileName) =>

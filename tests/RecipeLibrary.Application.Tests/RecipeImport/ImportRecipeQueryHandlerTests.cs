@@ -46,6 +46,15 @@ public sealed class ImportRecipeQueryHandlerTests
     }
 
     [Fact]
+    public async Task ImportRecipeFromUrlQueryHandler_Throws_ForPrivateHost()
+    {
+        var sut = new ImportRecipeFromUrlQueryHandler(new FakeContentFetcher(""), CreateService());
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new ImportRecipeFromUrlQuery { Url = "http://127.0.0.1/recipe" }));
+    }
+
+    [Fact]
     public async Task ImportRecipeFromImageQueryHandler_ExtractsTextAndImports()
     {
         var plain = await File.ReadAllTextAsync(GetFixturePath("plain-pasta.txt"));

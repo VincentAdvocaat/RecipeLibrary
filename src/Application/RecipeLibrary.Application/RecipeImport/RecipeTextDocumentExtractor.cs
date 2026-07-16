@@ -110,6 +110,10 @@ public static class RecipeTextDocumentExtractor
         @"^(?:(?<minutes>\d+)\s*M(?:in(?:uten)?)?|(?<hours>\d+)\s*U(?:ur)?(?:\s*(?<minutes2>\d+)\s*M(?:in(?:uten)?)?)?)$",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    private static readonly Regex LabeledTimePattern = new(
+        @"^(?<label>bereidingstijd|prep(?:aration)?(?:\s*time)?|voorbereidingstijd|kooktijd|baktijd|cook(?:ing)?(?:\s*time)?)\s*:?\s*(?<rest>.+)$",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private static readonly Regex ServingsPattern = new(
         @"^(?:voor\s+)?(?<count>\d+)\s*(?:personen|persoon|porties|portie|servings|serving|stuks|stuk)?$",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -147,6 +151,7 @@ public static class RecipeTextDocumentExtractor
 
         string? title = null;
         string? description = null;
+        int? preparationMinutes = null;
         int? cookingMinutes = null;
         int? difficulty = null;
         int? servings = null;
@@ -215,8 +220,24 @@ public static class RecipeTextDocumentExtractor
 
             if (section is Section.Preamble or Section.Intro)
             {
+                if (TryParseLabeledTime(line, out var labeledKind, out var labeledMinutes))
+                {
+                    if (labeledKind == TimeKind.Preparation)
+                    {
+                        preparationMinutes = labeledMinutes;
+                    }
+                    else
+                    {
+                        cookingMinutes = labeledMinutes;
+                    }
+
+                    seenRecipeMeta = true;
+                    continue;
+                }
+
                 if (TryParseTime(line, out var minutes))
                 {
+                    // Unlabeled duration (e.g. "30 M") maps to cooking time for clean paste fixtures.
                     cookingMinutes = minutes;
                     seenRecipeMeta = true;
                     continue;
@@ -323,6 +344,7 @@ public static class RecipeTextDocumentExtractor
         {
             Title = title,
             Description = description,
+            PreparationTimeMinutes = preparationMinutes,
             CookingTimeMinutes = cookingMinutes,
             Difficulty = difficulty,
             Servings = servings,
@@ -401,6 +423,32 @@ public static class RecipeTextDocumentExtractor
         }
 
         return false;
+    }
+
+    private enum TimeKind
+    {
+        Preparation,
+        Cooking,
+    }
+
+    private static bool TryParseLabeledTime(string line, out TimeKind kind, out int minutes)
+    {
+        kind = TimeKind.Cooking;
+        minutes = 0;
+        var labeled = LabeledTimePattern.Match(line.Trim());
+        if (!labeled.Success)
+        {
+            return false;
+        }
+
+        var label = labeled.Groups["label"].Value.ToLowerInvariant();
+        kind = label.StartsWith("bereid", StringComparison.Ordinal)
+            || label.StartsWith("prep", StringComparison.Ordinal)
+            || label.StartsWith("voorbereid", StringComparison.Ordinal)
+            ? TimeKind.Preparation
+            : TimeKind.Cooking;
+
+        return TryParseTime(labeled.Groups["rest"].Value.Trim(), out minutes);
     }
 
     private static bool TryParseTime(string line, out int minutes)

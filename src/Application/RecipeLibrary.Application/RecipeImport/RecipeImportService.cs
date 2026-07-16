@@ -6,6 +6,7 @@ namespace RecipeLibrary.Application.RecipeImport;
 
 /// <summary>
 /// Import entry: normalize any modality to plain text, then parse with <see cref="RecipeTextParser"/>.
+/// Low-confidence AI ingredient-line parsing is intentionally not used in this pipeline.
 /// </summary>
 public sealed class RecipeImportService(
     RecipeTextParser recipeTextParser,
@@ -38,8 +39,35 @@ public sealed class RecipeImportService(
         return isHtml ? htmlRecipeTextExtractor.Extract(raw) : raw;
     }
 
-    private static bool LooksLikeHtml(string content) =>
-        content.Contains('<', StringComparison.Ordinal) && content.Contains('>', StringComparison.Ordinal);
+    /// <summary>
+    /// Auto-detect HTML only when the payload looks like a real document.
+    /// Avoid treating OCR/paste lines that merely contain '&lt;' / '&gt;' as HTML.
+    /// </summary>
+    internal static bool LooksLikeHtml(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return false;
+        }
+
+        var trimmed = content.AsSpan().TrimStart();
+        if (trimmed.StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("<html", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("<head", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("<body", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (content.Contains("application/ld+json", StringComparison.OrdinalIgnoreCase)
+            && content.Contains("<script", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return content.Contains("<html", StringComparison.OrdinalIgnoreCase)
+            && content.Contains("</html>", StringComparison.OrdinalIgnoreCase);
+    }
 
     private async Task<ImportRecipeResult> BuildResultAsync(string plainText, CancellationToken ct)
     {

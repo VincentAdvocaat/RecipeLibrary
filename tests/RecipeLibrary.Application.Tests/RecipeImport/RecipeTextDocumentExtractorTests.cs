@@ -79,4 +79,28 @@ public sealed class RecipeTextDocumentExtractorTests
         Assert.Equal(2, doc.IngredientLines.Count);
         Assert.Single(doc.Steps);
     }
+
+    [Fact]
+    public void Extract_LabeledPrepAndCookTimes_AreSplit()
+    {
+        const string text = """
+            Inleiding:
+            Korte omschrijving.
+
+            Bereidingstijd: 10 M
+            Kooktijd: 20 M
+            Makkelijk
+
+            Ingrediënten: Soep
+            400 g tomaten
+
+            Bereiding: Soep
+            Kook de tomaten gaar.
+            """;
+
+        var doc = RecipeTextDocumentExtractor.Extract(text);
+
+        Assert.Equal(10, doc.PreparationTimeMinutes);
+        Assert.Equal(20, doc.CookingTimeMinutes);
+    }
 }

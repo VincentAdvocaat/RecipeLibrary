@@ -79,7 +79,12 @@ public sealed class BruchettaGoldenImportTests
 
         var actual = ImportRecipeResultMapper.ToCreateRecipeCommand(result);
         // JSON-LD name is the page SEO title; ingredients/steps still match the golden recipe.
-        AssertMatchesExpectedCore(actual, requireExactTitle: false, expectedServings: 8);
+        AssertMatchesExpectedCore(
+            actual,
+            requireExactTitle: false,
+            expectedServings: 8,
+            expectedPreparationTimeMinutes: 30,
+            expectedCookingTimeMinutes: 0);
         Assert.False(string.IsNullOrWhiteSpace(actual.Title));
         Assert.Equal((int)Difficulty.Easy, actual.Difficulty);
     }
@@ -96,7 +101,12 @@ public sealed class BruchettaGoldenImportTests
         var actual = ImportRecipeResultMapper.ToCreateRecipeCommand(result);
 
         Assert.Equal(url, fetcher.LastUrl);
-        AssertMatchesExpectedCore(actual, requireExactTitle: false, expectedServings: 8);
+        AssertMatchesExpectedCore(
+            actual,
+            requireExactTitle: false,
+            expectedServings: 8,
+            expectedPreparationTimeMinutes: 30,
+            expectedCookingTimeMinutes: 0);
         Assert.Equal((int)Difficulty.Easy, actual.Difficulty);
     }
 
@@ -152,7 +162,9 @@ public sealed class BruchettaGoldenImportTests
     private void AssertMatchesExpectedCore(
         CreateRecipeCommand actual,
         bool requireExactTitle,
-        int expectedServings)
+        int expectedServings,
+        int? expectedPreparationTimeMinutes = null,
+        int? expectedCookingTimeMinutes = null)
     {
         var expected = LoadExpected();
 
@@ -162,8 +174,12 @@ public sealed class BruchettaGoldenImportTests
         }
 
         Assert.Equal(expected.Description, actual.Description);
-        Assert.Equal(expected.PreparationTimeMinutes, actual.PreparationTimeMinutes);
-        Assert.Equal(expected.CookingTimeMinutes, actual.CookingTimeMinutes);
+        Assert.Equal(
+            expectedPreparationTimeMinutes ?? expected.PreparationTimeMinutes,
+            actual.PreparationTimeMinutes);
+        Assert.Equal(
+            expectedCookingTimeMinutes ?? expected.CookingTimeMinutes,
+            actual.CookingTimeMinutes);
         Assert.Equal(expected.Difficulty, actual.Difficulty);
         Assert.Equal(expected.Category, actual.Category);
         Assert.Equal(expectedServings, actual.Servings);
