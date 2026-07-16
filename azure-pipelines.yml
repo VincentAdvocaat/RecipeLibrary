@@ -70,7 +70,6 @@ stages:
     displayName: Deploy test SEC
     environment: test-sec
     variables:
-      azureServiceConnection: RecipeLibrary-Azure-SEC
       azureLocation: swedencentral
       resourceGroupName: rg-recipelibrary-test-sec
       environmentName: test-sec
@@ -84,7 +83,7 @@ stages:
           - task: AzureCLI@2
             displayName: Deploy Bicep infrastructure
             inputs:
-              azureSubscription: $(azureServiceConnection)
+              azureSubscription: RecipeLibrary-Azure-SEC
               scriptType: bash
               scriptLocation: inlineScript
               workingDirectory: $(Build.SourcesDirectory)
@@ -126,7 +125,7 @@ stages:
           - task: AzureCLI@2
             displayName: Smoke check (cold start tolerant)
             inputs:
-              azureSubscription: $(azureServiceConnection)
+              azureSubscription: RecipeLibrary-Azure-SEC
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
@@ -165,7 +164,6 @@ stages:
     displayName: Deploy test NEU
     environment: test-neu
     variables:
-      azureServiceConnection: RecipeLibrary-Azure-NEU
       azureLocation: northeurope
       resourceGroupName: rg-recipelibrary-test-neu
       environmentName: test-neu
@@ -179,7 +177,7 @@ stages:
           - task: AzureCLI@2
             displayName: Deploy Bicep infrastructure
             inputs:
-              azureSubscription: $(azureServiceConnection)
+              azureSubscription: RecipeLibrary-Azure-NEU
               scriptType: bash
               scriptLocation: inlineScript
               workingDirectory: $(Build.SourcesDirectory)
@@ -221,7 +219,7 @@ stages:
           - task: AzureCLI@2
             displayName: Smoke check (cold start tolerant)
             inputs:
-              azureSubscription: $(azureServiceConnection)
+              azureSubscription: RecipeLibrary-Azure-NEU
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
