@@ -107,6 +107,7 @@
   <data name="RecipeCreate.Import.Warning.HeuristicIngredients" xml:space="preserve"><value>No clear ingredient section was found; we treated some lines as ingredients. Please verify.</value></data>
   <data name="RecipeCreate.Import.Warning.LowConfidenceAiHint" xml:space="preserve"><value>Some ingredient lines look uncertain. Please check those rows.</value></data>
   <data name="RecipeCreate.Import.Warning.AiFallbackFailed" xml:space="preserve"><value>AI could not improve uncertain ingredient lines. Please check those rows manually.</value></data>
+  <data name="RecipeCreate.Import.Warning.UrlContentTruncated" xml:space="preserve"><value>The page was larger than we could download completely; some content may be missing. Please verify the recipe.</value></data>
   <data name="Nav.Overview" xml:space="preserve"><value>Overview</value></data>
   <data name="RecipeOverview.PageTitle" xml:space="preserve"><value>Recipe Overview</value></data>
   <data name="RecipeCreate.PageTitle" xml:space="preserve"><value>Add New Recipe</value></data>

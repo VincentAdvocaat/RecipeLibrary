@@ -34,6 +34,20 @@ public sealed class ImportRecipeQueryHandlerTests
 
         Assert.Equal("Snelle pasta", result.Title);
         Assert.Equal("https://example.com/recipe", fetcher.LastUrl);
+        Assert.DoesNotContain(ImportWarningCodes.UrlContentTruncated, result.Warnings);
+    }
+
+    [Fact]
+    public async Task ImportRecipeFromUrlQueryHandler_AddsWarning_WhenContentTruncated()
+    {
+        var html = await File.ReadAllTextAsync(GetFixturePath("jsonld-pasta.html"));
+        var fetcher = new FakeContentFetcher(html, wasTruncated: true);
+        var sut = new ImportRecipeFromUrlQueryHandler(fetcher, new NullSocialCaptionFetcher(), CreateService());
+
+        var result = await sut.HandleAsync(new ImportRecipeFromUrlQuery { Url = "https://example.com/recipe" });
+
+        Assert.Equal("Snelle pasta", result.Title);
+        Assert.Contains(ImportWarningCodes.UrlContentTruncated, result.Warnings);
     }
 
     [Fact]
@@ -267,14 +281,14 @@ public sealed class ImportRecipeQueryHandlerTests
         public Task<IReadOnlyList<Domain.Entities.Tag>> SearchTagsAsync(string normalizedQuery, int take, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Domain.Entities.Tag>>([]);
     }
 
-    private sealed class FakeContentFetcher(string html) : IRecipeImportContentFetcher
+    private sealed class FakeContentFetcher(string html, bool wasTruncated = false) : IRecipeImportContentFetcher
     {
         public string? LastUrl { get; private set; }
 
-        public Task<string> FetchHtmlAsync(string url, CancellationToken ct = default)
+        public Task<RecipeImportFetchedContent> FetchHtmlAsync(string url, CancellationToken ct = default)
         {
             LastUrl = url;
-            return Task.FromResult(html);
+            return Task.FromResult(new RecipeImportFetchedContent(html, wasTruncated));
         }
     }
 
