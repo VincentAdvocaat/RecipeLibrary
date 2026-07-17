@@ -34,10 +34,12 @@ public static class RecipeImportServiceRegistration
         if (aiEnabled && !string.IsNullOrWhiteSpace(apiKey))
         {
             services.AddScoped<IIngredientLineAiParser, OpenAiIngredientLineAiParser>();
+            services.AddScoped<IRecipeAiParser, OpenAiRecipeAiParser>();
         }
         else
         {
             services.AddScoped<IIngredientLineAiParser, NullIngredientLineAiParser>();
+            services.AddScoped<IRecipeAiParser, NullRecipeAiParser>();
         }
 
         return services;

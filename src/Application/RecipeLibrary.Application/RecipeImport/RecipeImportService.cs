@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
@@ -5,24 +6,28 @@ using RecipeLibrary.Application.Ingredients;
 namespace RecipeLibrary.Application.RecipeImport;
 
 /// <summary>
-/// Import entry: normalize any modality to plain text, then parse with <see cref="RecipeTextParser"/>.
-/// Low-confidence AI ingredient-line parsing is intentionally not used in this pipeline.
+/// Import entry: normalize any modality to plain text, then parse deterministically with optional AI assist.
 /// </summary>
 public sealed class RecipeImportService(
     RecipeTextParser recipeTextParser,
     HtmlRecipeTextExtractor htmlRecipeTextExtractor,
-    IngredientMatcher ingredientMatcher)
+    IngredientMatcher ingredientMatcher,
+    IRecipeAiParser recipeAiParser,
+    IOptions<RecipeImportOptions> importOptions)
 {
     public async Task<ImportRecipeResult> ImportContentAsync(
         ImportRecipeContentQuery query,
         CancellationToken ct = default)
     {
         var text = ResolvePlainText(query.Content, query.ContentKind);
-        return await BuildResultAsync(text, ct);
+        return await BuildResultAsync(text, query.ParseOptions, ct);
     }
 
-    public async Task<ImportRecipeResult> ImportPlainTextAsync(string plainText, CancellationToken ct = default) =>
-        await BuildResultAsync(plainText ?? string.Empty, ct);
+    public async Task<ImportRecipeResult> ImportPlainTextAsync(
+        string plainText,
+        ImportRecipeParseOptions? parseOptions = null,
+        CancellationToken ct = default) =>
+        await BuildResultAsync(plainText ?? string.Empty, parseOptions, ct);
 
     public string HtmlToRecipeText(string html) => htmlRecipeTextExtractor.Extract(html);
 
@@ -69,9 +74,27 @@ public sealed class RecipeImportService(
             && content.Contains("</html>", StringComparison.OrdinalIgnoreCase);
     }
 
-    private async Task<ImportRecipeResult> BuildResultAsync(string plainText, CancellationToken ct)
+    private async Task<ImportRecipeResult> BuildResultAsync(
+        string plainText,
+        ImportRecipeParseOptions? parseOptions,
+        CancellationToken ct)
     {
-        var parsed = recipeTextParser.Parse(plainText);
+        var options = parseOptions ?? new ImportRecipeParseOptions();
+        var aiEnabled = importOptions.Value.Ai.Enabled
+            && !string.IsNullOrWhiteSpace(importOptions.Value.Ai.ApiKey);
+
+        ImportRecipeResult parsed;
+        if (options.UseFullRecipeAi && aiEnabled)
+        {
+            // Strip page chrome (nav/footer/tips) before sending the full recipe to the LLM.
+            var aiInput = RecipeTextDocumentExtractor.NormalizePlainTextForAi(plainText);
+            parsed = await recipeAiParser.ParseAsync(aiInput, ct);
+        }
+        else
+        {
+            parsed = await recipeTextParser.ParseAsync(plainText, options, ct);
+        }
+
         var ingredients = parsed.Ingredients.ToList();
 
         for (var i = 0; i < ingredients.Count; i++)
@@ -105,7 +128,7 @@ public sealed class RecipeImportService(
             Difficulty = parsed.Difficulty,
             Category = parsed.Category,
             Servings = parsed.Servings,
-            Source = ImportSource.PlainText,
+            Source = parsed.Source,
             Ingredients = ingredients,
             Steps = parsed.Steps,
             Warnings = parsed.Warnings,

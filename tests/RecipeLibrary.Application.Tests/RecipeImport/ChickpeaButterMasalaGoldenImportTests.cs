@@ -1,23 +1,32 @@
+using System.Net;
 using System.Text.Json;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
-using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.RecipeImport;
 using RecipeLibrary.Application.UseCases.RecipeImport;
+using RecipeLibrary.Application.UseCases.Recipes;
 using RecipeLibrary.Application.Validators;
 using Xunit;
 
 namespace RecipeLibrary.Application.Tests.RecipeImport;
 
 /// <summary>
-/// Golden import coverage for all modalities using the Bruschetta fixture set.
-/// Every modality must produce a CreateRecipeCommand that matches expected-output.json exactly.
+/// Golden import coverage for Chickpea Butter Masala import modalities.
+/// Every asserted modality must match expected-output.json exactly.
 /// </summary>
-public sealed class BruchettaGoldenImportTests
+public sealed class ChickpeaButterMasalaGoldenImportTests
 {
-    private static readonly ImportRecipeParseOptions GoldenParseOptions = new() { UseAiFallback = false };
+    private static readonly ImportRecipeParseOptions GoldenParseOptions = new() { UseAiFallback = true };
 
-    private readonly RecipeTextParser _parser = ImportTestFactory.CreateTextParser();
+    private readonly FixtureAiIngredientLineParser _aiParser = new(
+        Path.Combine("Fixtures", "ChickpeaButterMasala", "ai-ingredient-overrides.json"));
+
+    private readonly RecipeTextParser _parser;
+
+    public ChickpeaButterMasalaGoldenImportTests()
+    {
+        _parser = ImportTestFactory.CreateTextParser(_aiParser, ImportTestFactory.AiEnabledOptions);
+    }
 
     [Fact]
     public async Task Parse_CleanData_MatchesExpectedOutput_AndPassesValidator()
@@ -25,14 +34,9 @@ public sealed class BruchettaGoldenImportTests
         var actual = await ParseToCommandAsync(ReadFixture("clean-data.txt"));
         AssertMatchesExpected(actual);
         CreateRecipeCommandValidator.ValidateAndThrow(actual);
-    }
-
-    [Fact]
-    public async Task Parse_EntireWebPageText_MatchesExpectedOutput_AndPassesValidator()
-    {
-        var actual = await ParseToCommandAsync(ReadFixture("entire-web-page.txt"));
-        AssertMatchesExpected(actual);
-        CreateRecipeCommandValidator.ValidateAndThrow(actual);
+        Assert.Equal(1, _aiParser.CallCount);
+        Assert.NotNull(_aiParser.LastBatch);
+        Assert.True(_aiParser.LastBatch.Count >= 2);
     }
 
     [Fact]
@@ -50,6 +54,14 @@ public sealed class BruchettaGoldenImportTests
     }
 
     [Fact]
+    public async Task Parse_EntireWebPageText_MatchesExpectedOutput_AndPassesValidator()
+    {
+        var actual = await ParseToCommandAsync(ReadFixture("entire-web-page.txt"));
+        AssertMatchesExpected(actual);
+        CreateRecipeCommandValidator.ValidateAndThrow(actual);
+    }
+
+    [Fact]
     public async Task ImportContent_EntireWebPageAsPlainText_MatchesExpectedOutput()
     {
         var service = CreateImportService();
@@ -64,12 +76,12 @@ public sealed class BruchettaGoldenImportTests
     }
 
     [Fact]
-    public async Task ImportContent_JsonLdHtml_MatchesExpectedOutput()
+    public async Task ImportContent_HtmlWrappedEntireWebPage_MatchesExpectedOutput()
     {
         var service = CreateImportService();
         var result = await service.ImportContentAsync(new ImportRecipeContentQuery
         {
-            Content = ReadFixture("page-jsonld.html"),
+            Content = WrapTextAsHtml(ReadFixture("entire-web-page.txt")),
             ContentKind = ImportContentKind.Html,
             ParseOptions = GoldenParseOptions,
         });
@@ -80,7 +92,7 @@ public sealed class BruchettaGoldenImportTests
     [Fact]
     public async Task ImportFromUrl_UsesFetchedHtml_AndMatchesExpectedOutput()
     {
-        var html = ReadFixture("page-jsonld.html");
+        var html = WrapTextAsHtml(ReadFixture("entire-web-page.txt"));
         var url = ReadFixture("url.txt").Trim();
         var fetcher = new FakeContentFetcher(html);
         var sut = new ImportRecipeFromUrlQueryHandler(fetcher, CreateImportService());
@@ -93,13 +105,6 @@ public sealed class BruchettaGoldenImportTests
 
         Assert.Equal(url, fetcher.LastUrl);
         AssertMatchesExpected(ImportRecipeResultMapper.ToCreateRecipeCommand(result));
-    }
-
-    [Fact]
-    public async Task HtmlExtractor_JsonLd_MatchesExpectedOutput()
-    {
-        var text = new HtmlRecipeTextExtractor().Extract(ReadFixture("page-jsonld.html"));
-        AssertMatchesExpected(await ParseToCommandAsync(text));
     }
 
     private async Task<CreateRecipeCommand> ParseToCommandAsync(string plainText) =>
@@ -148,13 +153,23 @@ public sealed class BruchettaGoldenImportTests
                ?? throw new InvalidOperationException("Failed to deserialize expected-output.json");
     }
 
-    private static RecipeImportService CreateImportService() => ImportTestFactory.CreateImportService();
+    private RecipeImportService CreateImportService() =>
+        ImportTestFactory.CreateImportService(_aiParser, options: ImportTestFactory.AiEnabledOptions);
 
     private static string ReadFixture(string relativePath) =>
         File.ReadAllText(GetFixturePath(relativePath));
 
     private static string GetFixturePath(string relativePath) =>
-        Path.Combine(AppContext.BaseDirectory, "Fixtures", "Bruchetta", relativePath);
+        Path.Combine(AppContext.BaseDirectory, "Fixtures", "ChickpeaButterMasala", relativePath);
+
+    private static string WrapTextAsHtml(string text) =>
+        $$"""
+          <!DOCTYPE html>
+          <html lang="en">
+          <head><meta charset="utf-8"><title>Recipe</title></head>
+          <body><pre>{{WebUtility.HtmlEncode(text)}}</pre></body>
+          </html>
+          """;
 
     private sealed class FakeContentFetcher(string html) : IRecipeImportContentFetcher
     {

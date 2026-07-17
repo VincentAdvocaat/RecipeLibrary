@@ -27,11 +27,15 @@ public sealed class ImportRecipeContentQuery : IQuery<ImportRecipeResult>
     public string Content { get; init; } = string.Empty;
 
     public ImportContentKind ContentKind { get; init; } = ImportContentKind.Auto;
+
+    public ImportRecipeParseOptions ParseOptions { get; init; } = new();
 }
 
 public sealed class ImportRecipeFromUrlQuery : IQuery<ImportRecipeResult>
 {
     public string Url { get; init; } = string.Empty;
+
+    public ImportRecipeParseOptions ParseOptions { get; init; } = new();
 }
 
 public sealed class ImportRecipeFromImageQuery : IQuery<ImportRecipeResult>
@@ -52,6 +56,8 @@ public sealed class ImportRecipeFromImageQuery : IQuery<ImportRecipeResult>
 
     /// <summary>Tesseract language code: nld or eng.</summary>
     public string Language { get; init; } = "nld";
+
+    public ImportRecipeParseOptions ParseOptions { get; init; } = new();
 }
 
 public sealed class ImportImageFile

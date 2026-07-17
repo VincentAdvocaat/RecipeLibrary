@@ -23,7 +23,7 @@ public static class UnitAliases
 
     public static bool TryResolveMatch(string? token, out Match match)
     {
-        var key = (token ?? string.Empty).Trim().TrimEnd('.').ToLowerInvariant();
+        var key = (token ?? string.Empty).Trim().TrimEnd('.', '/').ToLowerInvariant();
         if (key.Length == 0)
         {
             match = default;
@@ -54,6 +54,7 @@ public static class UnitAliases
 
         Add("g", Unit.Gram);
         Add("gr", Unit.Gram);
+        Add("gm", Unit.Gram);
         Add("gram", Unit.Gram);
         Add("grammen", Unit.Gram);
 
@@ -71,11 +72,19 @@ public static class UnitAliases
         Add("theelepel", Unit.Teaspoon);
         Add("theelepels", Unit.Teaspoon);
         Add("tsp", Unit.Teaspoon);
+        Add("teaspoon", Unit.Teaspoon);
+        Add("teaspoons", Unit.Teaspoon);
 
         Add("el", Unit.Tablespoon);
         Add("eetlepel", Unit.Tablespoon);
         Add("eetlepels", Unit.Tablespoon);
         Add("tbsp", Unit.Tablespoon);
+        Add("tbs", Unit.Tablespoon);
+        Add("tablespoon", Unit.Tablespoon);
+        Add("tablespoons", Unit.Tablespoon);
+
+        Add("cup", Unit.Milliliter, 240m);
+        Add("cups", Unit.Milliliter, 240m);
 
         Add("st", Unit.Piece);
         Add("stuk", Unit.Piece);

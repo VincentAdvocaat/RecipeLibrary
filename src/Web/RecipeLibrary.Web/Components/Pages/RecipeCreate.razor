@@ -102,6 +102,8 @@
 
     private string _pasteContent = string.Empty;
     private string _importUrl = string.Empty;
+    private bool _useAiFallback = true;
+    private bool _useFullRecipeAi;
     private string _ocrLanguage = "nld";
     private List<IBrowserFile> _photoFiles = [];
     private bool _isProcessing;
@@ -152,6 +154,7 @@
                           @bind="_pasteContent"></textarea>
             </div>
             <p class="text-xs text-gray-500">@L["RecipeCreate.Import.Responsibility.Hint"]</p>
+            @RenderAiImportOptions()
             @if (!string.IsNullOrWhiteSpace(_importError))
             {
                 <p class="text-sm text-red-600">@_importError</p>
@@ -199,6 +202,7 @@
                 </select>
             </div>
             <p class="text-xs text-gray-500">@L["RecipeCreate.Import.Responsibility.Hint"]</p>
+            @RenderAiImportOptions()
             @if (!string.IsNullOrWhiteSpace(_importError))
             {
                 <p class="text-sm text-red-600">@_importError</p>
@@ -225,6 +229,7 @@
                 <p class="mt-1 text-xs text-gray-500">@L["RecipeCreate.Url.Hint"]</p>
             </div>
             <p class="text-xs text-gray-500">@L["RecipeCreate.Import.Responsibility.Hint"]</p>
+            @RenderAiImportOptions()
             @if (!string.IsNullOrWhiteSpace(_importError))
             {
                 <p class="text-sm text-red-600">@_importError</p>
@@ -238,6 +243,32 @@
                 </button>
             </div>
         </div>
+    };
+
+    private RenderFragment RenderAiImportOptions() => __builder =>
+    {
+        if (!ImportOptions.Value.Ai.Enabled || string.IsNullOrWhiteSpace(ImportOptions.Value.Ai.ApiKey))
+        {
+            return;
+        }
+
+        <div class="space-y-2 rounded border border-gray-200 bg-gray-50 px-3 py-3">
+            <label class="flex items-start gap-2 text-sm text-gray-700">
+                <input type="checkbox" class="mt-1" @bind="_useAiFallback" />
+                <span>@L["RecipeCreate.Import.AiFallback.Label"]</span>
+            </label>
+            <label class="flex items-start gap-2 text-sm text-gray-700">
+                <input type="checkbox" class="mt-1" @bind="_useFullRecipeAi" />
+                <span>@L["RecipeCreate.Import.FullRecipeAi.Label"]</span>
+            </label>
+            <p class="text-xs text-gray-500">@L["RecipeCreate.Import.FullRecipeAi.Hint"]</p>
+        </div>
+    };
+
+    private ImportRecipeParseOptions BuildParseOptions() => new()
+    {
+        UseAiFallback = _useAiFallback,
+        UseFullRecipeAi = _useFullRecipeAi,
     };
 
     private RenderFragment RenderManualForm() => __builder =>
@@ -421,7 +452,12 @@
         {
             var response = await Http.PostAsJsonAsync(
                 "/recipes/import",
-                new ImportRecipeContentQuery { Content = _pasteContent, ContentKind = ImportContentKind.Auto });
+                new ImportRecipeContentQuery
+                {
+                    Content = _pasteContent,
+                    ContentKind = ImportContentKind.Auto,
+                    ParseOptions = BuildParseOptions(),
+                });
 
             if (!response.IsSuccessStatusCode)
             {
@@ -506,6 +542,8 @@
             }
 
             content.Add(new StringContent(_ocrLanguage), "language");
+            content.Add(new StringContent(_useAiFallback.ToString()), "useAiFallback");
+            content.Add(new StringContent(_useFullRecipeAi.ToString()), "useFullRecipeAi");
 
             var response = await Http.PostAsync("/recipes/import-image", content);
             if (!response.IsSuccessStatusCode)
@@ -551,7 +589,11 @@
         {
             var response = await Http.PostAsJsonAsync(
                 "/recipes/import-url",
-                new ImportRecipeFromUrlQuery { Url = _importUrl.Trim() });
+                new ImportRecipeFromUrlQuery
+                {
+                    Url = _importUrl.Trim(),
+                    ParseOptions = BuildParseOptions(),
+                });
 
             if (!response.IsSuccessStatusCode)
             {
@@ -588,7 +630,7 @@
 
     private void ApplyDraftToVm(ImportRecipeResult draft)
     {
-        const decimal reviewThreshold = 0.7m;
+        var reviewThreshold = ImportOptions.Value.Ai.ConfidenceThreshold;
 
         _vm.Title = draft.Title ?? string.Empty;
         _vm.Description = draft.Description;
@@ -669,6 +711,7 @@
         ImportWarningCodes.NoContent => L["RecipeCreate.Import.Warning.NoContent"].Value,
         ImportWarningCodes.HeuristicIngredients => L["RecipeCreate.Import.Warning.HeuristicIngredients"].Value,
         ImportWarningCodes.LowConfidenceAiHint => L["RecipeCreate.Import.Warning.LowConfidenceAiHint"].Value,
+        ImportWarningCodes.AiFallbackFailed => L["RecipeCreate.Import.Warning.AiFallbackFailed"].Value,
         _ => null,
     };
 

@@ -223,11 +223,7 @@ public sealed class ImportRecipeQueryHandlerTests
             }));
     }
 
-    private static RecipeImportService CreateService() =>
-        new(
-            new RecipeTextParser(new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser()))),
-            new HtmlRecipeTextExtractor(),
-            new IngredientMatcher(new EmptyIngredientRepository(), new IngredientTextNormalizer(), new IngredientSimilarityScorer()));
+    private static RecipeImportService CreateService() => ImportTestFactory.CreateImportService();
 
     private static string GetFixturePath(string fileName) =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "recipe-import", fileName);

@@ -1,0 +1,44 @@
+{
+  "390 gm/ 3 medium tomatoes": {
+    "quantity": 3,
+    "unit": "Piece",
+    "name": "tomatoes",
+    "preparation": "medium, 390g",
+    "confidence": 0.9
+  },
+  "11 gm/ 4 cloves garlic": {
+    "quantity": 4,
+    "unit": "Clove",
+    "name": "garlic",
+    "preparation": "11g",
+    "confidence": 0.9
+  },
+  "15 gm/ 1-inch piece ginger": {
+    "quantity": 1,
+    "unit": "Piece",
+    "name": "ginger",
+    "preparation": "1-inch piece, 15g",
+    "confidence": 0.9
+  },
+  "185 gm/ 1 large onion, finely chopped": {
+    "quantity": 1,
+    "unit": "Piece",
+    "name": "onion",
+    "preparation": "large, finely chopped, 185g",
+    "confidence": 0.9
+  },
+  "1 large can (822 gm with liquid and weighs 484 gm after draining liquid) chickpeas, drained and rinsed (save \u2153 cup for thickening)": {
+    "quantity": 484,
+    "unit": "Gram",
+    "name": "chickpeas",
+    "preparation": "drained and rinsed from 1 large can (822 g with liquid / 484 g drained); save 1/3 cup for thickening",
+    "confidence": 0.9
+  },
+  "1 drop oil, for garnish": {
+    "quantity": null,
+    "unit": null,
+    "name": "oil",
+    "preparation": "1 drop, for garnish",
+    "confidence": 0.9
+  }
+}

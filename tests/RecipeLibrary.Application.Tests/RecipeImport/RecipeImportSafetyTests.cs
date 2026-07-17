@@ -72,13 +72,7 @@ public sealed class RecipeImportLooksLikeHtmlTests
     [Fact]
     public async Task ImportContent_Auto_DoesNotTreatComparisonTextAsHtml()
     {
-        var service = new RecipeImportService(
-            new RecipeTextParser(new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser()))),
-            new HtmlRecipeTextExtractor(),
-            new IngredientMatcher(
-                new EmptyIngredientRepository(),
-                new IngredientTextNormalizer(),
-                new IngredientSimilarityScorer()));
+        var service = ImportTestFactory.CreateImportService();
 
         var result = await service.ImportContentAsync(new ImportRecipeContentQuery
         {

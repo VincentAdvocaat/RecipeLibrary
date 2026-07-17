@@ -96,6 +96,9 @@
   <data name="RecipeCreate.PhotoImport.Error.UploadTimeout" xml:space="preserve"><value>Het uploaden duurde te lang. Probeer minder of kleinere foto's.</value></data>
   <data name="RecipeCreate.PhotoImport.Experimental.Disclaimer" xml:space="preserve"><value>Experimenteel: foto-import werkt nog niet betrouwbaar. Gebruik liever tekst of een URL; resultaten kunnen mislukken of onvolledig zijn.</value></data>
   <data name="RecipeCreate.Import.Responsibility.Hint" xml:space="preserve"><value>Importeer alleen tekst, screenshots of links die je mag gebruiken. Jij bent verantwoordelijk voor de content die je toevoegt.</value></data>
+  <data name="RecipeCreate.Import.AiFallback.Label" xml:space="preserve"><value>Gebruik AI voor onzekere ingrediëntregels</value></data>
+  <data name="RecipeCreate.Import.FullRecipeAi.Label" xml:space="preserve"><value>Parse het hele recept met AI (experimenteel)</value></data>
+  <data name="RecipeCreate.Import.FullRecipeAi.Hint" xml:space="preserve"><value>HTML en paginaruis worden eerst verwijderd. Gebruik dit om AI-output te vergelijken met de standaard parser.</value></data>
   <data name="RecipeCreate.Import.ReviewBanner" xml:space="preserve"><value>We hebben dit recept voor je ingevuld. Check even of alles klopt vóór je opslaat.</value></data>
   <data name="RecipeCreate.Import.Ingredient.CheckHint" xml:space="preserve"><value>Check even of dit klopt.</value></data>
   <data name="RecipeCreate.Import.Warning.JsonLdParseSkipped" xml:space="preserve"><value>Een deel van de pagina-data kon niet gelezen worden; we hebben verder gezocht.</value></data>
@@ -103,6 +106,7 @@
   <data name="RecipeCreate.Import.Warning.NoContent" xml:space="preserve"><value>Er is geen bruikbare tekst gevonden om te importeren.</value></data>
   <data name="RecipeCreate.Import.Warning.HeuristicIngredients" xml:space="preserve"><value>Geen duidelijke ingrediëntensectie gevonden; we hebben regels als ingrediënten geïnterpreteerd. Check dit.</value></data>
   <data name="RecipeCreate.Import.Warning.LowConfidenceAiHint" xml:space="preserve"><value>Sommige ingrediëntregels zijn onzeker. Check die regels even.</value></data>
+  <data name="RecipeCreate.Import.Warning.AiFallbackFailed" xml:space="preserve"><value>AI kon onzekere ingrediëntregels niet verbeteren. Check die regels handmatig.</value></data>
   <data name="Nav.Overview" xml:space="preserve"><value>Overzicht</value></data>
   <data name="RecipeOverview.PageTitle" xml:space="preserve"><value>Recepten Overzicht</value></data>
   <data name="RecipeCreate.PageTitle" xml:space="preserve"><value>Nieuw Recept Toevoegen</value></data>

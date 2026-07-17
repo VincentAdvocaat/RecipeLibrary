@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Domain.ValueObjects;
@@ -49,6 +50,7 @@ public static class RecipeTextDocumentExtractor
         "gerelateerd",
         "related",
         "serveer met",
+        "serving suggestions",
         "voedingswaarde",
         "nutrition",
         "opmerkingen",
@@ -87,6 +89,7 @@ public static class RecipeTextDocumentExtractor
         "gemaakt door",
         "opgeslagen",
         "aanmelden",
+        "youtube link",
     ];
 
     private static readonly HashSet<string> ChromeExactLines = new(StringComparer.OrdinalIgnoreCase)
@@ -118,6 +121,10 @@ public static class RecipeTextDocumentExtractor
 
     private static readonly Regex ServingsPattern = new(
         @"^(?:voor\s+)?(?<count>\d+)\s*(?:personen|persoon|porties|portie|servings|serving|stuks|stuk)?$",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex ServesPhrasePattern = new(
+        @"^serves?\s+(?<count>\d+)(?:\s*(?:to|-|–)\s*\d+)?$",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex DifficultyLabeledPattern = new(
@@ -165,11 +172,17 @@ public static class RecipeTextDocumentExtractor
         var inIntroLabeled = false;
         var seenRecipeMeta = false;
         var ingredientsClosed = false;
+        var inGarnishIngredients = false;
 
         for (var i = 0; i < rawLines.Count; i++)
         {
             var line = rawLines[i].Trim();
             if (line.Length == 0)
+            {
+                continue;
+            }
+
+            if (section == Section.Done)
             {
                 continue;
             }
@@ -190,10 +203,19 @@ public static class RecipeTextDocumentExtractor
             {
                 section = Section.Ingredients;
                 ingredientsClosed = false;
+                inGarnishIngredients = false;
+                title ??= FindTitleAbove(rawLines, i);
                 if (!string.IsNullOrWhiteSpace(ingredientTitle))
                 {
-                    // Section titles are more specific than preamble headings.
-                    title = ingredientTitle.Trim();
+                    if (TryParseServingsPhrase(ingredientTitle, out var headerServings))
+                    {
+                        servings = headerServings;
+                    }
+                    else
+                    {
+                        // Section titles are more specific than preamble headings.
+                        title = ingredientTitle.Trim();
+                    }
                 }
 
                 continue;
@@ -202,6 +224,8 @@ public static class RecipeTextDocumentExtractor
             if (TryGetLabeledHeader(line, InstructionSectionHeaders, out var instructionTitle))
             {
                 section = Section.Instructions;
+                inGarnishIngredients = false;
+                title ??= FindTitleAbove(rawLines, i);
                 if (!string.IsNullOrWhiteSpace(instructionTitle))
                 {
                     title ??= instructionTitle.Trim();
@@ -275,13 +299,27 @@ public static class RecipeTextDocumentExtractor
                         break;
                     }
 
-                    if (IsLikelyIngredientLine(line))
+                    if (IsIngredientSubsectionHeader(line))
                     {
-                        ingredientLines.Add(StripBullet(line));
+                        inGarnishIngredients = IsGarnishSubsectionHeader(line);
+                        break;
                     }
-                    else if (IsChromeLine(line))
+
+                    if (IsChromeLine(line))
                     {
                         break;
+                    }
+
+                    if (IsLikelyIngredientLine(line))
+                    {
+                        var ingredient = StripBullet(line);
+                        if (inGarnishIngredients
+                            && ShouldAnnotateAsGarnish(ingredient))
+                        {
+                            ingredient = $"{ingredient}, for garnish";
+                        }
+
+                        ingredientLines.Add(ingredient);
                     }
                     else if (ingredientLines.Count > 0)
                     {
@@ -290,6 +328,11 @@ public static class RecipeTextDocumentExtractor
 
                     break;
                 case Section.Instructions:
+                    if (IsStepHeadingOnly(line))
+                    {
+                        break;
+                    }
+
                     if (IsLikelyInstructionLine(line))
                     {
                         instructionLines.Add(StripNumberPrefix(line));
@@ -313,11 +356,11 @@ public static class RecipeTextDocumentExtractor
         {
             if (title is null)
             {
-                var first = introBuffer[0].Trim();
-                if (first.Length > 0 && first.Length <= 80 && !first.Contains('.', StringComparison.Ordinal))
+                var titleIndex = FindPreambleTitleIndex(introBuffer);
+                if (titleIndex >= 0)
                 {
-                    title = first;
-                    introBuffer.RemoveAt(0);
+                    title = NormalizeTitleCandidate(introBuffer[titleIndex]);
+                    introBuffer.RemoveAt(titleIndex);
                 }
             }
 
@@ -354,6 +397,159 @@ public static class RecipeTextDocumentExtractor
             Steps = steps,
             Warnings = warnings,
         };
+    }
+
+    /// <summary>
+    /// Rebuilds a chrome-stripped plain-text recipe for full-recipe AI parsing.
+    /// Falls back to the original text when extraction yields no usable sections.
+    /// </summary>
+    public static string NormalizePlainTextForAi(string plainText)
+    {
+        var document = Extract(plainText ?? string.Empty);
+        var normalized = FormatNormalizedPlainText(document);
+        return string.IsNullOrWhiteSpace(normalized) ? plainText ?? string.Empty : normalized;
+    }
+
+    public static string FormatNormalizedPlainText(RecipeTextDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var sb = new StringBuilder();
+
+        if (!string.IsNullOrWhiteSpace(document.Title))
+        {
+            sb.AppendLine(document.Title.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(document.Description))
+        {
+            EnsureBlankLine(sb);
+            sb.AppendLine(document.Description.Trim());
+        }
+
+        var hasMeta = document.PreparationTimeMinutes is not null
+            || document.CookingTimeMinutes is not null
+            || document.Servings is not null;
+        if (hasMeta)
+        {
+            EnsureBlankLine(sb);
+            if (document.PreparationTimeMinutes is int prep)
+            {
+                sb.AppendLine($"Prep time: {prep} min");
+            }
+
+            if (document.CookingTimeMinutes is int cook)
+            {
+                sb.AppendLine($"Cook time: {cook} min");
+            }
+
+            if (document.Servings is int servings)
+            {
+                sb.AppendLine($"Servings: {servings}");
+            }
+        }
+
+        if (document.IngredientLines.Count > 0)
+        {
+            EnsureBlankLine(sb);
+            sb.AppendLine("Ingredients");
+            foreach (var line in document.IngredientLines)
+            {
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    sb.AppendLine(line.Trim());
+                }
+            }
+        }
+
+        if (document.Steps.Count > 0)
+        {
+            EnsureBlankLine(sb);
+            sb.AppendLine("Instructions");
+            foreach (var step in document.Steps)
+            {
+                if (string.IsNullOrWhiteSpace(step.Text))
+                {
+                    continue;
+                }
+
+                var number = step.StepNumber > 0 ? step.StepNumber : 0;
+                sb.AppendLine(number > 0 ? $"{number}. {step.Text.Trim()}" : step.Text.Trim());
+            }
+        }
+
+        return sb.ToString().Trim();
+    }
+
+    private static void EnsureBlankLine(StringBuilder sb)
+    {
+        if (sb.Length == 0)
+        {
+            return;
+        }
+
+        sb.AppendLine();
+    }
+
+    private static int FindPreambleTitleIndex(IReadOnlyList<string> lines)
+    {
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (IsTitleCandidate(lines[i]))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static string? FindTitleAbove(IReadOnlyList<string> rawLines, int headerIndex)
+    {
+        for (var i = headerIndex - 1; i >= 0; i--)
+        {
+            var candidate = rawLines[i].Trim();
+            if (candidate.Length == 0 || IsChromeLine(candidate))
+            {
+                continue;
+            }
+
+            if (IsTitleCandidate(candidate))
+            {
+                return NormalizeTitleCandidate(candidate);
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsTitleCandidate(string line)
+    {
+        var candidate = line.Trim();
+        if (candidate.Length is < 6 or > 80
+            || candidate.Contains('.', StringComparison.Ordinal)
+            || IsChromeLine(candidate)
+            || TryParseServingsPhrase(candidate, out _)
+            || TryParseDifficulty(candidate, out _)
+            || TryParseTime(candidate, out _))
+        {
+            return false;
+        }
+
+        var words = candidate
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return words.Length >= 2 && Regex.IsMatch(candidate, @"[A-Za-z]");
+    }
+
+    private static string NormalizeTitleCandidate(string line)
+    {
+        var trimmed = line.Trim();
+        if (trimmed.Any(char.IsLetter) && !trimmed.Any(char.IsLower))
+        {
+            return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(trimmed.ToLowerInvariant());
+        }
+
+        return trimmed;
     }
 
     /// <summary>
@@ -522,10 +718,26 @@ public static class RecipeTextDocumentExtractor
         return difficulty != 0;
     }
 
-    private static bool TryParseServings(string line, out int servings)
+    private static bool TryParseServings(string line, out int servings) =>
+        TryParseServingsPhrase(line, out servings);
+
+    private static bool TryParseServingsPhrase(string line, out int servings)
     {
         servings = 0;
-        var match = ServingsPattern.Match(line.Trim());
+        var trimmed = line.Trim();
+        if (trimmed.Length == 0)
+        {
+            return false;
+        }
+
+        var serves = ServesPhrasePattern.Match(trimmed);
+        if (serves.Success)
+        {
+            servings = int.Parse(serves.Groups["count"].Value, CultureInfo.InvariantCulture);
+            return servings > 0 && servings <= 100;
+        }
+
+        var match = ServingsPattern.Match(trimmed);
         if (!match.Success)
         {
             return false;
@@ -533,6 +745,71 @@ public static class RecipeTextDocumentExtractor
 
         servings = int.Parse(match.Groups["count"].Value, CultureInfo.InvariantCulture);
         return servings > 0 && servings <= 100;
+    }
+
+    private static bool IsIngredientSubsectionHeader(string line)
+    {
+        var trimmed = StripBullet(line);
+        if (trimmed.Length == 0 || LooksLikeMeasuredOrToTasteIngredient(trimmed))
+        {
+            return false;
+        }
+
+        if (trimmed.StartsWith("For the ", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("For ", StringComparison.OrdinalIgnoreCase)
+                && trimmed.EndsWith(':'))
+        {
+            return true;
+        }
+
+        var withoutColon = trimmed.TrimEnd(':').Trim();
+        return withoutColon.Equals("Other Ingredients", StringComparison.OrdinalIgnoreCase)
+            || withoutColon.Equals("Additional Ingredients", StringComparison.OrdinalIgnoreCase)
+            || (trimmed.EndsWith(':') && !Regex.IsMatch(trimmed, @"\d"));
+    }
+
+    private static bool IsGarnishSubsectionHeader(string line)
+    {
+        var normalized = StripBullet(line).TrimEnd(':').Trim();
+        return normalized.Contains("garnish", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("finishing", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ShouldAnnotateAsGarnish(string ingredientLine)
+    {
+        if (ingredientLine.Contains("for garnish", StringComparison.OrdinalIgnoreCase)
+            || ingredientLine.Contains("for drizzling", StringComparison.OrdinalIgnoreCase)
+            || ingredientLine.StartsWith("Additional ", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        // Alternative ingredient notes stay as-is (e.g. "paprika (or Kashmiri chili powder)").
+        if (ingredientLine.Contains("(or ", StringComparison.OrdinalIgnoreCase)
+            || ingredientLine.Contains(", or ", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsStepHeadingOnly(string line)
+    {
+        var trimmed = StripBullet(line);
+        var match = Regex.Match(
+            trimmed,
+            @"^Step\s+\d+\s*:\s*(?<title>.*)$",
+            RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        var title = match.Groups["title"].Value.Trim();
+        // Dedicated step captions (body follows on next lines).
+        return title.Length is > 0 and < 80
+            && !title.Contains('.', StringComparison.Ordinal);
     }
 
     private static string? SelectBestDescription(IReadOnlyList<string> lines)
@@ -567,18 +844,30 @@ public static class RecipeTextDocumentExtractor
     private static bool LooksLikeMeasuredOrToTasteIngredient(string trimmed) =>
         Regex.IsMatch(
             trimmed,
-            @"^(\d+(?:[.,]\d+)?|\d+\s*/\s*\d+|\d+\s*-\s*\d+|snuf|snufje|snufjes|handje|handjes|beetje|teen|teentje)\b",
+            @"^(?:[½¼¾⅓⅔]|\d+(?:[.,]\d+)?|\d+\s*/\s*\d+|\d+\s*-\s*\d+|\d+\s+to\s+\d+|snuf|snufje|snufjes|handje|handjes|beetje|teen|teentje)(?:\b|\s|$)",
             RegexOptions.IgnoreCase)
-        || trimmed.Contains(" naar smaak", StringComparison.OrdinalIgnoreCase);
+        || trimmed.Contains(" naar smaak", StringComparison.OrdinalIgnoreCase)
+        || trimmed.Contains(" to taste", StringComparison.OrdinalIgnoreCase);
 
     private static bool LooksLikeBareIngredientName(string trimmed)
     {
-        if (trimmed.Length is 0 or > 60)
+        if (trimmed.StartsWith("Additional ", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed["Additional ".Length..].Trim();
+        }
+
+        if (trimmed.Length is 0 or > 90)
         {
             return false;
         }
 
-        if (trimmed.Contains('.', StringComparison.Ordinal) || trimmed.Contains('?', StringComparison.Ordinal))
+        if (trimmed.Contains('?', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        // Allow a single trailing period-less phrase; reject multi-sentence chrome.
+        if (trimmed.Contains(". ", StringComparison.Ordinal))
         {
             return false;
         }
@@ -603,7 +892,7 @@ public static class RecipeTextDocumentExtractor
         }
 
         var words = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return words.Length is >= 1 and <= 6;
+        return words.Length is >= 1 and <= 12;
     }
 
     private static bool IsLikelyInstructionLine(string line)
@@ -642,6 +931,12 @@ public static class RecipeTextDocumentExtractor
         }
 
         if (ChromeExactLines.Contains(normalized))
+        {
+            return true;
+        }
+
+        if (Regex.IsMatch(normalized, @"^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)$", RegexOptions.IgnoreCase)
+            || Regex.IsMatch(normalized, @"^\d{1,2}$"))
         {
             return true;
         }
