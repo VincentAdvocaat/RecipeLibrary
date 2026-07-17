@@ -137,83 +137,88 @@ public sealed class EfIngredientRepository(RecipeDbContext dbContext) : IIngredi
             throw new ArgumentException("Language code is required.", nameof(languageCode));
         }
 
-        // Prefer a serializable transaction when the provider supports it (SQL Server).
-        // SQLite (tests) still re-queries after DbUpdateException for race safety.
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
-
-        try
+        // SqlServerRetryingExecutionStrategy forbids user-initiated transactions unless the whole
+        // unit runs via CreateExecutionStrategy (same pattern as EfUnitOfWork).
+        // SQLite (unit tests) still re-queries after DbUpdateException for race safety.
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            var existing = await FindByNormalizedDisplayNameTrackedAsync(language, normalizedDisplayName, ct);
-            if (existing is not null)
-            {
-                await transaction.CommitAsync(ct);
-                return existing;
-            }
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
 
-            if (!string.IsNullOrWhiteSpace(normalizedAlias))
+            try
             {
-                var viaAlias = await FindByNormalizedAliasInLanguageTrackedAsync(language, normalizedAlias, ct);
-                if (viaAlias is not null)
+                var existing = await FindByNormalizedDisplayNameTrackedAsync(language, normalizedDisplayName, ct);
+                if (existing is not null)
                 {
                     await transaction.CommitAsync(ct);
-                    return viaAlias;
+                    return existing;
                 }
-            }
 
-            var ingredient = new CanonicalIngredient
-            {
-                Id = Guid.NewGuid(),
-                CreatedAt = DateTimeOffset.UtcNow,
-            };
+                if (!string.IsNullOrWhiteSpace(normalizedAlias))
+                {
+                    var viaAlias = await FindByNormalizedAliasInLanguageTrackedAsync(language, normalizedAlias, ct);
+                    if (viaAlias is not null)
+                    {
+                        await transaction.CommitAsync(ct);
+                        return viaAlias;
+                    }
+                }
 
-            var translation = new IngredientTranslation
-            {
-                Id = Guid.NewGuid(),
-                IngredientId = ingredient.Id,
-                LanguageCode = language,
-                DisplayName = displayName,
-                NormalizedDisplayName = normalizedDisplayName,
-            };
-
-            await dbContext.Ingredients.AddAsync(ingredient, ct);
-            await dbContext.IngredientTranslations.AddAsync(translation, ct);
-
-            if (!string.IsNullOrWhiteSpace(alias)
-                && !string.IsNullOrWhiteSpace(normalizedAlias)
-                && !string.Equals(normalizedAlias, normalizedDisplayName, StringComparison.Ordinal))
-            {
-                await dbContext.IngredientTranslationAliases.AddAsync(new IngredientTranslationAlias
+                var ingredient = new CanonicalIngredient
                 {
                     Id = Guid.NewGuid(),
-                    IngredientTranslationId = translation.Id,
-                    Alias = alias,
-                    NormalizedAlias = normalizedAlias,
-                }, ct);
+                    CreatedAt = DateTimeOffset.UtcNow,
+                };
+
+                var translation = new IngredientTranslation
+                {
+                    Id = Guid.NewGuid(),
+                    IngredientId = ingredient.Id,
+                    LanguageCode = language,
+                    DisplayName = displayName,
+                    NormalizedDisplayName = normalizedDisplayName,
+                };
+
+                await dbContext.Ingredients.AddAsync(ingredient, ct);
+                await dbContext.IngredientTranslations.AddAsync(translation, ct);
+
+                if (!string.IsNullOrWhiteSpace(alias)
+                    && !string.IsNullOrWhiteSpace(normalizedAlias)
+                    && !string.Equals(normalizedAlias, normalizedDisplayName, StringComparison.Ordinal))
+                {
+                    await dbContext.IngredientTranslationAliases.AddAsync(new IngredientTranslationAlias
+                    {
+                        Id = Guid.NewGuid(),
+                        IngredientTranslationId = translation.Id,
+                        Alias = alias,
+                        NormalizedAlias = normalizedAlias,
+                    }, ct);
+                }
+
+                await dbContext.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                ingredient.Translations.Add(translation);
+                return ingredient;
             }
-
-            await dbContext.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
-
-            ingredient.Translations.Add(translation);
-            return ingredient;
-        }
-        catch (DbUpdateException)
-        {
-            await transaction.RollbackAsync(ct);
-            dbContext.ChangeTracker.Clear();
-
-            var raced = await FindByNormalizedDisplayNameTrackedAsync(language, normalizedDisplayName, ct)
-                ?? (!string.IsNullOrWhiteSpace(normalizedAlias)
-                    ? await FindByNormalizedAliasInLanguageTrackedAsync(language, normalizedAlias, ct)
-                    : null);
-
-            if (raced is not null)
+            catch (DbUpdateException)
             {
-                return raced;
-            }
+                await transaction.RollbackAsync(ct);
+                dbContext.ChangeTracker.Clear();
 
-            throw;
-        }
+                var raced = await FindByNormalizedDisplayNameTrackedAsync(language, normalizedDisplayName, ct)
+                    ?? (!string.IsNullOrWhiteSpace(normalizedAlias)
+                        ? await FindByNormalizedAliasInLanguageTrackedAsync(language, normalizedAlias, ct)
+                        : null);
+
+                if (raced is not null)
+                {
+                    return raced;
+                }
+
+                throw;
+            }
+        });
     }
 
     public async Task AddMatchLogAsync(IngredientMatchLog log, CancellationToken ct = default)
