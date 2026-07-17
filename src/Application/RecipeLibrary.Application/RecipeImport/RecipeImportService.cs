@@ -86,7 +86,9 @@ public sealed class RecipeImportService(
         ImportRecipeResult parsed;
         if (options.UseFullRecipeAi && aiEnabled)
         {
-            parsed = await recipeAiParser.ParseAsync(plainText, ct);
+            // Strip page chrome (nav/footer/tips) before sending the full recipe to the LLM.
+            var aiInput = RecipeTextDocumentExtractor.NormalizePlainTextForAi(plainText);
+            parsed = await recipeAiParser.ParseAsync(aiInput, ct);
         }
         else
         {

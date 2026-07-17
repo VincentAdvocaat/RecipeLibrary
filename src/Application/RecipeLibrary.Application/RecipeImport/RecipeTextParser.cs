@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
@@ -12,7 +13,8 @@ namespace RecipeLibrary.Application.RecipeImport;
 public sealed class RecipeTextParser(
     IngredientLineParser ingredientLineParser,
     IIngredientLineAiParser ingredientLineAiParser,
-    IOptions<RecipeImportOptions> importOptions)
+    IOptions<RecipeImportOptions> importOptions,
+    ILogger<RecipeTextParser> logger)
 {
     public Task<ImportRecipeResult> ParseAsync(
         string plainText,
@@ -57,41 +59,7 @@ public sealed class RecipeTextParser(
 
         if (aiCandidates.Count > 0)
         {
-            foreach (var (index, rawLine) in aiCandidates)
-            {
-                try
-                {
-                    var aiLines = await ingredientLineAiParser.ParseLinesAsync([rawLine], ct);
-                    if (aiLines.Count == 0 || string.IsNullOrWhiteSpace(aiLines[0].Name))
-                    {
-                        continue;
-                    }
-
-                    var aiLine = aiLines[0];
-                    ingredients[index] = new ImportedIngredientLine
-                    {
-                        RawLine = rawLine,
-                        Quantity = aiLine.Quantity,
-                        Unit = string.IsNullOrWhiteSpace(aiLine.Unit) ? null : aiLine.Unit,
-                        Name = aiLine.Name,
-                        Preparation = aiLine.Preparation,
-                        Confidence = aiLine.Confidence > 0 ? aiLine.Confidence : 0.85m,
-                        ParseMethod = ImportParseMethod.Ai,
-                    };
-
-                    if (!warnings.Contains(ImportWarningCodes.LowConfidenceAiHint))
-                    {
-                        warnings.Add(ImportWarningCodes.LowConfidenceAiHint);
-                    }
-                }
-                catch (Exception)
-                {
-                    if (!warnings.Contains(ImportWarningCodes.LowConfidenceAiHint))
-                    {
-                        warnings.Add(ImportWarningCodes.LowConfidenceAiHint);
-                    }
-                }
-            }
+            await ApplyAiFallbackAsync(ingredients, aiCandidates, warnings, ct);
         }
 
         return new ImportRecipeResult
@@ -108,6 +76,63 @@ public sealed class RecipeTextParser(
             Steps = document.Steps,
             Warnings = warnings,
         };
+    }
+
+    private async Task ApplyAiFallbackAsync(
+        List<ImportedIngredientLine> ingredients,
+        List<(int Index, string RawLine)> aiCandidates,
+        List<string> warnings,
+        CancellationToken ct)
+    {
+        try
+        {
+            var rawLines = aiCandidates.Select(static c => c.RawLine).ToList();
+            var aiLines = await ingredientLineAiParser.ParseLinesAsync(rawLines, ct);
+            var applied = false;
+
+            for (var i = 0; i < aiCandidates.Count; i++)
+            {
+                if (i >= aiLines.Count || string.IsNullOrWhiteSpace(aiLines[i].Name))
+                {
+                    continue;
+                }
+
+                var (index, rawLine) = aiCandidates[i];
+                var aiLine = aiLines[i];
+                ingredients[index] = new ImportedIngredientLine
+                {
+                    RawLine = rawLine,
+                    Quantity = aiLine.Quantity,
+                    Unit = string.IsNullOrWhiteSpace(aiLine.Unit) ? null : aiLine.Unit,
+                    Name = aiLine.Name,
+                    Preparation = aiLine.Preparation,
+                    Confidence = aiLine.Confidence > 0 ? aiLine.Confidence : 0.85m,
+                    ParseMethod = ImportParseMethod.Ai,
+                };
+                applied = true;
+            }
+
+            if (applied)
+            {
+                AddWarning(warnings, ImportWarningCodes.LowConfidenceAiHint);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "AI ingredient-line fallback failed for {Count} low-confidence line(s).",
+                aiCandidates.Count);
+            AddWarning(warnings, ImportWarningCodes.AiFallbackFailed);
+        }
+    }
+
+    private static void AddWarning(List<string> warnings, string code)
+    {
+        if (!warnings.Contains(code))
+        {
+            warnings.Add(code);
+        }
     }
 
     private static ImportedIngredientLine ToImportedLine(ParsedIngredientLine parsed) =>

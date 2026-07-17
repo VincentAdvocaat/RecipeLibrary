@@ -51,6 +51,22 @@ public sealed class IngredientLineParserTests
     }
 
     [Fact]
+    public void Parse_CanWithParentheses_HasLowConfidence()
+    {
+        var result = _sut.Parse("1 large can (400 g) chickpeas, drained");
+
+        Assert.True(result.Confidence < 0.7m);
+    }
+
+    [Fact]
+    public void Parse_PecanWithParentheses_DoesNotTriggerCanAmbiguity()
+    {
+        var result = _sut.Parse("100 g pecan (chopped)");
+
+        Assert.True(result.Confidence >= 0.7m);
+    }
+
+    [Fact]
     public void Parse_ParsesFractionTeaspoon()
     {
         var result = _sut.Parse("1/2 tl zout");

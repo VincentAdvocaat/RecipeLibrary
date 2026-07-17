@@ -179,7 +179,7 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
 
     private static bool LooksLikeComplexIngredientLine(string normalized) =>
         normalized.Length > 100
-        || (normalized.Contains("can", StringComparison.OrdinalIgnoreCase) && normalized.Contains('('))
+        || (Regex.IsMatch(normalized, @"\bcan\b", RegexOptions.IgnoreCase) && normalized.Contains('('))
         || Regex.IsMatch(normalized, @"\b\d+\s+drops?\b", RegexOptions.IgnoreCase);
 
     private static string RewritePlusAsPlusWord(string remainder)

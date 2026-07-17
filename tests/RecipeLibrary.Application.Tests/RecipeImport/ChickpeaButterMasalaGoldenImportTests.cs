@@ -1,10 +1,10 @@
 using System.Net;
 using System.Text.Json;
-using Microsoft.Extensions.Options;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.RecipeImport;
 using RecipeLibrary.Application.UseCases.RecipeImport;
+using RecipeLibrary.Application.UseCases.Recipes;
 using RecipeLibrary.Application.Validators;
 using Xunit;
 
@@ -18,9 +18,15 @@ public sealed class ChickpeaButterMasalaGoldenImportTests
 {
     private static readonly ImportRecipeParseOptions GoldenParseOptions = new() { UseAiFallback = true };
 
-    private readonly RecipeTextParser _parser = ImportTestFactory.CreateTextParser(
-        new FixtureAiIngredientLineParser(Path.Combine("Fixtures", "ChickpeaButterMasala", "ai-ingredient-overrides.json")),
-        ImportTestFactory.AiEnabledOptions);
+    private readonly FixtureAiIngredientLineParser _aiParser = new(
+        Path.Combine("Fixtures", "ChickpeaButterMasala", "ai-ingredient-overrides.json"));
+
+    private readonly RecipeTextParser _parser;
+
+    public ChickpeaButterMasalaGoldenImportTests()
+    {
+        _parser = ImportTestFactory.CreateTextParser(_aiParser, ImportTestFactory.AiEnabledOptions);
+    }
 
     [Fact]
     public async Task Parse_CleanData_MatchesExpectedOutput_AndPassesValidator()
@@ -28,6 +34,9 @@ public sealed class ChickpeaButterMasalaGoldenImportTests
         var actual = await ParseToCommandAsync(ReadFixture("clean-data.txt"));
         AssertMatchesExpected(actual);
         CreateRecipeCommandValidator.ValidateAndThrow(actual);
+        Assert.Equal(1, _aiParser.CallCount);
+        Assert.NotNull(_aiParser.LastBatch);
+        Assert.True(_aiParser.LastBatch.Count >= 2);
     }
 
     [Fact]
@@ -144,10 +153,8 @@ public sealed class ChickpeaButterMasalaGoldenImportTests
                ?? throw new InvalidOperationException("Failed to deserialize expected-output.json");
     }
 
-    private static RecipeImportService CreateImportService() =>
-        ImportTestFactory.CreateImportService(
-            new FixtureAiIngredientLineParser(Path.Combine("Fixtures", "ChickpeaButterMasala", "ai-ingredient-overrides.json")),
-            options: ImportTestFactory.AiEnabledOptions);
+    private RecipeImportService CreateImportService() =>
+        ImportTestFactory.CreateImportService(_aiParser, options: ImportTestFactory.AiEnabledOptions);
 
     private static string ReadFixture(string relativePath) =>
         File.ReadAllText(GetFixturePath(relativePath));

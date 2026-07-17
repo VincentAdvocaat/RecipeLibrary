@@ -247,7 +247,7 @@
 
     private RenderFragment RenderAiImportOptions() => __builder =>
     {
-        if (!ImportOptions.Value.Ai.Enabled)
+        if (!ImportOptions.Value.Ai.Enabled || string.IsNullOrWhiteSpace(ImportOptions.Value.Ai.ApiKey))
         {
             return;
         }
@@ -711,6 +711,7 @@
         ImportWarningCodes.NoContent => L["RecipeCreate.Import.Warning.NoContent"].Value,
         ImportWarningCodes.HeuristicIngredients => L["RecipeCreate.Import.Warning.HeuristicIngredients"].Value,
         ImportWarningCodes.LowConfidenceAiHint => L["RecipeCreate.Import.Warning.LowConfidenceAiHint"].Value,
+        ImportWarningCodes.AiFallbackFailed => L["RecipeCreate.Import.Warning.AiFallbackFailed"].Value,
         _ => null,
     };
 

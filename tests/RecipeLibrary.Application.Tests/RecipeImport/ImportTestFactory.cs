@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
@@ -27,7 +28,8 @@ internal static class ImportTestFactory
         new(
             new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser())),
             aiParser ?? new TestNullIngredientLineAiParser(),
-            options ?? AiDisabledOptions);
+            options ?? AiDisabledOptions,
+            NullLogger<RecipeTextParser>.Instance);
 
     internal static RecipeImportService CreateImportService(
         IIngredientLineAiParser? aiParser = null,
@@ -64,16 +66,28 @@ internal sealed class FixtureAiIngredientLineParser(string fixtureRelativePath) 
 {
     private readonly Dictionary<string, AiParsedIngredientLine> _overrides = LoadOverrides(fixtureRelativePath);
 
+    public int CallCount { get; private set; }
+
+    public IReadOnlyList<string>? LastBatch { get; private set; }
+
     public Task<IReadOnlyList<AiParsedIngredientLine>> ParseLinesAsync(
         IReadOnlyList<string> rawLines,
         CancellationToken ct = default)
     {
+        CallCount++;
+        LastBatch = rawLines.ToList();
+
         var results = rawLines
             .Select(line =>
             {
                 if (!_overrides.TryGetValue(line, out var mapped))
                 {
-                    throw new InvalidOperationException($"No AI fixture override for ingredient line: {line}");
+                    // Skip unknown lines so one missing override does not fail the whole batch.
+                    return new AiParsedIngredientLine
+                    {
+                        RawLine = line,
+                        Name = string.Empty,
+                    };
                 }
 
                 return new AiParsedIngredientLine

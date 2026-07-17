@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Domain.ValueObjects;
@@ -396,6 +397,98 @@ public static class RecipeTextDocumentExtractor
             Steps = steps,
             Warnings = warnings,
         };
+    }
+
+    /// <summary>
+    /// Rebuilds a chrome-stripped plain-text recipe for full-recipe AI parsing.
+    /// Falls back to the original text when extraction yields no usable sections.
+    /// </summary>
+    public static string NormalizePlainTextForAi(string plainText)
+    {
+        var document = Extract(plainText ?? string.Empty);
+        var normalized = FormatNormalizedPlainText(document);
+        return string.IsNullOrWhiteSpace(normalized) ? plainText ?? string.Empty : normalized;
+    }
+
+    public static string FormatNormalizedPlainText(RecipeTextDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var sb = new StringBuilder();
+
+        if (!string.IsNullOrWhiteSpace(document.Title))
+        {
+            sb.AppendLine(document.Title.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(document.Description))
+        {
+            EnsureBlankLine(sb);
+            sb.AppendLine(document.Description.Trim());
+        }
+
+        var hasMeta = document.PreparationTimeMinutes is not null
+            || document.CookingTimeMinutes is not null
+            || document.Servings is not null;
+        if (hasMeta)
+        {
+            EnsureBlankLine(sb);
+            if (document.PreparationTimeMinutes is int prep)
+            {
+                sb.AppendLine($"Prep time: {prep} min");
+            }
+
+            if (document.CookingTimeMinutes is int cook)
+            {
+                sb.AppendLine($"Cook time: {cook} min");
+            }
+
+            if (document.Servings is int servings)
+            {
+                sb.AppendLine($"Servings: {servings}");
+            }
+        }
+
+        if (document.IngredientLines.Count > 0)
+        {
+            EnsureBlankLine(sb);
+            sb.AppendLine("Ingredients");
+            foreach (var line in document.IngredientLines)
+            {
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    sb.AppendLine(line.Trim());
+                }
+            }
+        }
+
+        if (document.Steps.Count > 0)
+        {
+            EnsureBlankLine(sb);
+            sb.AppendLine("Instructions");
+            foreach (var step in document.Steps)
+            {
+                if (string.IsNullOrWhiteSpace(step.Text))
+                {
+                    continue;
+                }
+
+                var number = step.StepNumber > 0 ? step.StepNumber : 0;
+                sb.AppendLine(number > 0 ? $"{number}. {step.Text.Trim()}" : step.Text.Trim());
+            }
+        }
+
+        return sb.ToString().Trim();
+    }
+
+    private static void EnsureBlankLine(StringBuilder sb)
+    {
+        if (sb.Length == 0)
+        {
+            return;
+        }
+
+        sb.AppendLine();
     }
 
     private static int FindPreambleTitleIndex(IReadOnlyList<string> lines)

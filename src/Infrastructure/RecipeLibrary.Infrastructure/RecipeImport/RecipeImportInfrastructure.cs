@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Domain.ValueObjects;
 
 namespace RecipeLibrary.Infrastructure.RecipeImport;
 
@@ -147,8 +148,15 @@ public sealed class OpenAiIngredientLineAiParser(
     private static decimal? NormalizeQuantity(decimal? quantity) =>
         quantity is null or <= 0 ? null : quantity;
 
-    private static string? NormalizeUnit(string? unit) =>
-        string.IsNullOrWhiteSpace(unit) ? null : unit.Trim();
+    private static string? NormalizeUnit(string? unit)
+    {
+        if (string.IsNullOrWhiteSpace(unit))
+        {
+            return null;
+        }
+
+        return UnitRules.TryParse(unit, out var parsed) ? parsed.ToString() : null;
+    }
 
     private static string? NormalizePreparation(string? preparation) =>
         string.IsNullOrWhiteSpace(preparation) ? null : preparation.Trim();

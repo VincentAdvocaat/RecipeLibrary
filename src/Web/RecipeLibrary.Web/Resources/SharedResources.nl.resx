@@ -106,6 +106,7 @@
   <data name="RecipeCreate.Import.Warning.NoContent" xml:space="preserve"><value>Er is geen bruikbare tekst gevonden om te importeren.</value></data>
   <data name="RecipeCreate.Import.Warning.HeuristicIngredients" xml:space="preserve"><value>Geen duidelijke ingrediëntensectie gevonden; we hebben regels als ingrediënten geïnterpreteerd. Check dit.</value></data>
   <data name="RecipeCreate.Import.Warning.LowConfidenceAiHint" xml:space="preserve"><value>Sommige ingrediëntregels zijn onzeker. Check die regels even.</value></data>
+  <data name="RecipeCreate.Import.Warning.AiFallbackFailed" xml:space="preserve"><value>AI kon onzekere ingrediëntregels niet verbeteren. Check die regels handmatig.</value></data>
   <data name="Nav.Overview" xml:space="preserve"><value>Overzicht</value></data>
   <data name="RecipeOverview.PageTitle" xml:space="preserve"><value>Recepten Overzicht</value></data>
   <data name="RecipeCreate.PageTitle" xml:space="preserve"><value>Nieuw Recept Toevoegen</value></data>
