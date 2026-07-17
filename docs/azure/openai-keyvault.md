@@ -39,11 +39,15 @@ CA=$(az containerapp list -g "$RG" --query "[0].name" -o tsv)
 echo "Key Vault: $KV"
 echo "Container App: $CA"
 
-# Set or rotate the key (creates a new secret version; does not require Bicep deploy)
-az keyvault secret set \
+# Set or rotate the key via stdin (avoids putting the key in shell history).
+# Creates a new secret version; does not require a Bicep deploy.
+read -r -s -p "OpenAI API key: " OPENAI_KEY; echo
+printf '%s' "$OPENAI_KEY" | az keyvault secret set \
   --vault-name "$KV" \
   --name "RecipeImport-OpenAi-ApiKey" \
-  --value "sk-YOUR-OPENAI-KEY"
+  --file /dev/stdin \
+  --encoding utf-8 >/dev/null
+unset OPENAI_KEY
 
 # Restart so the app picks up the latest Key Vault secret version
 REV=$(az containerapp revision list -g "$RG" -n "$CA" --query "[0].name" -o tsv)
@@ -57,10 +61,29 @@ $RG = "rg-recipelibrary-test-sec"
 $KV = (az keyvault list -g $RG --query "[0].name" -o tsv)
 $CA = (az containerapp list -g $RG --query "[0].name" -o tsv)
 
-az keyvault secret set `
-  --vault-name $KV `
-  --name "RecipeImport-OpenAi-ApiKey" `
-  --value "sk-YOUR-OPENAI-KEY"
+# Prompt securely; avoid --value on the command line (shell history).
+$secure = Read-Host -AsSecureString "OpenAI API key"
+$bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+try {
+  $openAiKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+  $tmp = [System.IO.Path]::GetTempFileName()
+  try {
+    [System.IO.File]::WriteAllText($tmp, $openAiKey)
+    az keyvault secret set `
+      --vault-name $KV `
+      --name "RecipeImport-OpenAi-ApiKey" `
+      --file $tmp `
+      --encoding utf-8 | Out-Null
+  }
+  finally {
+    Remove-Item -Force $tmp -ErrorAction SilentlyContinue
+  }
+}
+finally {
+  [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+  $openAiKey = $null
+  $secure = $null
+}
 
 $REV = (az containerapp revision list -g $RG -n $CA --query "[0].name" -o tsv)
 az containerapp revision restart -g $RG -n $CA --revision $REV

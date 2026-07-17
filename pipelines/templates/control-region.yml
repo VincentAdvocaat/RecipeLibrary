@@ -183,6 +183,7 @@ stages:
                 echo "=== Remaining data resources ==="
                 az sql server list --resource-group "$rg" --query "[].name" -o tsv
                 az storage account list --resource-group "$rg" --query "[].name" -o tsv
+                az keyvault list --resource-group "$rg" --query "[].name" -o tsv
                 az identity list --resource-group "$rg" --query "[].name" -o tsv
 
                 echo "Hibernate complete. To bring the app back: run azure-pipelines.yml for this region."
