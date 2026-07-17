@@ -50,6 +50,10 @@ var containerAppShortSuffix = take(suffix, 6)
 var containerAppName = toLower('ca-rl-${environment}-${containerAppShortSuffix}')
 var managedEnvName = toLower('cae-${projectName}-${environment}-${suffix}')
 var appIdentityName = toLower('id-${projectName}-${environment}-${suffix}')
+var keyVaultScriptIdentityName = toLower('id-kvs-${environment}-${containerAppShortSuffix}')
+
+// Key Vault names: 3-24 chars, alphanumeric only.
+var keyVaultName = toLower('kv${uniqueString(resourceGroup().id, projectName, environment, 'openai')}')
 
 // Storage account names: 3-24 chars, lowercase alphanumeric. Bicep substring length is capped at 13.
 var storageAccountName = toLower('st${substring(uniqueString(resourceGroup().id, projectName, environment, 'blob'), 0, 13)}')
@@ -62,9 +66,120 @@ var sqlFqdn = '${sqlServerName}.database.windows.net'
 var containerImage = '${ghcrImageRepository}@${containerImageDigest}'
 var dataProtectionBlobUri = 'https://${storageAccount.name}.blob.core.windows.net/dataprotection/keys.xml'
 
+// Key Vault secret name (rotate via Azure CLI without redeploy). Container Apps secret alias for secretRef.
+var openAiKeyVaultSecretName = 'RecipeImport-OpenAi-ApiKey'
+var openAiContainerAppSecretName = 'openai-api-key'
+
 resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: appIdentityName
   location: location
+}
+
+// Used only by the one-time secret bootstrap script (not by the web app).
+resource keyVaultScriptIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: keyVaultScriptIdentityName
+  location: location
+}
+
+// RBAC-only vault; purge protection stays on (cannot be disabled later).
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  name: keyVaultName
+  location: location
+  properties: {
+    tenantId: tenantId
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    enableRbacAuthorization: true
+    enableSoftDelete: true
+    softDeleteRetentionInDays: 90
+    enablePurgeProtection: true
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
+var keyVaultSecretsOfficerRoleId = 'b86a8fe4-44ce-4338-a84b-9e22c2e38a1b'
+
+// Container App identity reads the OpenAI API key at runtime via secretRef.
+resource appKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, appIdentity.id, keyVaultSecretsUserRoleId)
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+    principalId: appIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Bootstrap identity may create the placeholder secret if it does not exist yet (never overwrites).
+resource scriptKeyVaultSecretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, keyVaultScriptIdentity.id, keyVaultSecretsOfficerRoleId)
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsOfficerRoleId)
+    principalId: keyVaultScriptIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Entra SQL admin can set/rotate the OpenAI secret from CLI/Portal without pipeline changes.
+resource adminKeyVaultSecretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, entraAdminObjectId, keyVaultSecretsOfficerRoleId)
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsOfficerRoleId)
+    principalId: entraAdminObjectId
+    principalType: 'User'
+  }
+}
+
+// Idempotent: create placeholder secret only when missing so later deploys do not wipe CLI rotations.
+resource ensureOpenAiSecret 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
+  name: 'ensure-openai-api-key'
+  location: location
+  kind: 'AzureCLI'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${keyVaultScriptIdentity.id}': {}
+    }
+  }
+  dependsOn: [
+    scriptKeyVaultSecretsOfficer
+  ]
+  properties: {
+    azCliVersion: '2.67.0'
+    timeout: 'PT10M'
+    retentionInterval: 'PT1H'
+    cleanupPreference: 'OnSuccess'
+    forceUpdateTag: 'v1'
+    environmentVariables: [
+      {
+        name: 'AZURE_CLIENT_ID'
+        value: keyVaultScriptIdentity.properties.clientId
+      }
+      {
+        name: 'KV_NAME'
+        value: keyVault.name
+      }
+      {
+        name: 'SECRET_NAME'
+        value: openAiKeyVaultSecretName
+      }
+    ]
+    scriptContent: '''
+set -euo pipefail
+az login --identity --client-id "$AZURE_CLIENT_ID" >/dev/null
+if az keyvault secret show --vault-name "$KV_NAME" --name "$SECRET_NAME" --query name -o tsv >/dev/null 2>&1; then
+  echo "Secret $SECRET_NAME already exists; leaving value unchanged."
+else
+  echo "Creating placeholder secret $SECRET_NAME (replace via az keyvault secret set)."
+  az keyvault secret set --vault-name "$KV_NAME" --name "$SECRET_NAME" --value "UNSET" >/dev/null
+fi
+'''
+  }
 }
 
 resource managedEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
@@ -178,6 +293,10 @@ resource sqlAllowClientIp 'Microsoft.Sql/servers/firewallRules@2023-05-01-previe
 resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: containerAppName
   location: location
+  dependsOn: [
+    appKeyVaultSecretsUser
+    ensureOpenAiSecret
+  ]
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -189,10 +308,16 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       // GHCR packages are private by default; Container Apps need registry credentials to pull.
+      // OpenAI key is referenced from Key Vault (never stored as a plain Container App secret value).
       secrets: [
         {
           name: 'ghcr-password'
           value: ghcrPassword
+        }
+        {
+          name: openAiContainerAppSecretName
+          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/${openAiKeyVaultSecretName}'
+          identity: appIdentity.id
         }
       ]
       registries: [
@@ -258,6 +383,14 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'DataProtection__BlobUri'
               value: dataProtectionBlobUri
             }
+            {
+              name: 'RecipeImport__Ai__Enabled'
+              value: 'true'
+            }
+            {
+              name: 'RecipeImport__Ai__ApiKey'
+              secretRef: openAiContainerAppSecretName
+            }
           ]
           probes: [
             {
@@ -320,3 +453,6 @@ output sqlDatabaseName string = sqlDb.name
 output storageAccountName string = storageAccount.name
 output recipeImagesContainerName string = recipeImagesContainer.name
 output dataProtectionContainerName string = dataProtectionContainer.name
+output keyVaultName string = keyVault.name
+output keyVaultUri string = keyVault.properties.vaultUri
+output openAiKeyVaultSecretName string = openAiKeyVaultSecretName

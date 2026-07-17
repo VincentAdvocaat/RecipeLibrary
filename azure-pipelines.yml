@@ -134,10 +134,13 @@ stages:
 
                 container_app_name="$(echo "$outputs" | jq -r '.containerAppName.value')"
                 container_app_fqdn="$(echo "$outputs" | jq -r '.containerAppFqdn.value')"
+                key_vault_name="$(echo "$outputs" | jq -r '.keyVaultName.value')"
                 echo "Deployed Container App: $container_app_name"
                 echo "Container App FQDN: $container_app_fqdn"
+                echo "Key Vault: $key_vault_name"
                 echo "##vso[task.setvariable variable=containerAppName]$container_app_name"
                 echo "##vso[task.setvariable variable=containerAppFqdn]$container_app_fqdn"
+                echo "##vso[task.setvariable variable=keyVaultName]$key_vault_name"
 
           - task: AzureCLI@2
             displayName: Smoke check (cold start tolerant)
@@ -239,10 +242,13 @@ stages:
 
                 container_app_name="$(echo "$outputs" | jq -r '.containerAppName.value')"
                 container_app_fqdn="$(echo "$outputs" | jq -r '.containerAppFqdn.value')"
+                key_vault_name="$(echo "$outputs" | jq -r '.keyVaultName.value')"
                 echo "Deployed Container App: $container_app_name"
                 echo "Container App FQDN: $container_app_fqdn"
+                echo "Key Vault: $key_vault_name"
                 echo "##vso[task.setvariable variable=containerAppName]$container_app_name"
                 echo "##vso[task.setvariable variable=containerAppFqdn]$container_app_fqdn"
+                echo "##vso[task.setvariable variable=keyVaultName]$key_vault_name"
 
           - task: AzureCLI@2
             displayName: Smoke check (cold start tolerant)

@@ -9,14 +9,17 @@ This folder contains Bicep templates to provision a **test** environment on Azur
   - `useFreeLimit: true`
   - `freeLimitExhaustionBehavior: AutoPause` (auto-pauses until next month when the free limit is exhausted)
 - **Blob Storage**: recipe images + Data Protection key ring (private containers)
+- **Key Vault**: OpenAI API key for recipe import AI (RBAC; Container App reads via managed identity)
 
 ### Files
 
 - `subscription.bicep`: creates the resource group (subscription-scope)
-- `main.bicep`: deploys Container App, SQL, storage into the resource group (resource-group scope)
+- `main.bicep`: deploys Container App, SQL, storage, Key Vault into the resource group (resource-group scope)
 - `cost-guard.bicep`: monthly budget, Action Group, Logic App auto-stop at 80% (deploy separately with Owner)
 - `params/test.bicepparam`: example parameter file for local/manual deploy
 - `params/cost-guard.bicepparam`: example parameters for cost guard deploy
+
+OpenAI / Key Vault setup: see `docs/azure/openai-keyvault.md`.
 
 ### Pipeline deploy
 
@@ -37,7 +40,7 @@ az provider register --namespace Microsoft.App
 az provider register --namespace Microsoft.OperationalInsights
 ```
 
-Also register `Microsoft.Sql` and `Microsoft.Storage` (see
+Also register `Microsoft.Sql`, `Microsoft.Storage`, and `Microsoft.KeyVault` (see
 `docs/azure/subscription-bootstrap.md`).
 
 Verify Container Apps quota in `swedencentral` if deploy fails with quota errors.
@@ -73,7 +76,7 @@ environment costs may remain.
 Register `azure-pipelines-control.yml` (no CI trigger).
 
 - **Default run** → hibernate (delete Container App + Managed Environment, pause SQL;
-  keep SQL + Blob + identity).
+  keep SQL + Blob + Key Vault + identity).
 - **Status only** checkbox → inspect without changes.
 - **target**: `sec` | `neu` | `all`
 

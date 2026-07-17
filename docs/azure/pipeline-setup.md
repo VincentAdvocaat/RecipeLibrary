@@ -33,6 +33,7 @@ Register required resource providers (once per subscription):
 az provider register --namespace Microsoft.App
 az provider register --namespace Microsoft.Sql
 az provider register --namespace Microsoft.Storage
+az provider register --namespace Microsoft.KeyVault
 az provider register --namespace Microsoft.ManagedIdentity
 az provider register --namespace Microsoft.OperationalInsights
 ```
@@ -84,9 +85,13 @@ Each pipeline service principal needs on **its** resource group:
 
 - **Contributor**
 - **Role Based Access Control Administrator** with a condition that allows only
-  **Storage Blob Data Contributor** assignments (for Bicep blob RBAC)
+  these role definition IDs (for Bicep data-plane RBAC):
+  - Storage Blob Data Contributor `ba92f5b4-2d11-453d-a403-e96b0029c9fe`
+  - Key Vault Secrets User `4633458b-17de-408a-b874-0445c86b69e6`
+  - Key Vault Secrets Officer `b86a8fe4-44ce-4338-a84b-9e22c2e38a1b`
 
-Example for SEC (replace `<sp-object-id>`):
+Example for SEC (replace `<sp-object-id>`). If an older restricted assignment
+exists, remove it first and recreate with the condition below:
 
 ```bash
 az role assignment create \
@@ -100,7 +105,7 @@ az role assignment create \
   --assignee-principal-type ServicePrincipal \
   --role "Role Based Access Control Administrator" \
   --scope "/subscriptions/<subscription-id>/resourceGroups/rg-recipelibrary-test-sec" \
-  --condition "((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe}))" \
+  --condition "((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4338-a84b-9e22c2e38a1b})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4338-a84b-9e22c2e38a1b}))" \
   --condition-version "2.0"
 ```
 
@@ -129,6 +134,9 @@ it to the pipeline):
 | `GHCR_TOKEN` | GitHub PAT with `write:packages` (classic) or fine-grained packages write |
 
 These map to Bicep parameters and GHCR login. They are **not** checked into git.
+
+OpenAI API key for recipe import lives in Key Vault (not in ADO). See
+`docs/azure/openai-keyvault.md` — set/rotate with Azure CLI; no redeploy required.
 
 The public image repository defaults to `ghcr.io/vincentadvocaat/recipelibrary`
 (pipeline variable `ghcrImageRepository`). After the first push, keep the package

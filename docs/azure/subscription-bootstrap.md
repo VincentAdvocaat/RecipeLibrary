@@ -50,6 +50,7 @@ used by the Bicep template before the first deployment:
 az provider register --namespace Microsoft.Sql --subscription "<subscription-id>"
 az provider register --namespace Microsoft.App --subscription "<subscription-id>"
 az provider register --namespace Microsoft.Storage --subscription "<subscription-id>"
+az provider register --namespace Microsoft.KeyVault --subscription "<subscription-id>"
 az provider register --namespace Microsoft.OperationalInsights --subscription "<subscription-id>"
 ```
 
@@ -136,9 +137,13 @@ step as well.
 ## 6. Grant restricted RBAC administration
 
 The following assignment lets the pipeline service principal assign or remove
-only **Storage Blob Data Contributor** (`ba92f5b4-2d11-453d-a403-e96b0029c9fe`)
-inside the resource group. It cannot use this assignment to grant Owner or
-Contributor.
+only these data-plane roles inside the resource group:
+
+- Storage Blob Data Contributor (`ba92f5b4-2d11-453d-a403-e96b0029c9fe`)
+- Key Vault Secrets User (`4633458b-17de-408a-b874-0445c86b69e6`)
+- Key Vault Secrets Officer (`b86a8fe4-44ce-4338-a84b-9e22c2e38a1b`)
+
+It cannot use this assignment to grant Owner or Contributor.
 
 ### Bash / Azure Cloud Shell
 
@@ -148,7 +153,7 @@ az role assignment create \
   --assignee-principal-type ServicePrincipal \
   --role "Role Based Access Control Administrator" \
   --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>" \
-  --condition "((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe}))" \
+  --condition "((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4338-a84b-9e22c2e38a1b})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4338-a84b-9e22c2e38a1b}))" \
   --condition-version "2.0"
 ```
 
@@ -160,7 +165,7 @@ az role assignment create `
   --assignee-principal-type ServicePrincipal `
   --role "Role Based Access Control Administrator" `
   --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>" `
-  --condition '((!(ActionMatches{''Microsoft.Authorization/roleAssignments/write''})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe})) AND ((!(ActionMatches{''Microsoft.Authorization/roleAssignments/delete''})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe}))' `
+  --condition '((!(ActionMatches{''Microsoft.Authorization/roleAssignments/write''})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4338-a84b-9e22c2e38a1b})) AND ((!(ActionMatches{''Microsoft.Authorization/roleAssignments/delete''})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4338-a84b-9e22c2e38a1b}))' `
   --condition-version "2.0"
 ```
 
