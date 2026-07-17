@@ -6,7 +6,7 @@ using RecipeLibrary.Application.Abstractions;
 namespace RecipeLibrary.Infrastructure.RecipeImport;
 
 /// <summary>
-/// Reads recipe captions from Instagram oEmbed and YouTube InnerTube (shorts/watch).
+/// Reads recipe captions from Instagram oEmbed and YouTube (Data API v3, then InnerTube).
 /// </summary>
 public sealed class RecipeSocialCaptionFetcher(
     IHttpClientFactory httpClientFactory,
@@ -14,6 +14,7 @@ public sealed class RecipeSocialCaptionFetcher(
 {
     private const string UserAgent = "RecipeLibrary/1.0 (+recipe-import)";
     private const string YouTubeClientVersion = "2.20240101.00.00";
+    private const string KeyVaultPlaceholder = "UNSET";
 
     public async Task<string?> TryFetchCaptionAsync(string url, CancellationToken ct = default)
     {
@@ -58,18 +59,44 @@ public sealed class RecipeSocialCaptionFetcher(
             return null;
         }
 
-        using var document = JsonDocument.Parse(json);
-        if (!document.RootElement.TryGetProperty("title", out var titleElement)
-            || titleElement.ValueKind != JsonValueKind.String)
+        return TryParseInstagramOEmbedTitle(json);
+    }
+
+    private async Task<string?> FetchYouTubeDescriptionAsync(string videoId, CancellationToken ct)
+    {
+        if (TryGetConfiguredYouTubeApiKey(options.Value.YouTube.ApiKey, out var apiKey))
+        {
+            var fromDataApi = await FetchYouTubeDataApiDescriptionAsync(videoId, apiKey, ct);
+            if (!string.IsNullOrWhiteSpace(fromDataApi))
+            {
+                return fromDataApi;
+            }
+        }
+
+        return await FetchYouTubeInnerTubeDescriptionAsync(videoId, ct);
+    }
+
+    private async Task<string?> FetchYouTubeDataApiDescriptionAsync(
+        string videoId,
+        string apiKey,
+        CancellationToken ct)
+    {
+        var endpoint =
+            "https://www.googleapis.com/youtube/v3/videos"
+            + "?part=snippet"
+            + "&id=" + Uri.EscapeDataString(videoId)
+            + "&key=" + Uri.EscapeDataString(apiKey);
+
+        var json = await SendGetAsync(endpoint, ct);
+        if (string.IsNullOrWhiteSpace(json))
         {
             return null;
         }
 
-        var caption = titleElement.GetString();
-        return string.IsNullOrWhiteSpace(caption) ? null : caption.Trim();
+        return TryParseYouTubeDataApiSnippet(json);
     }
 
-    private async Task<string?> FetchYouTubeDescriptionAsync(string videoId, CancellationToken ct)
+    private async Task<string?> FetchYouTubeInnerTubeDescriptionAsync(string videoId, CancellationToken ct)
     {
         var endpoint = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
         var payload = JsonSerializer.Serialize(new
@@ -93,6 +120,80 @@ public sealed class RecipeSocialCaptionFetcher(
             return null;
         }
 
+        return TryParseYouTubeInnerTubeDescription(json);
+    }
+
+    /// <summary>True when the key is usable (not empty and not the Key Vault placeholder).</summary>
+    internal static bool TryGetConfiguredYouTubeApiKey(string? apiKey, out string configuredKey)
+    {
+        configuredKey = string.Empty;
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            return false;
+        }
+
+        var trimmed = apiKey.Trim();
+        if (trimmed.Equals(KeyVaultPlaceholder, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        configuredKey = trimmed;
+        return true;
+    }
+
+    internal static string? TryParseInstagramOEmbedTitle(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("title", out var titleElement)
+            || titleElement.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var caption = titleElement.GetString();
+        return string.IsNullOrWhiteSpace(caption) ? null : caption.Trim();
+    }
+
+    internal static string? TryParseYouTubeDataApiSnippet(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("items", out var items)
+            || items.ValueKind != JsonValueKind.Array
+            || items.GetArrayLength() == 0)
+        {
+            return null;
+        }
+
+        var first = items[0];
+        if (!first.TryGetProperty("snippet", out var snippet)
+            || snippet.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (snippet.TryGetProperty("description", out var descriptionElement)
+            && descriptionElement.ValueKind == JsonValueKind.String)
+        {
+            var description = descriptionElement.GetString();
+            if (!string.IsNullOrWhiteSpace(description))
+            {
+                return description.Trim();
+            }
+        }
+
+        if (snippet.TryGetProperty("title", out var titleElement)
+            && titleElement.ValueKind == JsonValueKind.String)
+        {
+            var title = titleElement.GetString();
+            return string.IsNullOrWhiteSpace(title) ? null : title.Trim();
+        }
+
+        return null;
+    }
+
+    internal static string? TryParseYouTubeInnerTubeDescription(string json)
+    {
         using var document = JsonDocument.Parse(json);
         if (!document.RootElement.TryGetProperty("videoDetails", out var details)
             || details.ValueKind != JsonValueKind.Object)
@@ -100,16 +201,14 @@ public sealed class RecipeSocialCaptionFetcher(
             return null;
         }
 
-        string? description = null;
         if (details.TryGetProperty("shortDescription", out var descriptionElement)
             && descriptionElement.ValueKind == JsonValueKind.String)
         {
-            description = descriptionElement.GetString();
-        }
-
-        if (!string.IsNullOrWhiteSpace(description))
-        {
-            return description.Trim();
+            var description = descriptionElement.GetString();
+            if (!string.IsNullOrWhiteSpace(description))
+            {
+                return description.Trim();
+            }
         }
 
         if (details.TryGetProperty("title", out var titleElement)

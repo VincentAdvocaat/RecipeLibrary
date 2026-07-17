@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\src\Application\RecipeLibrary.Application\RecipeLibrary.Application.csproj" />
     <ProjectReference Include="..\..\src\Application\RecipeLibrary.Application.Abstractions\RecipeLibrary.Application.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Domain\RecipeLibrary.Domain\RecipeLibrary.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure\RecipeLibrary.Infrastructure\RecipeLibrary.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

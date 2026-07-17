@@ -138,6 +138,9 @@ These map to Bicep parameters and GHCR login. They are **not** checked into git.
 OpenAI API key for recipe import lives in Key Vault (not in ADO). See
 `docs/azure/openai-keyvault.md` — set/rotate with Azure CLI; no redeploy required.
 
+YouTube Data API key for Shorts/video import also lives in Key Vault (not in ADO).
+See `docs/azure/youtube-keyvault.md` — set/rotate with Azure CLI; no redeploy required.
+
 The public image repository defaults to `ghcr.io/vincentadvocaat/recipelibrary`
 (pipeline variable `ghcrImageRepository`). After the first push, keep the package
 **public** so Container Apps can pull anonymously (no registry secret at runtime).

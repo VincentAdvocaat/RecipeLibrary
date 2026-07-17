@@ -9,7 +9,7 @@ This folder contains Bicep templates to provision a **test** environment on Azur
   - `useFreeLimit: true`
   - `freeLimitExhaustionBehavior: AutoPause` (auto-pauses until next month when the free limit is exhausted)
 - **Blob Storage**: recipe images + Data Protection key ring (private containers)
-- **Key Vault**: OpenAI API key for recipe import AI (RBAC; Container App reads via managed identity)
+- **Key Vault**: OpenAI + YouTube Data API keys for recipe import (RBAC; Container App reads via managed identity)
 
 ### Files
 
@@ -20,6 +20,7 @@ This folder contains Bicep templates to provision a **test** environment on Azur
 - `params/cost-guard.bicepparam`: example parameters for cost guard deploy
 
 OpenAI / Key Vault setup: see `docs/azure/openai-keyvault.md`.
+YouTube Data API / Key Vault setup: see `docs/azure/youtube-keyvault.md`.
 
 ### Pipeline deploy
 

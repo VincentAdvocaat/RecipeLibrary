@@ -66,9 +66,11 @@ var sqlFqdn = '${sqlServerName}.database.windows.net'
 var containerImage = '${ghcrImageRepository}@${containerImageDigest}'
 var dataProtectionBlobUri = 'https://${storageAccount.name}.blob.core.windows.net/dataprotection/keys.xml'
 
-// Key Vault secret name (rotate via Azure CLI without redeploy). Container Apps secret alias for secretRef.
+// Key Vault secret names (rotate via Azure CLI without redeploy). Container Apps secret aliases for secretRef.
 var openAiKeyVaultSecretName = 'RecipeImport-OpenAi-ApiKey'
 var openAiContainerAppSecretName = 'openai-api-key'
+var youTubeKeyVaultSecretName = 'RecipeImport-YouTube-ApiKey'
+var youTubeContainerAppSecretName = 'youtube-api-key'
 
 resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: appIdentityName
@@ -102,7 +104,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
 var keyVaultSecretsOfficerRoleId = 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
 
-// Container App identity reads the OpenAI API key at runtime via secretRef.
+// Container App identity reads OpenAI / YouTube API keys at runtime via secretRef.
 resource appKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(keyVault.id, appIdentity.id, keyVaultSecretsUserRoleId)
   scope: keyVault
@@ -124,7 +126,7 @@ resource scriptKeyVaultSecretsOfficer 'Microsoft.Authorization/roleAssignments@2
   }
 }
 
-// Entra SQL admin can set/rotate the OpenAI secret from CLI/Portal without pipeline changes.
+// Entra SQL admin can set/rotate OpenAI / YouTube secrets from CLI/Portal without pipeline changes.
 resource adminKeyVaultSecretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(keyVault.id, entraAdminObjectId, keyVaultSecretsOfficerRoleId)
   scope: keyVault
@@ -173,6 +175,54 @@ resource ensureOpenAiSecret 'Microsoft.Resources/deploymentScripts@2023-08-01' =
     scriptContent: '''
 set -euo pipefail
 # azCliVersion 2.67.0 supports --username for UAMI, not --client-id (added later).
+az login --identity --username "$AZURE_CLIENT_ID" >/dev/null
+if az keyvault secret show --vault-name "$KV_NAME" --name "$SECRET_NAME" --query name -o tsv >/dev/null 2>&1; then
+  echo "Secret $SECRET_NAME already exists; leaving value unchanged."
+else
+  echo "Creating placeholder secret $SECRET_NAME (replace via az keyvault secret set)."
+  az keyvault secret set --vault-name "$KV_NAME" --name "$SECRET_NAME" --value "UNSET" >/dev/null
+fi
+'''
+  }
+}
+
+// Idempotent: create YouTube Data API placeholder secret only when missing.
+resource ensureYouTubeSecret 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
+  name: 'ensure-youtube-api-key'
+  location: location
+  kind: 'AzureCLI'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${keyVaultScriptIdentity.id}': {}
+    }
+  }
+  dependsOn: [
+    scriptKeyVaultSecretsOfficer
+  ]
+  properties: {
+    azCliVersion: '2.67.0'
+    timeout: 'PT10M'
+    retentionInterval: 'PT1H'
+    cleanupPreference: 'OnSuccess'
+    // Bump when script body changes so ARM re-runs the deployment script.
+    forceUpdateTag: 'v1'
+    environmentVariables: [
+      {
+        name: 'AZURE_CLIENT_ID'
+        value: keyVaultScriptIdentity.properties.clientId
+      }
+      {
+        name: 'KV_NAME'
+        value: keyVault.name
+      }
+      {
+        name: 'SECRET_NAME'
+        value: youTubeKeyVaultSecretName
+      }
+    ]
+    scriptContent: '''
+set -euo pipefail
 az login --identity --username "$AZURE_CLIENT_ID" >/dev/null
 if az keyvault secret show --vault-name "$KV_NAME" --name "$SECRET_NAME" --query name -o tsv >/dev/null 2>&1; then
   echo "Secret $SECRET_NAME already exists; leaving value unchanged."
@@ -298,6 +348,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   dependsOn: [
     appKeyVaultSecretsUser
     ensureOpenAiSecret
+    ensureYouTubeSecret
   ]
   identity: {
     type: 'UserAssigned'
@@ -310,7 +361,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       // GHCR packages are private by default; Container Apps need registry credentials to pull.
-      // OpenAI key is referenced from Key Vault (never stored as a plain Container App secret value).
+      // OpenAI / YouTube keys are referenced from Key Vault (never stored as plain Container App secret values).
       secrets: [
         {
           name: 'ghcr-password'
@@ -319,6 +370,11 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: openAiContainerAppSecretName
           keyVaultUrl: '${keyVault.properties.vaultUri}secrets/${openAiKeyVaultSecretName}'
+          identity: appIdentity.id
+        }
+        {
+          name: youTubeContainerAppSecretName
+          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/${youTubeKeyVaultSecretName}'
           identity: appIdentity.id
         }
       ]
@@ -393,6 +449,10 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'RecipeImport__Ai__ApiKey'
               secretRef: openAiContainerAppSecretName
             }
+            {
+              name: 'RecipeImport__YouTube__ApiKey'
+              secretRef: youTubeContainerAppSecretName
+            }
           ]
           probes: [
             {
@@ -458,3 +518,4 @@ output dataProtectionContainerName string = dataProtectionContainer.name
 output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVault.properties.vaultUri
 output openAiKeyVaultSecretName string = openAiKeyVaultSecretName
+output youTubeKeyVaultSecretName string = youTubeKeyVaultSecretName
