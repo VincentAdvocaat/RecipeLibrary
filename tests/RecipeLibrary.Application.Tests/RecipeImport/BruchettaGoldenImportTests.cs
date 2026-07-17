@@ -83,7 +83,7 @@ public sealed class BruchettaGoldenImportTests
         var html = ReadFixture("page-jsonld.html");
         var url = ReadFixture("url.txt").Trim();
         var fetcher = new FakeContentFetcher(html);
-        var sut = new ImportRecipeFromUrlQueryHandler(fetcher, CreateImportService());
+        var sut = new ImportRecipeFromUrlQueryHandler(fetcher, new NullSocialCaptionFetcher(), CreateImportService());
 
         var result = await sut.HandleAsync(new ImportRecipeFromUrlQuery
         {
@@ -165,5 +165,11 @@ public sealed class BruchettaGoldenImportTests
             LastUrl = url;
             return Task.FromResult(html);
         }
+    }
+
+    private sealed class NullSocialCaptionFetcher : IRecipeSocialCaptionFetcher
+    {
+        public Task<string?> TryFetchCaptionAsync(string url, CancellationToken ct = default) =>
+            Task.FromResult<string?>(null);
     }
 }

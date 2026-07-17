@@ -15,6 +15,7 @@ public sealed class ImportRecipeContentQueryHandler(
 
 public sealed class ImportRecipeFromUrlQueryHandler(
     IRecipeImportContentFetcher contentFetcher,
+    IRecipeSocialCaptionFetcher socialCaptionFetcher,
     RecipeImportService recipeImportService)
     : IQueryHandler<ImportRecipeFromUrlQuery, ImportRecipeResult>
 {
@@ -27,6 +28,13 @@ public sealed class ImportRecipeFromUrlQueryHandler(
         }
 
         await RecipeImportUrlSafety.EnsurePublicHttpUrlAsync(url, ct);
+
+        // Instagram/YouTube pages are JS shells; captions live in platform APIs.
+        var socialCaption = await socialCaptionFetcher.TryFetchCaptionAsync(url, ct);
+        if (!string.IsNullOrWhiteSpace(socialCaption))
+        {
+            return await recipeImportService.ImportPlainTextAsync(socialCaption, query.ParseOptions, ct);
+        }
 
         var html = await contentFetcher.FetchHtmlAsync(url, ct);
         var text = recipeImportService.HtmlToRecipeText(html);

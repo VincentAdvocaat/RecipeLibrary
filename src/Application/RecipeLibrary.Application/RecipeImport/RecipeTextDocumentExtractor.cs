@@ -25,6 +25,7 @@ public static class RecipeTextDocumentExtractor
         "werkwijze",
         "instructies",
         "stappen",
+        "steps",
         "instructions",
         "method",
         "directions",
@@ -125,6 +126,11 @@ public static class RecipeTextDocumentExtractor
 
     private static readonly Regex ServesPhrasePattern = new(
         @"^serves?\s+(?<count>\d+)(?:\s*(?:to|-|–)\s*\d+)?$",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>Matches Instagram-style "RECIPE (serves 2):" / "(serves 4)" lines.</summary>
+    private static readonly Regex ServesInParenthesesPattern = new(
+        @"\(\s*serves?\s+(?<count>\d+)(?:\s*(?:to|-|–)\s*\d+)?\s*\)",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex DifficultyLabeledPattern = new(
@@ -724,7 +730,7 @@ public static class RecipeTextDocumentExtractor
     private static bool TryParseServingsPhrase(string line, out int servings)
     {
         servings = 0;
-        var trimmed = line.Trim();
+        var trimmed = line.Trim().TrimEnd(':').Trim();
         if (trimmed.Length == 0)
         {
             return false;
@@ -734,6 +740,13 @@ public static class RecipeTextDocumentExtractor
         if (serves.Success)
         {
             servings = int.Parse(serves.Groups["count"].Value, CultureInfo.InvariantCulture);
+            return servings > 0 && servings <= 100;
+        }
+
+        var parenthetical = ServesInParenthesesPattern.Match(trimmed);
+        if (parenthetical.Success)
+        {
+            servings = int.Parse(parenthetical.Groups["count"].Value, CultureInfo.InvariantCulture);
             return servings > 0 && servings <= 100;
         }
 
@@ -844,8 +857,10 @@ public static class RecipeTextDocumentExtractor
     private static bool LooksLikeMeasuredOrToTasteIngredient(string trimmed) =>
         Regex.IsMatch(
             trimmed,
-            @"^(?:[½¼¾⅓⅔]|\d+(?:[.,]\d+)?|\d+\s*/\s*\d+|\d+\s*-\s*\d+|\d+\s+to\s+\d+|snuf|snufje|snufjes|handje|handjes|beetje|teen|teentje)(?:\b|\s|$)",
+            // Allow glued units common in social captions ("14oz", "500g", "2tbsp").
+            @"^(?:[½¼¾⅓⅔]|\d+(?:[.,]\d+)?|\d+\s*/\s*\d+|\d+\s*-\s*\d+|\d+\s+to\s+\d+|snuf|snufje|snufjes|handje|handjes|beetje|teen|teentje)(?:[a-zA-Z]{1,4})?(?:\b|\s|$)",
             RegexOptions.IgnoreCase)
+        || Regex.IsMatch(trimmed, @"^juice\s+of\s+\d+\b", RegexOptions.IgnoreCase)
         || trimmed.Contains(" naar smaak", StringComparison.OrdinalIgnoreCase)
         || trimmed.Contains(" to taste", StringComparison.OrdinalIgnoreCase);
 
@@ -935,6 +950,11 @@ public static class RecipeTextDocumentExtractor
             return true;
         }
 
+        if (IsHashtagOnlyLine(normalized))
+        {
+            return true;
+        }
+
         if (Regex.IsMatch(normalized, @"^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)$", RegexOptions.IgnoreCase)
             || Regex.IsMatch(normalized, @"^\d{1,2}$"))
         {
@@ -952,6 +972,13 @@ public static class RecipeTextDocumentExtractor
         }
 
         return false;
+    }
+
+    /// <summary>Instagram/TikTok trailing tag rows like "#shrimpbowl #proteinbowl".</summary>
+    private static bool IsHashtagOnlyLine(string line)
+    {
+        var tokens = line.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return tokens.Length > 0 && tokens.All(static t => t.StartsWith('#') && t.Length > 1);
     }
 
     private static string StripBullet(string line) =>

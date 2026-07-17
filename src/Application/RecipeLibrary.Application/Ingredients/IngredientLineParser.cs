@@ -132,6 +132,11 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         else
         {
             finalQuantity = IngredientQuantityFormatter.Normalize(scaled, unit);
+            // "1/4 avocado" rounds to 0 Piece; keep at least 1 so the draft stays valid.
+            if (finalQuantity <= 0 && scaled > 0)
+            {
+                finalQuantity = 1;
+            }
         }
 
         var confidence = hasExplicitUnit && resolved.DisplayName.Length > 0
@@ -303,6 +308,12 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
             });
         value = NormalizeMixedPlus(value);
         value = Regex.Replace(value, @"\b(\d+)\s+to\s+(\d+)\b", "$1-$2", RegexOptions.IgnoreCase);
+        // Social captions often glue quantity and unit: "14oz coconut milk".
+        value = Regex.Replace(
+            value,
+            @"\b(\d+(?:[.,]\d+)?)(oz|lbs?|kg|g|ml|l|tsp|tbsp|cups?)\b",
+            "$1 $2",
+            RegexOptions.IgnoreCase);
         value = Regex.Replace(value, @"\bgm\s*/", "g ", RegexOptions.IgnoreCase);
         value = Regex.Replace(value, @"\bgm\b", "g", RegexOptions.IgnoreCase);
         return Regex.Replace(value, @"\s+", " ").Trim();

@@ -27,6 +27,7 @@ public static class RecipeImportServiceRegistration
             });
 
         services.AddScoped<IRecipeImportContentFetcher, RecipeImportContentFetcher>();
+        services.AddScoped<IRecipeSocialCaptionFetcher, RecipeSocialCaptionFetcher>();
         services.AddScoped<IRecipeImageTextExtractor, TesseractRecipeImageTextExtractor>();
 
         var aiEnabled = configuration.GetValue<bool>($"{RecipeImportOptions.SectionName}:Ai:Enabled");

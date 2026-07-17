@@ -1,0 +1,91 @@
+{
+  "title": "Panang Curry",
+  "preparationTimeMinutes": 0,
+  "cookingTimeMinutes": 0,
+  "category": 0,
+  "servings": 0,
+  "difficulty": 0,
+  "description": null,
+  "imageUrl": null,
+  "ingredients": [
+    {
+      "name": "lbs chicken thigh",
+      "preparation": "sliced",
+      "quantity": 1,
+      "unit": "Piece",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "oz panang curry paste",
+      "preparation": null,
+      "quantity": 4,
+      "unit": "Piece",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "oz coconut milk",
+      "preparation": null,
+      "quantity": 14,
+      "unit": "Piece",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "kaffir lime leaves",
+      "preparation": "4-5",
+      "quantity": 4,
+      "unit": "Piece",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "palm sugar",
+      "preparation": null,
+      "quantity": 1,
+      "unit": "Tablespoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "fish sauce",
+      "preparation": null,
+      "quantity": 1,
+      "unit": "Tablespoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "Red chilies",
+      "preparation": null,
+      "quantity": null,
+      "unit": null,
+      "createAsNewIngredient": false
+    }
+  ],
+  "instructionSteps": [
+    {
+      "stepNumber": 1,
+      "text": "Heat half of 14oz can coconut milk in a deep pan on medium heat for 2-3 minutes."
+    },
+    {
+      "stepNumber": 2,
+      "text": "Once slightly thickened, add curry paste and stir. Once incorporated, simmer on medium low for 5-6 minutes until the coconut milk makes a bright red oil with the curry paste."
+    },
+    {
+      "stepNumber": 3,
+      "text": "Add sliced chicken thigh and stir so the chicken is coated in the curry mixture."
+    },
+    {
+      "stepNumber": 4,
+      "text": "Add coconut milk, and 3-4 torn kaffir lime leaves."
+    },
+    {
+      "stepNumber": 5,
+      "text": "Cover and simmer on medium low heat for 10-15 minutes until the chicken is fully cooked through. Make sure to occasionally stir so the bottom doesn\u2019t burn."
+    },
+    {
+      "stepNumber": 6,
+      "text": "Season to taste with fish sauce and palm sugar."
+    },
+    {
+      "stepNumber": 7,
+      "text": "Garnish with minced kaffir lime leaves, sliced red chillies, and enjoy with hot rice."
+    }
+  ]
+}

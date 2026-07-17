@@ -1,32 +1,22 @@
-using System.Net;
 using System.Text.Json;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.RecipeImport;
 using RecipeLibrary.Application.UseCases.RecipeImport;
-using RecipeLibrary.Application.UseCases.Recipes;
 using RecipeLibrary.Application.Validators;
 using Xunit;
 
 namespace RecipeLibrary.Application.Tests.RecipeImport;
 
 /// <summary>
-/// Golden import coverage for Chickpea Butter Masala import modalities.
-/// Every asserted modality must match expected-output.json exactly.
+/// Golden import coverage for Instagram reel captions (Mango Shrimp Fiesta Bowl).
+/// Caption text and URL→social-caption import must match expected-output.json.
 /// </summary>
-public sealed class ChickpeaButterMasalaGoldenImportTests
+public sealed class InstagramMangoShrimpBowlGoldenImportTests
 {
-    private static readonly ImportRecipeParseOptions GoldenParseOptions = new() { UseAiFallback = true };
+    private static readonly ImportRecipeParseOptions GoldenParseOptions = new() { UseAiFallback = false };
 
-    private readonly FixtureAiIngredientLineParser _aiParser = new(
-        Path.Combine("Fixtures", "ChickpeaButterMasala", "ai-ingredient-overrides.json"));
-
-    private readonly RecipeTextParser _parser;
-
-    public ChickpeaButterMasalaGoldenImportTests()
-    {
-        _parser = ImportTestFactory.CreateTextParser(_aiParser, ImportTestFactory.AiEnabledOptions);
-    }
+    private readonly RecipeTextParser _parser = ImportTestFactory.CreateTextParser();
 
     [Fact]
     public async Task Parse_CleanData_MatchesExpectedOutput_AndPassesValidator()
@@ -34,9 +24,6 @@ public sealed class ChickpeaButterMasalaGoldenImportTests
         var actual = await ParseToCommandAsync(ReadFixture("clean-data.txt"));
         AssertMatchesExpected(actual);
         CreateRecipeCommandValidator.ValidateAndThrow(actual);
-        Assert.Equal(1, _aiParser.CallCount);
-        Assert.NotNull(_aiParser.LastBatch);
-        Assert.True(_aiParser.LastBatch.Count >= 2);
     }
 
     [Fact]
@@ -54,48 +41,13 @@ public sealed class ChickpeaButterMasalaGoldenImportTests
     }
 
     [Fact]
-    public async Task Parse_EntireWebPageText_MatchesExpectedOutput_AndPassesValidator()
+    public async Task ImportFromUrl_UsesSocialCaption_AndMatchesExpectedOutput()
     {
-        var actual = await ParseToCommandAsync(ReadFixture("entire-web-page.txt"));
-        AssertMatchesExpected(actual);
-        CreateRecipeCommandValidator.ValidateAndThrow(actual);
-    }
-
-    [Fact]
-    public async Task ImportContent_EntireWebPageAsPlainText_MatchesExpectedOutput()
-    {
-        var service = CreateImportService();
-        var result = await service.ImportContentAsync(new ImportRecipeContentQuery
-        {
-            Content = ReadFixture("entire-web-page.txt"),
-            ContentKind = ImportContentKind.PlainText,
-            ParseOptions = GoldenParseOptions,
-        });
-
-        AssertMatchesExpected(ImportRecipeResultMapper.ToCreateRecipeCommand(result));
-    }
-
-    [Fact]
-    public async Task ImportContent_HtmlWrappedEntireWebPage_MatchesExpectedOutput()
-    {
-        var service = CreateImportService();
-        var result = await service.ImportContentAsync(new ImportRecipeContentQuery
-        {
-            Content = WrapTextAsHtml(ReadFixture("entire-web-page.txt")),
-            ContentKind = ImportContentKind.Html,
-            ParseOptions = GoldenParseOptions,
-        });
-
-        AssertMatchesExpected(ImportRecipeResultMapper.ToCreateRecipeCommand(result));
-    }
-
-    [Fact]
-    public async Task ImportFromUrl_UsesFetchedHtml_AndMatchesExpectedOutput()
-    {
-        var html = WrapTextAsHtml(ReadFixture("entire-web-page.txt"));
+        var caption = ReadFixture("clean-data.txt");
         var url = ReadFixture("url.txt").Trim();
-        var fetcher = new FakeContentFetcher(html);
-        var sut = new ImportRecipeFromUrlQueryHandler(fetcher, new NullSocialCaptionFetcher(), CreateImportService());
+        var htmlFetcher = new FakeContentFetcher("<html><body>unused</body></html>");
+        var social = new FakeSocialCaptionFetcher(caption);
+        var sut = new ImportRecipeFromUrlQueryHandler(htmlFetcher, social, CreateImportService());
 
         var result = await sut.HandleAsync(new ImportRecipeFromUrlQuery
         {
@@ -103,7 +55,8 @@ public sealed class ChickpeaButterMasalaGoldenImportTests
             ParseOptions = GoldenParseOptions,
         });
 
-        Assert.Equal(url, fetcher.LastUrl);
+        Assert.Equal(url, social.LastUrl);
+        Assert.Null(htmlFetcher.LastUrl);
         AssertMatchesExpected(ImportRecipeResultMapper.ToCreateRecipeCommand(result));
     }
 
@@ -153,23 +106,13 @@ public sealed class ChickpeaButterMasalaGoldenImportTests
                ?? throw new InvalidOperationException("Failed to deserialize expected-output.json");
     }
 
-    private RecipeImportService CreateImportService() =>
-        ImportTestFactory.CreateImportService(_aiParser, options: ImportTestFactory.AiEnabledOptions);
+    private static RecipeImportService CreateImportService() => ImportTestFactory.CreateImportService();
 
     private static string ReadFixture(string relativePath) =>
         File.ReadAllText(GetFixturePath(relativePath));
 
     private static string GetFixturePath(string relativePath) =>
-        Path.Combine(AppContext.BaseDirectory, "Fixtures", "ChickpeaButterMasala", relativePath);
-
-    private static string WrapTextAsHtml(string text) =>
-        $$"""
-          <!DOCTYPE html>
-          <html lang="en">
-          <head><meta charset="utf-8"><title>Recipe</title></head>
-          <body><pre>{{WebUtility.HtmlEncode(text)}}</pre></body>
-          </html>
-          """;
+        Path.Combine(AppContext.BaseDirectory, "Fixtures", "InstagramMangoShrimpBowl", relativePath);
 
     private sealed class FakeContentFetcher(string html) : IRecipeImportContentFetcher
     {
@@ -182,9 +125,14 @@ public sealed class ChickpeaButterMasalaGoldenImportTests
         }
     }
 
-    private sealed class NullSocialCaptionFetcher : IRecipeSocialCaptionFetcher
+    private sealed class FakeSocialCaptionFetcher(string caption) : IRecipeSocialCaptionFetcher
     {
-        public Task<string?> TryFetchCaptionAsync(string url, CancellationToken ct = default) =>
-            Task.FromResult<string?>(null);
+        public string? LastUrl { get; private set; }
+
+        public Task<string?> TryFetchCaptionAsync(string url, CancellationToken ct = default)
+        {
+            LastUrl = url;
+            return Task.FromResult<string?>(caption);
+        }
     }
 }
