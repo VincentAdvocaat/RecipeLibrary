@@ -14,7 +14,9 @@ public sealed class MatchIngredientCommandHandler(
     public async Task<MatchIngredientResult> HandleAsync(MatchIngredientCommand command, CancellationToken ct = default)
     {
         var rawInput = (command.Input ?? string.Empty).Trim();
-        var cultureName = CultureInfo.CurrentUICulture.Name;
+        var cultureName = string.IsNullOrWhiteSpace(command.CultureName)
+            ? CultureInfo.CurrentUICulture.Name
+            : command.CultureName;
         var result = await matcher.MatchAsync(rawInput, cultureName, ct);
 
         await ingredientRepository.AddMatchLogAsync(new IngredientMatchLog

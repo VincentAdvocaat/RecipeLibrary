@@ -124,8 +124,7 @@
             return;
         }
 
-        var encoded = Uri.EscapeDataString(_addItemName.Trim());
-        _addItemSuggestions = await Http.GetFromJsonAsync<List<IngredientLookupItem>>($"/ingredients/search?q={encoded}") ?? [];
+        _addItemSuggestions = await Http.GetFromJsonAsync<List<IngredientLookupItem>>(IngredientApi.SearchUrl(_addItemName.Trim())) ?? [];
     }
 
     private void SelectAddItemSuggestion(IngredientLookupItem suggestion)

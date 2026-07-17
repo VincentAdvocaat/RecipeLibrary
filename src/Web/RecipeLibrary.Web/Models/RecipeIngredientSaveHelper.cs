@@ -22,7 +22,7 @@ public static class RecipeIngredientSaveHelper
                 continue;
             }
 
-            var match = await http.PostAsJsonAsync("/ingredients/match", new MatchIngredientCommand { Input = input });
+            var match = await http.PostAsJsonAsync("/ingredients/match", IngredientApi.MatchCommand(input));
             var payload = await match.Content.ReadFromJsonAsync<MatchIngredientResult>();
             if (payload is null)
             {

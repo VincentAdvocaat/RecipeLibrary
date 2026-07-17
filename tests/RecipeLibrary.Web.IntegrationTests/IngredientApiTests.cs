@@ -1,4 +1,4 @@
-using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Testing;
@@ -23,6 +23,35 @@ public sealed class IngredientApiTests(SqlContainerFixture fixture)
     }
 
     [Fact]
+    public async Task Search_WithEnglishCultureQuery_ReturnsEnglishDisplayName()
+    {
+        var response = await _client.GetAsync("/ingredients/search?q=tom&culture=en-US");
+
+        response.EnsureSuccessStatusCode();
+        var items = await response.Content.ReadFromJsonAsync<List<IngredientLookupItem>>();
+        Assert.NotNull(items);
+        Assert.Contains(items, i =>
+            string.Equals(i.Name, "tomato", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(i.LanguageCode, "en", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Search_WithAcceptLanguageEnglish_ReturnsEnglishDisplayName()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/ingredients/search?q=tom");
+        request.Headers.AcceptLanguage.Add(new StringWithQualityHeaderValue("en-US"));
+
+        var response = await _client.SendAsync(request);
+
+        response.EnsureSuccessStatusCode();
+        var items = await response.Content.ReadFromJsonAsync<List<IngredientLookupItem>>();
+        Assert.NotNull(items);
+        Assert.Contains(items, i =>
+            string.Equals(i.Name, "tomato", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(i.LanguageCode, "en", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task Match_ReturnsResultForKnownInput()
     {
         var response = await _client.PostAsJsonAsync("/ingredients/match", new MatchIngredientCommand { Input = "gehakt" });
@@ -31,6 +60,21 @@ public sealed class IngredientApiTests(SqlContainerFixture fixture)
         var result = await response.Content.ReadFromJsonAsync<MatchIngredientResult>();
         Assert.NotNull(result);
         Assert.NotNull(result.Ingredient);
+    }
+
+    [Fact]
+    public async Task Match_WithEnglishCulture_ReturnsEnglishDisplayName()
+    {
+        var response = await _client.PostAsJsonAsync(
+            "/ingredients/match",
+            new MatchIngredientCommand { Input = "tomato", CultureName = "en-US" });
+
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<MatchIngredientResult>();
+        Assert.NotNull(result);
+        Assert.NotNull(result.Ingredient);
+        Assert.Equal("tomato", result.Ingredient!.Name, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal("en", result.Ingredient.LanguageCode);
     }
 
     [Fact]

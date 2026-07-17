@@ -29,6 +29,31 @@ public sealed class MatchIngredientCommandHandlerTests
         Assert.Equal("Gehakt", repo.LastLog!.Input);
     }
 
+    [Fact]
+    public async Task HandleAsync_UsesCultureNameForEnglishDisplay()
+    {
+        var tomato = IngredientTestFactory.Create("tomaat", "nl", catalogKey: "tomato");
+        tomato.Translations.Add(new IngredientTranslation
+        {
+            Id = Guid.NewGuid(),
+            IngredientId = tomato.Id,
+            LanguageCode = "en",
+            DisplayName = "tomato",
+            NormalizedDisplayName = "tomato",
+        });
+        var repo = new FakeIngredientRepository(tomato);
+
+        var matcher = new IngredientMatcher(repo, new IngredientTextNormalizer(), new IngredientSimilarityScorer());
+        var sut = new MatchIngredientCommandHandler(matcher, repo);
+
+        var result = await sut.HandleAsync(new MatchIngredientCommand { Input = "tomato", CultureName = "en-US" });
+
+        Assert.Equal("exact", result.MatchType);
+        Assert.NotNull(result.Ingredient);
+        Assert.Equal("tomato", result.Ingredient!.Name);
+        Assert.Equal("en", result.Ingredient.LanguageCode);
+    }
+
     private sealed class FakeIngredientRepository(CanonicalIngredient? exactMatch) : IIngredientRepository
     {
         public IngredientMatchLog? LastLog { get; private set; }
