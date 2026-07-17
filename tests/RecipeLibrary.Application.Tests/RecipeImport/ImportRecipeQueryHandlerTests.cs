@@ -28,7 +28,7 @@ public sealed class ImportRecipeQueryHandlerTests
     {
         var html = await File.ReadAllTextAsync(GetFixturePath("jsonld-pasta.html"));
         var fetcher = new FakeContentFetcher(html);
-        var sut = new ImportRecipeFromUrlQueryHandler(fetcher, CreateService());
+        var sut = new ImportRecipeFromUrlQueryHandler(fetcher, new NullSocialCaptionFetcher(), CreateService());
 
         var result = await sut.HandleAsync(new ImportRecipeFromUrlQuery { Url = "https://example.com/recipe" });
 
@@ -37,9 +37,33 @@ public sealed class ImportRecipeQueryHandlerTests
     }
 
     [Fact]
+    public async Task ImportRecipeFromUrlQueryHandler_UsesSocialCaption_WhenAvailable()
+    {
+        var caption = await File.ReadAllTextAsync(
+            Path.Combine(AppContext.BaseDirectory, "Fixtures", "YouTubePanangCurry", "clean-data.txt"));
+        var htmlFetcher = new FakeContentFetcher("<html><body>should not be used</body></html>");
+        var social = new FakeSocialCaptionFetcher(caption);
+        var sut = new ImportRecipeFromUrlQueryHandler(htmlFetcher, social, CreateService());
+
+        var result = await sut.HandleAsync(new ImportRecipeFromUrlQuery
+        {
+            Url = "https://www.youtube.com/shorts/DSGRNoSTvLg",
+        });
+
+        Assert.Equal("Panang Curry", result.Title);
+        Assert.True(result.Ingredients.Count >= 5);
+        Assert.True(result.Steps.Count >= 5);
+        Assert.Null(htmlFetcher.LastUrl);
+        Assert.Equal("https://www.youtube.com/shorts/DSGRNoSTvLg", social.LastUrl);
+    }
+
+    [Fact]
     public async Task ImportRecipeFromUrlQueryHandler_Throws_ForInvalidUrl()
     {
-        var sut = new ImportRecipeFromUrlQueryHandler(new FakeContentFetcher(""), CreateService());
+        var sut = new ImportRecipeFromUrlQueryHandler(
+            new FakeContentFetcher(""),
+            new NullSocialCaptionFetcher(),
+            CreateService());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new ImportRecipeFromUrlQuery { Url = "not-a-url" }));
@@ -48,7 +72,10 @@ public sealed class ImportRecipeQueryHandlerTests
     [Fact]
     public async Task ImportRecipeFromUrlQueryHandler_Throws_ForPrivateHost()
     {
-        var sut = new ImportRecipeFromUrlQueryHandler(new FakeContentFetcher(""), CreateService());
+        var sut = new ImportRecipeFromUrlQueryHandler(
+            new FakeContentFetcher(""),
+            new NullSocialCaptionFetcher(),
+            CreateService());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new ImportRecipeFromUrlQuery { Url = "http://127.0.0.1/recipe" }));
@@ -248,6 +275,23 @@ public sealed class ImportRecipeQueryHandlerTests
         {
             LastUrl = url;
             return Task.FromResult(html);
+        }
+    }
+
+    private sealed class NullSocialCaptionFetcher : IRecipeSocialCaptionFetcher
+    {
+        public Task<string?> TryFetchCaptionAsync(string url, CancellationToken ct = default) =>
+            Task.FromResult<string?>(null);
+    }
+
+    private sealed class FakeSocialCaptionFetcher(string caption) : IRecipeSocialCaptionFetcher
+    {
+        public string? LastUrl { get; private set; }
+
+        public Task<string?> TryFetchCaptionAsync(string url, CancellationToken ct = default)
+        {
+            LastUrl = url;
+            return Task.FromResult<string?>(caption);
         }
     }
 

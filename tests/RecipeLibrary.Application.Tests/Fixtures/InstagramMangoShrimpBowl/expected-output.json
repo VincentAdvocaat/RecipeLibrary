@@ -1,0 +1,142 @@
+{
+  "title": "Day 4/30 Healthy Bowls - Mango Shrimp Fiesta Bowl \uD83E\uDD6D\uD83C\uDF64",
+  "preparationTimeMinutes": 0,
+  "cookingTimeMinutes": 0,
+  "category": 0,
+  "servings": 2,
+  "difficulty": 0,
+  "description": "It is bright, fresh, takes 15 minutes, and honestly might be my favourite one yet.",
+  "imageUrl": null,
+  "ingredients": [
+    {
+      "name": "basmati rice",
+      "preparation": null,
+      "quantity": 1,
+      "unit": "Cup",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "raw shrimp",
+      "preparation": "peeled, deveined",
+      "quantity": 10,
+      "unit": "Ounce",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "cumin",
+      "preparation": null,
+      "quantity": 0.5,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "smoked paprika",
+      "preparation": null,
+      "quantity": 0.5,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "chili",
+      "preparation": null,
+      "quantity": 0.5,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "oregano",
+      "preparation": null,
+      "quantity": 0.25,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "garlic powder",
+      "preparation": null,
+      "quantity": 0.25,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "Salt and pepper",
+      "preparation": null,
+      "quantity": null,
+      "unit": null,
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "ripe mango",
+      "preparation": "diced",
+      "quantity": 1,
+      "unit": "Piece",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "red onion",
+      "preparation": "diced",
+      "quantity": 0.5,
+      "unit": "Piece",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "cilantro",
+      "preparation": "chopped",
+      "quantity": 1,
+      "unit": "Tablespoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "jalape\u00F1o",
+      "preparation": "sliced",
+      "quantity": 0.25,
+      "unit": "Piece",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "avocado",
+      "preparation": "diced",
+      "quantity": 0.25,
+      "unit": "Piece",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "fresh cilantro",
+      "preparation": "for rice",
+      "quantity": 0.25,
+      "unit": "Cup",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "lime",
+      "preparation": "juice",
+      "quantity": 1,
+      "unit": "Piece",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "Lime wedges for serving",
+      "preparation": null,
+      "quantity": null,
+      "unit": null,
+      "createAsNewIngredient": false
+    }
+  ],
+  "instructionSteps": [
+    {
+      "stepNumber": 1,
+      "text": "Cook jasmine rice. While it\u2019s still hot, stir in chopped cilantro and fresh lime juice. This is the move that makes the whole bowl."
+    },
+    {
+      "stepNumber": 2,
+      "text": "Season shrimp with cumin, smoked paprika, garlic powder, and salt. Sear in a hot pan, 2 minutes per side."
+    },
+    {
+      "stepNumber": 3,
+      "text": "Make mango salsa: combine diced mango, red onion, cilantro, and half the jalape\u00F1o slices. Squeeze lime over it."
+    },
+    {
+      "stepNumber": 4,
+      "text": "Build your bowls: cilantro lime rice on the bottom, shrimp, mango salsa, diced avocado, remaining jalape\u00F1o slices. Serve with lime wedges."
+    }
+  ]
+}

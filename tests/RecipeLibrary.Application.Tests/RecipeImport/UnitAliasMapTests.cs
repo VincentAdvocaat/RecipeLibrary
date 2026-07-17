@@ -14,6 +14,16 @@ public sealed class UnitAliasMapTests
     [InlineData("tl", Unit.Teaspoon, 1)]
     [InlineData("el", Unit.Tablespoon, 1)]
     [InlineData("stuk", Unit.Piece, 1)]
+    [InlineData("cup", Unit.Cup, 1)]
+    [InlineData("cups", Unit.Cup, 1)]
+    [InlineData("kopje", Unit.Cup, 1)]
+    [InlineData("oz", Unit.Ounce, 1)]
+    [InlineData("ounce", Unit.Ounce, 1)]
+    [InlineData("lb", Unit.Pound, 1)]
+    [InlineData("lbs", Unit.Pound, 1)]
+    [InlineData("can", Unit.Can, 1)]
+    [InlineData("blikje", Unit.Can, 1)]
+    [InlineData("cloves", Unit.Clove, 1)]
     public void TryResolve_MapsAliases(string alias, Unit expectedUnit, decimal expectedMultiplier)
     {
         var success = UnitAliasMap.TryResolve(alias, out var match);

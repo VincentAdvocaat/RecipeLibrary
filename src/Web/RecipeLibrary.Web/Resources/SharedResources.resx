@@ -225,6 +225,10 @@
   <data name="Recipe.Unit.Leaf" xml:space="preserve"><value>leaf</value></data>
   <data name="Recipe.Unit.Bunch" xml:space="preserve"><value>bunch</value></data>
   <data name="Recipe.Unit.Stalk" xml:space="preserve"><value>stalk</value></data>
+  <data name="Recipe.Unit.Cup" xml:space="preserve"><value>cup</value></data>
+  <data name="Recipe.Unit.Ounce" xml:space="preserve"><value>ounce</value></data>
+  <data name="Recipe.Unit.Pound" xml:space="preserve"><value>pound</value></data>
+  <data name="Recipe.Unit.Can" xml:space="preserve"><value>can</value></data>
   <data name="RecipeCreate.Ingredient.Unit.Unmeasured" xml:space="preserve"><value>none (to taste)</value></data>
   <data name="Auth.SignIn" xml:space="preserve"><value>Sign in</value></data>
   <data name="Auth.SignOut" xml:space="preserve"><value>Sign out</value></data>

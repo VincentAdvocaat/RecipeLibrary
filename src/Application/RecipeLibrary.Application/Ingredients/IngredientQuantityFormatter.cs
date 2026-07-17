@@ -4,15 +4,22 @@ using RecipeLibrary.Domain.ValueObjects;
 namespace RecipeLibrary.Application.Ingredients;
 
 /// <summary>
-/// Normalizes and formats ingredient quantities (whole numbers, or culinary fractions for tsp/tbsp).
+/// Normalizes and formats ingredient quantities (whole numbers, culinary fractions, or decimals).
 /// </summary>
 public static class IngredientQuantityFormatter
 {
+    private const int DecimalQuantityScale = 2;
+
     public static decimal Normalize(decimal quantity, Unit unit)
     {
         if (UnitRules.AllowsCulinaryFractions(unit))
         {
             return CulinaryQuantityFractions.SnapToNearest(quantity);
+        }
+
+        if (UnitRules.AllowsDecimalQuantity(unit))
+        {
+            return decimal.Round(quantity, DecimalQuantityScale, MidpointRounding.AwayFromZero);
         }
 
         return decimal.Round(quantity, 0, MidpointRounding.AwayFromZero);
@@ -24,6 +31,11 @@ public static class IngredientQuantityFormatter
         if (UnitRules.AllowsCulinaryFractions(unit))
         {
             return CulinaryQuantityFractions.FormatMixed(normalized);
+        }
+
+        if (UnitRules.AllowsDecimalQuantity(unit))
+        {
+            return normalized.ToString("0.##", CultureInfo.InvariantCulture);
         }
 
         return ((long)normalized).ToString(CultureInfo.InvariantCulture);
@@ -55,6 +67,12 @@ public static class IngredientQuantityFormatter
 
         if (quantity != normalized)
         {
+            if (UnitRules.AllowsDecimalQuantity(unit))
+            {
+                throw new ArgumentException(
+                    $"Quantity must have at most {DecimalQuantityScale} decimal places for unit '{unit}'.");
+            }
+
             throw new ArgumentException(
                 $"Quantity must be a whole number for unit '{unit}'.");
         }

@@ -89,4 +89,25 @@ public sealed class IngredientQuantityFormatterTests
         Assert.Throws<ArgumentException>(() =>
             IngredientQuantityFormatter.ValidateQuantity(1.37m, Unit.Teaspoon));
     }
+
+    [Theory]
+    [InlineData(0.5, Unit.Cup, "½")]
+    [InlineData(0.25, Unit.Piece, "¼")]
+    [InlineData(1.5, Unit.Ounce, "1½")]
+    public void Format_UsesCulinaryFractions_ForCupPieceAndOunce(decimal quantity, Unit unit, string expected)
+    {
+        Assert.Equal(expected, IngredientQuantityFormatter.Format(quantity, unit));
+    }
+
+    [Fact]
+    public void Format_KeepsDecimal_ForPound()
+    {
+        Assert.Equal("1.3", IngredientQuantityFormatter.Format(1.3m, Unit.Pound));
+    }
+
+    [Fact]
+    public void ValidateQuantity_AllowsDecimal_ForPound()
+    {
+        IngredientQuantityFormatter.ValidateQuantity(1.3m, Unit.Pound);
+    }
 }

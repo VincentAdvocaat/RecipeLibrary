@@ -83,13 +83,33 @@ public static class UnitAliases
         Add("tablespoon", Unit.Tablespoon);
         Add("tablespoons", Unit.Tablespoon);
 
-        Add("cup", Unit.Milliliter, 240m);
-        Add("cups", Unit.Milliliter, 240m);
+        Add("cup", Unit.Cup);
+        Add("cups", Unit.Cup);
+        Add("kop", Unit.Cup);
+        Add("kopje", Unit.Cup);
+        Add("kopjes", Unit.Cup);
+
+        Add("oz", Unit.Ounce);
+        Add("ounce", Unit.Ounce);
+        Add("ounces", Unit.Ounce);
+
+        Add("lb", Unit.Pound);
+        Add("lbs", Unit.Pound);
+        Add("pound", Unit.Pound);
+        Add("pounds", Unit.Pound);
+
+        Add("can", Unit.Can);
+        Add("cans", Unit.Can);
+        Add("blik", Unit.Can);
+        Add("blikje", Unit.Can);
+        Add("blikjes", Unit.Can);
 
         Add("st", Unit.Piece);
         Add("stuk", Unit.Piece);
         Add("stuks", Unit.Piece);
         Add("x", Unit.Piece);
+        Add("piece", Unit.Piece);
+        Add("pieces", Unit.Piece);
 
         Add("snuf", Unit.Teaspoon);
         Add("snufje", Unit.Teaspoon);
@@ -99,6 +119,7 @@ public static class UnitAliases
         Add("teentje", Unit.Clove);
         Add("teentjes", Unit.Clove);
         Add("clove", Unit.Clove);
+        Add("cloves", Unit.Clove);
 
         Add("handje", Unit.Handful);
         Add("handjes", Unit.Handful);

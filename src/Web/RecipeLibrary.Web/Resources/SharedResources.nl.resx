@@ -225,6 +225,10 @@
   <data name="Recipe.Unit.Leaf" xml:space="preserve"><value>blaadje</value></data>
   <data name="Recipe.Unit.Bunch" xml:space="preserve"><value>bosje</value></data>
   <data name="Recipe.Unit.Stalk" xml:space="preserve"><value>stengel</value></data>
+  <data name="Recipe.Unit.Cup" xml:space="preserve"><value>kopje</value></data>
+  <data name="Recipe.Unit.Ounce" xml:space="preserve"><value>ounce</value></data>
+  <data name="Recipe.Unit.Pound" xml:space="preserve"><value>pond</value></data>
+  <data name="Recipe.Unit.Can" xml:space="preserve"><value>blik</value></data>
   <data name="RecipeCreate.Ingredient.Unit.Unmeasured" xml:space="preserve"><value>geen (naar smaak)</value></data>
   <data name="Auth.SignIn" xml:space="preserve"><value>Inloggen</value></data>
   <data name="Auth.SignOut" xml:space="preserve"><value>Uitloggen</value></data>
