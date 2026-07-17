@@ -6,9 +6,17 @@ public sealed class RecipeImportOptions
 
     public RecipeImportAiOptions Ai { get; init; } = new();
 
+    public RecipeImportYouTubeOptions YouTube { get; init; } = new();
+
     public RecipeImportUrlFetchOptions UrlFetch { get; init; } = new();
 
     public RecipeImportOcrOptions Ocr { get; init; } = new();
+}
+
+public sealed class RecipeImportYouTubeOptions
+{
+    /// <summary>YouTube Data API v3 key. Empty or placeholder values skip the Data API path.</summary>
+    public string? ApiKey { get; init; }
 }
 
 public sealed class RecipeImportAiOptions
