@@ -17,6 +17,26 @@ public sealed class RecipeImportContentFetcher(
 
     public async Task<string> FetchHtmlAsync(string url, CancellationToken ct = default)
     {
+        var (body, finalUri) = await FetchBodyAsync(url, ct);
+
+        if (BloggerDynamicContent.IsDynamicShell(body)
+            && BloggerDynamicContent.TryGetPostId(body, out var postId))
+        {
+            var feedUri = BloggerDynamicContent.BuildAtomFeedUri(finalUri, postId);
+            var (atom, _) = await FetchBodyAsync(feedUri.ToString(), ct);
+            var entryHtml = BloggerDynamicContent.TryExtractHtmlFromAtom(atom);
+            if (!string.IsNullOrWhiteSpace(entryHtml))
+            {
+                var title = BloggerDynamicContent.TryGetEntryTitleFromAtom(atom);
+                return BloggerDynamicContent.WrapAsHtmlDocument(entryHtml, title);
+            }
+        }
+
+        return body;
+    }
+
+    private async Task<(string Body, Uri FinalUri)> FetchBodyAsync(string url, CancellationToken ct)
+    {
         var client = httpClientFactory.CreateClient(RecipeImportServiceRegistration.HttpClientName);
         var current = await RecipeImportUrlSafety.ResolvePublicHttpEndpointAsync(url, ct);
 
@@ -53,24 +73,8 @@ public sealed class RecipeImportContentFetcher(
 
                 var maxBytes = options.Value.UrlFetch.MaxBytes;
                 await using var stream = await response.Content.ReadAsStreamAsync(ct);
-                using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-                var buffer = new char[Math.Min(maxBytes, 8192)];
-                var builder = new StringBuilder();
-                int read;
-                var totalBytes = 0;
-
-                while ((read = await reader.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
-                {
-                    totalBytes += Encoding.UTF8.GetByteCount(buffer.AsSpan(0, read));
-                    if (totalBytes > maxBytes)
-                    {
-                        throw new InvalidOperationException($"Response exceeded maximum size of {maxBytes} bytes.");
-                    }
-
-                    builder.Append(buffer, 0, read);
-                }
-
-                return builder.ToString();
+                var body = await RecipeImportBodyReader.ReadUtf8UpToMaxBytesAsync(stream, maxBytes, ct);
+                return (body, current.Uri);
             }
         }
 
