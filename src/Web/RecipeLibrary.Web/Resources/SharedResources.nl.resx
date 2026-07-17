@@ -196,6 +196,12 @@
   <data name="NotFound.PageTitle" xml:space="preserve"><value>Niet gevonden</value></data>
   <data name="NotFound.Heading" xml:space="preserve"><value>Niet gevonden</value></data>
   <data name="NotFound.Message" xml:space="preserve"><value>Sorry, de inhoud die u zoekt bestaat niet.</value></data>
+  <data name="Starting.PageTitle" xml:space="preserve"><value>Bezig met starten</value></data>
+  <data name="Starting.Heading" xml:space="preserve"><value>De app start op</value></data>
+  <data name="Starting.Message" xml:space="preserve"><value>De database wordt wakker. Dat kan een minuut of twee duren na idle tijd. Deze pagina gaat automatisch verder zodra alles klaar is.</value></data>
+  <data name="Starting.Status" xml:space="preserve"><value>Wachten op de database…</value></data>
+  <data name="Starting.Spinner.AriaLabel" xml:space="preserve"><value>Nog bezig met starten</value></data>
+  <data name="Starting.RetryButton" xml:space="preserve"><value>Opnieuw proberen</value></data>
   <data name="RecipeDetail.PageTitle" xml:space="preserve"><value>{0} — Recept</value></data>
   <data name="RecipeDetail.BackToOverview" xml:space="preserve"><value>Terug naar overzicht</value></data>
   <data name="RecipeDetail.Instructions.SectionLabel" xml:space="preserve"><value>Bereiding</value></data>
