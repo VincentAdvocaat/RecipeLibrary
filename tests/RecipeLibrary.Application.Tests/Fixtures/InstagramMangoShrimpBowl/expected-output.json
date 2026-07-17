@@ -11,15 +11,15 @@
     {
       "name": "basmati rice",
       "preparation": null,
-      "quantity": 240,
-      "unit": "Milliliter",
+      "quantity": 1,
+      "unit": "Cup",
       "createAsNewIngredient": false
     },
     {
-      "name": "oz raw shrimp",
+      "name": "raw shrimp",
       "preparation": "peeled, deveined",
       "quantity": 10,
-      "unit": "Piece",
+      "unit": "Ounce",
       "createAsNewIngredient": false
     },
     {
@@ -74,7 +74,7 @@
     {
       "name": "red onion",
       "preparation": "diced",
-      "quantity": 1,
+      "quantity": 0.5,
       "unit": "Piece",
       "createAsNewIngredient": false
     },
@@ -88,29 +88,29 @@
     {
       "name": "jalape\u00F1o",
       "preparation": "sliced",
-      "quantity": 1,
+      "quantity": 0.25,
       "unit": "Piece",
       "createAsNewIngredient": false
     },
     {
       "name": "avocado",
       "preparation": "diced",
-      "quantity": 1,
+      "quantity": 0.25,
       "unit": "Piece",
       "createAsNewIngredient": false
     },
     {
       "name": "fresh cilantro",
       "preparation": "for rice",
-      "quantity": 60,
-      "unit": "Milliliter",
+      "quantity": 0.25,
+      "unit": "Cup",
       "createAsNewIngredient": false
     },
     {
-      "name": "Juice of 1 lime",
-      "preparation": null,
-      "quantity": null,
-      "unit": null,
+      "name": "lime",
+      "preparation": "juice",
+      "quantity": 1,
+      "unit": "Piece",
       "createAsNewIngredient": false
     },
     {

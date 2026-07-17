@@ -1,4 +1,4 @@
-@* Molecule: quantity input — whole numbers, or whole + culinary fraction for tsp/tbsp. *@
+@* Molecule: quantity input — whole, culinary fraction, or decimal (e.g. pounds). *@
 @namespace RecipeLibrary.Components.Molecules
 
 @if (string.IsNullOrWhiteSpace(UnitName))
@@ -27,6 +27,16 @@ else if (_allowsCulinaryFractions)
         </select>
     </div>
 }
+else if (_allowsDecimalQuantity)
+{
+    <input type="number"
+           class="@CssClass"
+           min="0.01"
+           step="0.01"
+           inputmode="decimal"
+           value="@_decimalDisplay"
+           @onchange="OnDecimalChangedAsync" />
+}
 else
 {
     <input type="number"
@@ -46,14 +56,23 @@ else
     [Parameter] public string? CssClass { get; set; }
 
     private bool _allowsCulinaryFractions;
+    private bool _allowsDecimalQuantity;
     private int _whole;
     private string _fractionKey = "0";
     private int _wholeDisplay = 1;
+    private string _decimalDisplay = "1";
 
     protected override void OnParametersSet()
     {
-        _allowsCulinaryFractions =
-            UnitRules.TryParse(UnitName, out var unit) && UnitRules.AllowsCulinaryFractions(unit);
+        _allowsCulinaryFractions = false;
+        _allowsDecimalQuantity = false;
+        Unit? parsedUnit = null;
+        if (UnitRules.TryParse(UnitName, out var unit))
+        {
+            parsedUnit = unit;
+            _allowsCulinaryFractions = UnitRules.AllowsCulinaryFractions(unit);
+            _allowsDecimalQuantity = UnitRules.AllowsDecimalQuantity(unit);
+        }
 
         var q = Quantity ?? 0m;
         if (_allowsCulinaryFractions)
@@ -61,6 +80,11 @@ else
             var (whole, fraction) = CulinaryQuantityFractions.Split(q <= 0 ? 1m : q);
             _whole = whole;
             _fractionKey = CulinaryQuantityFractions.FractionKey(fraction);
+        }
+        else if (_allowsDecimalQuantity && parsedUnit is Unit decimalUnit)
+        {
+            var normalized = q <= 0 ? 1m : IngredientQuantityFormatter.Normalize(q, decimalUnit);
+            _decimalDisplay = normalized.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
         }
         else
         {
@@ -85,6 +109,25 @@ else
         }
 
         await SetQuantityAsync(parsed);
+    }
+
+    private async Task OnDecimalChangedAsync(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString();
+        if (!decimal.TryParse(raw, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+            && !decimal.TryParse(raw, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out parsed))
+        {
+            return;
+        }
+
+        if (parsed <= 0 || !UnitRules.TryParse(UnitName, out var unit) || !UnitRules.AllowsDecimalQuantity(unit))
+        {
+            return;
+        }
+
+        var normalized = IngredientQuantityFormatter.Normalize(parsed, unit);
+        _decimalDisplay = normalized.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        await SetQuantityAsync(normalized);
     }
 
     private async Task OnWholeChangedAsync(ChangeEventArgs e)

@@ -210,4 +210,67 @@ public sealed class IngredientLineParserTests
         Assert.Equal(nameof(Unit.Gram), result.Unit);
         Assert.Equal("aardappelen", result.Name);
     }
+
+    [Fact]
+    public void Parse_KeepsCupAsCup_NotMilliliter()
+    {
+        var result = _sut.Parse("1 cup basmati rice");
+
+        Assert.Equal(1, result.Quantity);
+        Assert.Equal(nameof(Unit.Cup), result.Unit);
+        Assert.Equal("basmati rice", result.Name);
+    }
+
+    [Fact]
+    public void Parse_ParsesGluedOunceUnit()
+    {
+        var result = _sut.Parse("14oz coconut milk");
+
+        Assert.Equal(14, result.Quantity);
+        Assert.Equal(nameof(Unit.Ounce), result.Unit);
+        Assert.Equal("coconut milk", result.Name);
+    }
+
+    [Fact]
+    public void Parse_ParsesPoundWithDecimalQuantity()
+    {
+        var result = _sut.Parse("1.3 lbs chicken thigh(sliced)");
+
+        Assert.Equal(1.3m, result.Quantity);
+        Assert.Equal(nameof(Unit.Pound), result.Unit);
+        Assert.Equal("chicken thigh", result.Name);
+        Assert.Equal("sliced", result.Preparation);
+    }
+
+    [Fact]
+    public void Parse_KeepsQuarterPieceAsCulinaryFraction()
+    {
+        var result = _sut.Parse("1/4 avocado, diced");
+
+        Assert.Equal(0.25m, result.Quantity);
+        Assert.Equal(nameof(Unit.Piece), result.Unit);
+        Assert.Equal("avocado", result.Name);
+        Assert.Equal("diced", result.Preparation);
+    }
+
+    [Fact]
+    public void Parse_ParsesJuiceOfPhrase()
+    {
+        var result = _sut.Parse("Juice of 1 lime");
+
+        Assert.Equal(1, result.Quantity);
+        Assert.Equal(nameof(Unit.Piece), result.Unit);
+        Assert.Equal("lime", result.Name);
+        Assert.Equal("juice", result.Preparation);
+    }
+
+    [Fact]
+    public void Parse_ParsesCanUnit()
+    {
+        var result = _sut.Parse("1 can chickpeas");
+
+        Assert.Equal(1, result.Quantity);
+        Assert.Equal(nameof(Unit.Can), result.Unit);
+        Assert.Equal("chickpeas", result.Name);
+    }
 }

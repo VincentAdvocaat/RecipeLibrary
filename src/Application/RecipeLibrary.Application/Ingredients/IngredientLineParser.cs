@@ -16,7 +16,11 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex UnitPlusFractionPattern = new(
-        @"\b(?<whole>\d+)\s+(?<unit>tsp|tbsp|tl|el|teaspoon|teaspoons|tablespoon|tablespoons)\s*\+\s*(?<num>\d+)\s*/\s*(?<den>\d+)\b",
+        @"\b(?<whole>\d+)\s+(?<unit>tsp|tbsp|tl|el|teaspoon|teaspoons|tablespoon|tablespoons|cup|cups)\s*\+\s*(?<num>\d+)\s*/\s*(?<den>\d+)\b",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex JuiceOfPattern = new(
+        @"^(?:juice|sap)\s+of\s+(?<qty>\d+(?:[.,]\d+)?|\d+\s*/\s*\d+)\s+(?<rest>.+)$",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly HashSet<string> MeasureAdjectives = new(StringComparer.OrdinalIgnoreCase)
@@ -38,6 +42,24 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
 
         var normalized = NormalizeLine(raw);
 
+        if (normalized.Contains("naar smaak", StringComparison.OrdinalIgnoreCase))
+        {
+            return ParseToTaste(raw, normalized);
+        }
+
+        if (TryParseJuiceOfPhrase(normalized, out var juiceQuantity, out var juiceRest))
+        {
+            var juiceResolved = lineResolver.Resolve(juiceRest, "juice");
+            return new ParsedIngredientLine(
+                raw,
+                juiceQuantity,
+                nameof(Unit.Piece),
+                juiceResolved.DisplayName,
+                juiceResolved.Preparation,
+                0.85m,
+                ImportParseMethod.Deterministic);
+        }
+
         var tokens = Tokenize(normalized);
         if (tokens.Count == 0)
         {
@@ -52,11 +74,6 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         if (UnitAliasMap.IsVagueQuantityWord(tokens[0]))
         {
             return ParseVagueQuantity(raw, tokens);
-        }
-
-        if (normalized.Contains("naar smaak", StringComparison.OrdinalIgnoreCase))
-        {
-            return ParseToTaste(raw, normalized);
         }
 
         var index = 0;
@@ -112,7 +129,7 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         var remainder = string.Join(' ', tokens.Skip(index)).Trim();
         remainder = RewritePlusAsPlusWord(remainder);
 
-        if (unit == Unit.Milliliter && hasExplicitUnit)
+        if (hasExplicitUnit && unit is Unit.Milliliter or Unit.Cup)
         {
             var plusSplit = SplitLeadingNameFromPlusClause(remainder);
             remainder = plusSplit.Name;
@@ -132,11 +149,6 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         else
         {
             finalQuantity = IngredientQuantityFormatter.Normalize(scaled, unit);
-            // "1/4 avocado" rounds to 0 Piece; keep at least 1 so the draft stays valid.
-            if (finalQuantity <= 0 && scaled > 0)
-            {
-                finalQuantity = 1;
-            }
         }
 
         var confidence = hasExplicitUnit && resolved.DisplayName.Length > 0
@@ -270,6 +282,25 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         return Unmeasured(raw, resolved.DisplayName, resolved.Preparation, confidence);
     }
 
+    private static bool TryParseJuiceOfPhrase(string normalized, out decimal quantity, out string rest)
+    {
+        quantity = 0m;
+        rest = string.Empty;
+        var match = JuiceOfPattern.Match(normalized);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        if (!TryParseQuantityToken(match.Groups["qty"].Value, out quantity, out _))
+        {
+            return false;
+        }
+
+        rest = match.Groups["rest"].Value.Trim();
+        return rest.Length > 0 && quantity > 0;
+    }
+
     private static ParsedIngredientLine Unmeasured(string raw, string name, string? preparation, decimal confidence) =>
         new(
             raw,
@@ -311,7 +342,7 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         // Social captions often glue quantity and unit: "14oz coconut milk".
         value = Regex.Replace(
             value,
-            @"\b(\d+(?:[.,]\d+)?)(oz|lbs?|kg|g|ml|l|tsp|tbsp|cups?)\b",
+            @"\b(\d+(?:[.,]\d+)?)(oz|lbs?|kg|g|ml|l|tsp|tbsp|cups?|cans?)\b",
             "$1 $2",
             RegexOptions.IgnoreCase);
         value = Regex.Replace(value, @"\bgm\s*/", "g ", RegexOptions.IgnoreCase);

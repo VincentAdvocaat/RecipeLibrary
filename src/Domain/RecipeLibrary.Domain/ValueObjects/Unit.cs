@@ -25,4 +25,12 @@ public enum Unit
     Bunch,
     /// <summary>Stalk (stengel).</summary>
     Stalk,
+    /// <summary>Measuring cup (cup / kopje).</summary>
+    Cup,
+    /// <summary>Weight ounce (oz).</summary>
+    Ounce,
+    /// <summary>Pound (lb / lbs).</summary>
+    Pound,
+    /// <summary>Can / tin (blik).</summary>
+    Can,
 }

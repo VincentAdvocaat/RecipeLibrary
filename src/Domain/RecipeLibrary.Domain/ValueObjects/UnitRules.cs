@@ -11,7 +11,7 @@ public static class UnitRules
             .ToArray();
 
     /// <summary>
-    /// Count-style units (whole numbers only), including culinary piece descriptors.
+    /// Count-style units, including culinary piece descriptors and cans.
     /// </summary>
     public static bool IsCountUnit(Unit unit) =>
         unit is Unit.Piece
@@ -21,19 +21,33 @@ public static class UnitRules
             or Unit.Sprig
             or Unit.Leaf
             or Unit.Bunch
-            or Unit.Stalk;
+            or Unit.Stalk
+            or Unit.Can;
 
     /// <summary>
-    /// Teaspoon and tablespoon allow discrete culinary fractions (¼, ⅓, ½, ⅔, ¾).
+    /// Units that allow discrete culinary fractions (¼, ⅓, ½, ⅔, ¾).
+    /// Prefer these over converting cup/piece measures into ml/gram.
     /// </summary>
     public static bool AllowsCulinaryFractions(Unit unit) =>
-        unit is Unit.Teaspoon or Unit.Tablespoon;
+        unit is Unit.Teaspoon
+            or Unit.Tablespoon
+            or Unit.Cup
+            or Unit.Piece
+            or Unit.Clove
+            or Unit.Ounce;
+
+    /// <summary>
+    /// Continuous decimal quantities (not snapped to whole numbers or culinary fractions).
+    /// Pound keeps values like 1.3 lbs; gram/ml stay whole numbers.
+    /// </summary>
+    public static bool AllowsDecimalQuantity(Unit unit) =>
+        unit is Unit.Pound;
 
     /// <summary>
     /// Smallest culinary fractional step (¼). Thirds are also allowed via the fraction select.
     /// </summary>
     public static decimal InputStep(Unit unit) =>
-        AllowsCulinaryFractions(unit) ? 0.25m : 1m;
+        AllowsCulinaryFractions(unit) ? 0.25m : unit is Unit.Pound ? 0.01m : 1m;
 
     public static bool TryParse(string? value, out Unit unit)
     {

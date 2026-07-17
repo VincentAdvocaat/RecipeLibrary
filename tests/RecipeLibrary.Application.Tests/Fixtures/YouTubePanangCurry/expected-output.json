@@ -9,24 +9,24 @@
   "imageUrl": null,
   "ingredients": [
     {
-      "name": "lbs chicken thigh",
+      "name": "chicken thigh",
       "preparation": "sliced",
-      "quantity": 1,
-      "unit": "Piece",
+      "quantity": 1.3,
+      "unit": "Pound",
       "createAsNewIngredient": false
     },
     {
-      "name": "oz panang curry paste",
+      "name": "panang curry paste",
       "preparation": null,
       "quantity": 4,
-      "unit": "Piece",
+      "unit": "Ounce",
       "createAsNewIngredient": false
     },
     {
-      "name": "oz coconut milk",
+      "name": "coconut milk",
       "preparation": null,
       "quantity": 14,
-      "unit": "Piece",
+      "unit": "Ounce",
       "createAsNewIngredient": false
     },
     {
