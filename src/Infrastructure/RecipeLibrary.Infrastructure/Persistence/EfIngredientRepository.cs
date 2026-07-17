@@ -76,7 +76,8 @@ public sealed class EfIngredientRepository(RecipeDbContext dbContext) : IIngredi
                         a.NormalizedAlias.Contains(normalizedQuery)
                         || tokens.Any(token => a.NormalizedAlias.Contains(token))))));
 
-            var matched = await query.Take(take * 3).ToListAsync(ct);
+            // Order after loading all matches — Take before OrderBy dropped prefix hits (e.g. "gehakt" for q=ge).
+            var matched = await query.ToListAsync(ct);
             return matched
                 .OrderByDescending(x =>
                     IngredientDisplayResolver.ResolveNormalizedDisplayName(x, languageCodes)
@@ -86,7 +87,7 @@ public sealed class EfIngredientRepository(RecipeDbContext dbContext) : IIngredi
                 .ToList();
         }
 
-        var items = await query.Take(take * 3).ToListAsync(ct);
+        var items = await query.ToListAsync(ct);
         return items
             .OrderBy(x => IngredientDisplayResolver.Resolve(x, languageCodes).DisplayName, StringComparer.OrdinalIgnoreCase)
             .Take(take)
@@ -114,7 +115,6 @@ public sealed class EfIngredientRepository(RecipeDbContext dbContext) : IIngredi
                         a.NormalizedAlias.Contains(normalizedQuery)
                         || normalizedQuery.Contains(a.NormalizedAlias)
                         || tokens.Any(token => a.NormalizedAlias.Contains(token))))))
-            .Take(take * 3)
             .ToListAsync(ct);
 
         return matched
