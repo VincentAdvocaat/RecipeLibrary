@@ -8,6 +8,9 @@ public static class RecipeImportServiceRegistration
 {
     public const string HttpClientName = "RecipeImport";
 
+    /// <summary>Named client for OpenAI calls — no URL-fetch SSRF pin/timeout.</summary>
+    public const string AiHttpClientName = "RecipeImportAi";
+
     public static IServiceCollection AddRecipeImport(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<RecipeImportOptions>(configuration.GetSection(RecipeImportOptions.SectionName));
@@ -25,6 +28,14 @@ public static class RecipeImportServiceRegistration
                 // Connect only to pre-validated (or freshly filtered) public addresses — no DNS rebinding.
                 ConnectCallback = RecipeImportSocketsConnect.ConnectAsync,
             });
+
+        services.AddHttpClient(AiHttpClientName, (sp, client) =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RecipeImportOptions>>().Value;
+            var timeoutSeconds = options.Ai.TimeoutSeconds > 0 ? options.Ai.TimeoutSeconds : 120;
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+            client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+        });
 
         services.AddScoped<IRecipeImportContentFetcher, RecipeImportContentFetcher>();
         services.AddScoped<IRecipeSocialCaptionFetcher, RecipeSocialCaptionFetcher>();
