@@ -21,6 +21,7 @@ public sealed class IngredientSuggestionItem
 {
     public Guid Id { get; init; }
     public string Name { get; init; } = string.Empty;
+    public string? LanguageCode { get; init; }
     public decimal Score { get; init; }
 }
 
@@ -36,6 +37,11 @@ public sealed class MatchIngredientResult
 public sealed class SearchIngredientsQuery : IQuery<IReadOnlyList<IngredientLookupItem>>
 {
     public string Query { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Optional BCP-47 culture; defaults to current UI culture when omitted.
+    /// </summary>
+    public string? CultureName { get; init; }
 }
 
 public sealed class AddIngredientTagsCommand : ICommand<AddIngredientTagsResult>
@@ -55,6 +61,11 @@ public sealed class IngredientLookupItem
 {
     public Guid Id { get; init; }
     public string Name { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Language of the resolved display name, when known.
+    /// </summary>
+    public string? LanguageCode { get; init; }
 }
 
 public sealed class TagLookupItem

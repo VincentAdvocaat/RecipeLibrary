@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -9,7 +8,7 @@ namespace RecipeLibrary.Infrastructure.Persistence.Seed;
 
 /// <summary>
 /// Idempotent seeder for the curated culinary ingredient catalog.
-/// Canonical display names are Dutch; English (and extra Dutch) forms become aliases.
+/// Maps catalog language keys to BCP-47 translations and language-specific aliases.
 /// </summary>
 public sealed class IngredientCatalogSeeder(
     RecipeDbContext dbContext,
@@ -23,52 +22,62 @@ public sealed class IngredientCatalogSeeder(
         PropertyNameCaseInsensitive = true,
     };
 
+    private static readonly (string CatalogKey, string LanguageCode)[] LanguageMap =
+    [
+        ("nl", "nl"),
+        ("en", "en"),
+    ];
+
     public async Task<IngredientCatalogSeedResult> SeedAsync(CancellationToken ct = default)
     {
         var catalog = LoadCatalog();
         if (catalog.Ingredients.Count == 0)
         {
             logger.LogWarning("Curated ingredient catalog is empty; nothing to seed.");
-            return new IngredientCatalogSeedResult(0, 0, 0, 0);
+            return new IngredientCatalogSeedResult(0, 0, 0, 0, 0, 0);
         }
 
-        var nameToId = await dbContext.Ingredients
+        var keyToId = await dbContext.Ingredients
             .AsNoTracking()
-            .Select(x => new { x.Id, x.NormalizedName })
-            .ToDictionaryAsync(x => x.NormalizedName, x => x.Id, StringComparer.Ordinal, ct);
+            .Where(x => x.CatalogKey != null)
+            .Select(x => new { x.Id, x.CatalogKey })
+            .ToDictionaryAsync(x => x.CatalogKey!, x => x.Id, StringComparer.Ordinal, ct);
 
-        var existingAliases = await dbContext.IngredientAliases
+        var existingTranslations = await dbContext.IngredientTranslations
             .AsNoTracking()
-            .Select(x => x.NormalizedAlias)
+            .Select(x => new { x.Id, x.IngredientId, x.LanguageCode })
             .ToListAsync(ct);
-        var aliasSet = existingAliases.ToHashSet(StringComparer.Ordinal);
+        var translationKeys = existingTranslations
+            .ToDictionary(
+                x => (x.IngredientId, Language: x.LanguageCode),
+                x => x.Id);
+
+        var existingAliases = await dbContext.IngredientTranslationAliases
+            .AsNoTracking()
+            .Select(x => new { x.IngredientTranslationId, x.NormalizedAlias })
+            .ToListAsync(ct);
+        var aliasKeys = existingAliases
+            .Select(x => (x.IngredientTranslationId, x.NormalizedAlias))
+            .ToHashSet();
 
         var ingredientsInserted = 0;
         var ingredientsSkipped = 0;
+        var translationsInserted = 0;
+        var translationsSkipped = 0;
         var aliasesInserted = 0;
         var aliasesSkipped = 0;
         var now = DateTimeOffset.UtcNow;
 
         foreach (var entry in catalog.Ingredients)
         {
-            var nlNames = entry.Names.Nl
-                .Select(x => (x ?? string.Empty).Trim())
-                .Where(x => x.Length > 0)
-                .ToList();
-            if (nlNames.Count == 0)
-            {
-                continue;
-            }
-
-            var canonicalName = nlNames[0];
-            var normalizedCanonical = normalizer.Normalize(canonicalName);
-            if (normalizedCanonical.Length == 0)
+            var catalogKey = (entry.Id ?? string.Empty).Trim();
+            if (catalogKey.Length == 0)
             {
                 continue;
             }
 
             Guid ingredientId;
-            if (nameToId.TryGetValue(normalizedCanonical, out var existingId))
+            if (keyToId.TryGetValue(catalogKey, out var existingId))
             {
                 ingredientId = existingId;
                 ingredientsSkipped++;
@@ -79,65 +88,91 @@ public sealed class IngredientCatalogSeeder(
                 dbContext.Ingredients.Add(new CanonicalIngredient
                 {
                     Id = ingredientId,
-                    CanonicalName = canonicalName,
-                    NormalizedName = normalizedCanonical,
+                    CatalogKey = catalogKey,
                     CreatedAt = now,
                 });
-                nameToId[normalizedCanonical] = ingredientId;
+                keyToId[catalogKey] = ingredientId;
                 ingredientsInserted++;
             }
 
-            var aliasCandidates = new List<string>();
-            aliasCandidates.AddRange(nlNames.Skip(1));
-            aliasCandidates.AddRange(
-                entry.Names.En
-                    .Select(x => (x ?? string.Empty).Trim())
-                    .Where(x => x.Length > 0));
-
-            foreach (var alias in DeduplicateAliases(aliasCandidates, normalizer, normalizedCanonical))
+            foreach (var (catalogLanguage, languageCode) in LanguageMap)
             {
-                var normalizedAlias = normalizer.Normalize(alias);
-                if (normalizedAlias.Length == 0 || aliasSet.Contains(normalizedAlias))
+                var names = GetNames(entry.Names, catalogLanguage);
+                if (names.Count == 0)
                 {
-                    aliasesSkipped++;
                     continue;
                 }
 
-                // NormalizedName and NormalizedAlias share a uniqueness domain for matching:
-                // never create an alias that collides with another canonical name.
-                if (nameToId.ContainsKey(normalizedAlias) && nameToId[normalizedAlias] != ingredientId)
+                var displayName = names[0];
+                var normalizedDisplay = normalizer.Normalize(displayName);
+                if (normalizedDisplay.Length == 0)
                 {
-                    aliasesSkipped++;
                     continue;
                 }
 
-                dbContext.IngredientAliases.Add(new IngredientAlias
+                Guid translationId;
+                if (translationKeys.TryGetValue((ingredientId, languageCode), out var existingTranslationId))
                 {
-                    Id = Guid.NewGuid(),
-                    IngredientId = ingredientId,
-                    Alias = alias,
-                    NormalizedAlias = normalizedAlias,
-                });
-                aliasSet.Add(normalizedAlias);
-                aliasesInserted++;
+                    translationId = existingTranslationId;
+                    translationsSkipped++;
+                }
+                else
+                {
+                    translationId = Guid.NewGuid();
+                    dbContext.IngredientTranslations.Add(new IngredientTranslation
+                    {
+                        Id = translationId,
+                        IngredientId = ingredientId,
+                        LanguageCode = languageCode,
+                        DisplayName = displayName,
+                        NormalizedDisplayName = normalizedDisplay,
+                    });
+                    translationKeys[(ingredientId, languageCode)] = translationId;
+                    translationsInserted++;
+                }
+
+                foreach (var alias in DeduplicateAliases(names.Skip(1), normalizer, normalizedDisplay))
+                {
+                    var normalizedAlias = normalizer.Normalize(alias);
+                    if (normalizedAlias.Length == 0
+                        || aliasKeys.Contains((translationId, normalizedAlias)))
+                    {
+                        aliasesSkipped++;
+                        continue;
+                    }
+
+                    dbContext.IngredientTranslationAliases.Add(new IngredientTranslationAlias
+                    {
+                        Id = Guid.NewGuid(),
+                        IngredientTranslationId = translationId,
+                        Alias = alias,
+                        NormalizedAlias = normalizedAlias,
+                    });
+                    aliasKeys.Add((translationId, normalizedAlias));
+                    aliasesInserted++;
+                }
             }
         }
 
-        if (ingredientsInserted > 0 || aliasesInserted > 0)
+        if (ingredientsInserted > 0 || translationsInserted > 0 || aliasesInserted > 0)
         {
             await dbContext.SaveChangesAsync(ct);
         }
 
         logger.LogInformation(
-            "Ingredient catalog seed finished. Ingredients inserted={Inserted}, skipped={Skipped}; aliases inserted={AliasInserted}, skipped={AliasSkipped}.",
+            "Ingredient catalog seed finished. Ingredients inserted={Inserted}, skipped={Skipped}; translations inserted={TranslationsInserted}, skipped={TranslationsSkipped}; aliases inserted={AliasInserted}, skipped={AliasSkipped}.",
             ingredientsInserted,
             ingredientsSkipped,
+            translationsInserted,
+            translationsSkipped,
             aliasesInserted,
             aliasesSkipped);
 
         return new IngredientCatalogSeedResult(
             ingredientsInserted,
             ingredientsSkipped,
+            translationsInserted,
+            translationsSkipped,
             aliasesInserted,
             aliasesSkipped);
     }
@@ -155,12 +190,27 @@ public sealed class IngredientCatalogSeeder(
         return document;
     }
 
+    private static IReadOnlyList<string> GetNames(CuratedIngredientNames names, string catalogLanguage)
+    {
+        IReadOnlyList<string> source = catalogLanguage switch
+        {
+            "nl" => names.Nl,
+            "en" => names.En,
+            _ => [],
+        };
+
+        return source
+            .Select(x => (x ?? string.Empty).Trim())
+            .Where(x => x.Length > 0)
+            .ToList();
+    }
+
     private static IEnumerable<string> DeduplicateAliases(
         IEnumerable<string> aliases,
         IIngredientTextNormalizer normalizer,
-        string normalizedCanonical)
+        string normalizedDisplay)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal) { normalizedCanonical };
+        var seen = new HashSet<string>(StringComparer.Ordinal) { normalizedDisplay };
         foreach (var alias in aliases)
         {
             var normalized = normalizer.Normalize(alias);
@@ -177,5 +227,7 @@ public sealed class IngredientCatalogSeeder(
 public readonly record struct IngredientCatalogSeedResult(
     int IngredientsInserted,
     int IngredientsSkipped,
+    int TranslationsInserted,
+    int TranslationsSkipped,
     int AliasesInserted,
     int AliasesSkipped);

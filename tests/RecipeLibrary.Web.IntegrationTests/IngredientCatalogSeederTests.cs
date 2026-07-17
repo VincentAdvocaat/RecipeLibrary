@@ -22,7 +22,7 @@ public sealed class IngredientCatalogSeederTests
     }
 
     [Fact]
-    public async Task SeedAsync_InsertsCanonicalDutchNames_AndIsIdempotent()
+    public async Task SeedAsync_InsertsTranslations_AndIsIdempotent()
     {
         await using var connection = new SqliteConnection("DataSource=:memory:");
         await connection.OpenAsync();
@@ -41,20 +41,28 @@ public sealed class IngredientCatalogSeederTests
 
         var first = await seeder.SeedAsync();
         Assert.True(first.IngredientsInserted > 100);
+        Assert.True(first.TranslationsInserted > 100);
         Assert.True(first.AliasesInserted > 0);
 
-        Assert.True(await db.Ingredients.AnyAsync(x => x.NormalizedName == "tomaat"));
-        Assert.True(await db.Ingredients.AnyAsync(x => x.NormalizedName == "gehakt"));
-        Assert.True(await db.IngredientAliases.AnyAsync(x => x.NormalizedAlias == "tomato"));
-        Assert.True(await db.IngredientAliases.AnyAsync(x => x.NormalizedAlias == "tomaten"));
+        Assert.True(await db.Ingredients.AnyAsync(x => x.CatalogKey == "tomato"));
+        Assert.True(await db.IngredientTranslations.AnyAsync(x =>
+            x.LanguageCode == "nl" && x.NormalizedDisplayName == "tomaat"));
+        Assert.True(await db.IngredientTranslations.AnyAsync(x =>
+            x.LanguageCode == "nl" && x.NormalizedDisplayName == "gehakt"));
+        Assert.True(await db.IngredientTranslations.AnyAsync(x =>
+            x.LanguageCode == "en" && x.NormalizedDisplayName == "tomato"));
+        Assert.True(await db.IngredientTranslationAliases.AnyAsync(x => x.NormalizedAlias == "tomaten"));
 
         var countAfterFirst = await db.Ingredients.CountAsync();
-        var aliasCountAfterFirst = await db.IngredientAliases.CountAsync();
+        var translationCountAfterFirst = await db.IngredientTranslations.CountAsync();
+        var aliasCountAfterFirst = await db.IngredientTranslationAliases.CountAsync();
 
         var second = await seeder.SeedAsync();
         Assert.Equal(0, second.IngredientsInserted);
+        Assert.Equal(0, second.TranslationsInserted);
         Assert.Equal(0, second.AliasesInserted);
         Assert.Equal(countAfterFirst, await db.Ingredients.CountAsync());
-        Assert.Equal(aliasCountAfterFirst, await db.IngredientAliases.CountAsync());
+        Assert.Equal(translationCountAfterFirst, await db.IngredientTranslations.CountAsync());
+        Assert.Equal(aliasCountAfterFirst, await db.IngredientTranslationAliases.CountAsync());
     }
 }

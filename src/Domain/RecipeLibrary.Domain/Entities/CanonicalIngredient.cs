@@ -1,19 +1,21 @@
 namespace RecipeLibrary.Domain.Entities;
 
 /// <summary>
-/// Canonical ingredient entity used for normalization and matching.
+/// Language-neutral canonical ingredient used for identity, linking, and matching.
+/// Display names live on <see cref="IngredientTranslation"/>.
 /// </summary>
 public sealed class CanonicalIngredient
 {
     public Guid Id { get; set; }
 
-    public string CanonicalName { get; set; } = string.Empty;
-
-    public string NormalizedName { get; set; } = string.Empty;
+    /// <summary>
+    /// Stable catalog key from curated seed data (e.g. Open Food Facts-derived id).
+    /// </summary>
+    public string? CatalogKey { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 
-    public ICollection<IngredientAlias> Aliases { get; set; } = new List<IngredientAlias>();
+    public ICollection<IngredientTranslation> Translations { get; set; } = new List<IngredientTranslation>();
 
     public ICollection<IngredientTag> IngredientTags { get; set; } = new List<IngredientTag>();
 }

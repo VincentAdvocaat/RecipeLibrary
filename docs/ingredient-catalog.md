@@ -15,7 +15,7 @@ The curated list is meant to:
 3. Store **both Dutch and English** up front, with a language-key scheme that can grow later.
 4. Stay **reviewable** in git (JSON + CSV), separate from EF migrations and runtime code.
 
-At application startup, after EF Core `Database.Migrate()`, `IngredientCatalogSeeder` loads the curated JSON (embedded in Infrastructure) and **idempotently** upserts Dutch canonical names plus NL/EN aliases. Regenerating the JSON does not require a new EF migration.
+At application startup, after EF Core `Database.Migrate()`, `IngredientCatalogSeeder` loads the curated JSON (embedded in Infrastructure) and **idempotently** upserts canonical ingredients with NL/EN translations and aliases. Regenerating the JSON does not require a new EF migration.
 
 
 ## Design idea in one sentence
@@ -149,10 +149,11 @@ The JSON is linked into Infrastructure as an **embedded resource** (`RecipeLibra
 
 | Catalog JSON | Domain / DB |
 |--------------|-------------|
-| `names.nl[0]` | `CanonicalIngredient.CanonicalName` (Dutch UI catalog) |
-| normalized `names.nl[0]` | `CanonicalIngredient.NormalizedName` (via `IngredientTextNormalizer`) |
-| other `names.nl[*]` + all `names.en[*]` | `IngredientAlias` rows (skip if normalized equals canonical or already taken) |
-| `id` | Not a DB column today; keep in seed metadata or a future `ExternalId` if needed |
+| `id` | `CanonicalIngredient.CatalogKey` |
+| `names.nl[0]` | `IngredientTranslation` (`LanguageCode = nl`, `DisplayName`) |
+| `names.nl[1…]` | `IngredientTranslationAlias` under the NL translation |
+| `names.en[0]` | `IngredientTranslation` (`LanguageCode = en`, `DisplayName`) |
+| `names.en[1…]` | `IngredientTranslationAlias` under the EN translation |
 
 Quantity and unit stay on **recipe lines** (`RecipeIngredients`), not on the catalog entity.
 
@@ -167,8 +168,8 @@ App start
 
 Behaviour:
 
-- **Idempotent**: existing `NormalizedName` / `NormalizedAlias` rows are skipped; safe on every startup.
-- **Shared matching domain**: a normalized string may belong to **either** a canonical `NormalizedName` **or** a single `NormalizedAlias`, never both. The generator enforces this when writing JSON; the seeder also skips a new canonical when that form is already an alias (and attaches further aliases to the existing owner).
+- **Idempotent**: existing `CatalogKey` / `(IngredientId, LanguageCode)` / aliases are skipped; safe on every startup.
+- **Language-aware matching**: search and match use a BCP-47 fallback chain (exact culture → parent → `en`).
 - **Not an EF `HasData` migration**: catalog updates stay in JSON; no Designer/snapshot churn for hundreds of rows.
 - Hook: `PersistenceServiceRegistration.EnsurePersistenceMigrated` in Infrastructure (called from `Program.cs`).
 
@@ -223,8 +224,9 @@ This curated list feeds the **catalog content**; it does not replace those mecha
 
 ## Related code
 
-- Domain: `CanonicalIngredient`, `IngredientAlias`
+- Domain: `CanonicalIngredient`, `IngredientTranslation`, `IngredientTranslationAlias`
+- Localization: `IngredientLanguageFallback`, `IngredientDisplayResolver`
 - Matching: `IngredientMatcher`, `IngredientTextNormalizer`
 - Seeder: `IngredientCatalogSeeder`
 - Existing recipe demo seed (separate): `scripts/seed-lasagna-recipe.sql`
-- Tests: `IngredientCatalogSeederTests`, `IngredientCatalogSeedStartupTests`
+- Tests: `IngredientCatalogSeederTests`, `IngredientCatalogSeedStartupTests`, `IngredientLanguageFallbackTests`

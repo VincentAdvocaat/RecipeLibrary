@@ -129,8 +129,8 @@ public static class TestDataSeeder
     }
 
     /// <summary>
-    /// Resolves an existing catalog row by normalized name or alias (after curated seed),
-    /// otherwise creates a canonical ingredient for tests.
+    /// Resolves an existing catalog row by normalized NL display name or alias (after curated seed),
+    /// otherwise creates a canonical ingredient with an NL translation for tests.
     /// </summary>
     private static async Task<Guid> GetOrCreateCanonicalAsync(
         RecipeDbContext db,
@@ -138,31 +138,40 @@ public static class TestDataSeeder
         string normalizedName,
         CancellationToken ct)
     {
-        var existing = await db.Ingredients
+        var existingId = await db.IngredientTranslations
             .AsNoTracking()
-            .SingleOrDefaultAsync(x => x.NormalizedName == normalizedName, ct);
-        if (existing is not null)
+            .Where(x => x.LanguageCode == "nl" && x.NormalizedDisplayName == normalizedName)
+            .Select(x => x.IngredientId)
+            .FirstOrDefaultAsync(ct);
+        if (existingId != Guid.Empty)
         {
-            return existing.Id;
+            return existingId;
         }
 
-        var viaAlias = await db.IngredientAliases
+        var viaAlias = await db.IngredientTranslationAliases
             .AsNoTracking()
-            .Where(x => x.NormalizedAlias == normalizedName)
-            .Select(x => x.IngredientId)
-            .SingleOrDefaultAsync(ct);
+            .Where(x => x.NormalizedAlias == normalizedName && x.Translation.LanguageCode == "nl")
+            .Select(x => x.Translation.IngredientId)
+            .FirstOrDefaultAsync(ct);
         if (viaAlias != Guid.Empty)
         {
             return viaAlias;
         }
 
         var id = Guid.NewGuid();
+        var translationId = Guid.NewGuid();
         db.Ingredients.Add(new CanonicalIngredient
         {
             Id = id,
-            CanonicalName = canonicalName,
-            NormalizedName = normalizedName,
             CreatedAt = DateTimeOffset.UtcNow,
+        });
+        db.IngredientTranslations.Add(new IngredientTranslation
+        {
+            Id = translationId,
+            IngredientId = id,
+            LanguageCode = "nl",
+            DisplayName = canonicalName,
+            NormalizedDisplayName = normalizedName,
         });
         await db.SaveChangesAsync(ct);
         return id;
@@ -189,18 +198,20 @@ public static class TestDataSeeder
 
     private static async Task<Guid> ResolveCanonicalIdAsync(RecipeDbContext db, string normalized, CancellationToken ct)
     {
-        var byName = await db.Ingredients
+        var byName = await db.IngredientTranslations
             .AsNoTracking()
-            .SingleOrDefaultAsync(x => x.NormalizedName == normalized, ct);
-        if (byName is not null)
+            .Where(x => x.LanguageCode == "nl" && x.NormalizedDisplayName == normalized)
+            .Select(x => x.IngredientId)
+            .FirstOrDefaultAsync(ct);
+        if (byName != Guid.Empty)
         {
-            return byName.Id;
+            return byName;
         }
 
-        return await db.IngredientAliases
+        return await db.IngredientTranslationAliases
             .AsNoTracking()
             .Where(x => x.NormalizedAlias == normalized)
-            .Select(x => x.IngredientId)
-            .SingleAsync(ct);
+            .Select(x => x.Translation.IngredientId)
+            .FirstAsync(ct);
     }
 }
