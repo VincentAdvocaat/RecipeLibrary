@@ -141,7 +141,7 @@ only these data-plane roles inside the resource group:
 
 - Storage Blob Data Contributor (`ba92f5b4-2d11-453d-a403-e96b0029c9fe`)
 - Key Vault Secrets User (`4633458b-17de-408a-b874-0445c86b69e6`)
-- Key Vault Secrets Officer (`b86a8fe4-44ce-4338-a84b-9e22c2e38a1b`)
+- Key Vault Secrets Officer (`b86a8fe4-44ce-4948-aee5-eccb2c155cd7`)
 
 It cannot use this assignment to grant Owner or Contributor.
 
@@ -153,7 +153,7 @@ az role assignment create \
   --assignee-principal-type ServicePrincipal \
   --role "Role Based Access Control Administrator" \
   --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>" \
-  --condition "((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4338-a84b-9e22c2e38a1b})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4338-a84b-9e22c2e38a1b}))" \
+  --condition "((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4948-aee5-eccb2c155cd7})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4948-aee5-eccb2c155cd7}))" \
   --condition-version "2.0"
 ```
 
@@ -165,7 +165,7 @@ az role assignment create `
   --assignee-principal-type ServicePrincipal `
   --role "Role Based Access Control Administrator" `
   --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>" `
-  --condition '((!(ActionMatches{''Microsoft.Authorization/roleAssignments/write''})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4338-a84b-9e22c2e38a1b})) AND ((!(ActionMatches{''Microsoft.Authorization/roleAssignments/delete''})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4338-a84b-9e22c2e38a1b}))' `
+  --condition '((!(ActionMatches{''Microsoft.Authorization/roleAssignments/write''})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4948-aee5-eccb2c155cd7})) AND ((!(ActionMatches{''Microsoft.Authorization/roleAssignments/delete''})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {ba92f5b4-2d11-453d-a403-e96b0029c9fe, 4633458b-17de-408a-b874-0445c86b69e6, b86a8fe4-44ce-4948-aee5-eccb2c155cd7}))' `
   --condition-version "2.0"
 ```
 

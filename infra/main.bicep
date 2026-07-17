@@ -100,7 +100,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
 }
 
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
-var keyVaultSecretsOfficerRoleId = 'b86a8fe4-44ce-4338-a84b-9e22c2e38a1b'
+var keyVaultSecretsOfficerRoleId = 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
 
 // Container App identity reads the OpenAI API key at runtime via secretRef.
 resource appKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
