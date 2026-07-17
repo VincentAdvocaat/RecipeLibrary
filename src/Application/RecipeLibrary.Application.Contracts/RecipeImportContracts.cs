@@ -94,6 +94,30 @@ public sealed class ImportRecipeResult
     public IReadOnlyList<ImportedInstructionStep> Steps { get; init; } = [];
 
     public IReadOnlyList<string> Warnings { get; init; } = [];
+
+    public ImportRecipeResult WithWarning(string warningCode)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(warningCode);
+        if (Warnings.Contains(warningCode, StringComparer.Ordinal))
+        {
+            return this;
+        }
+
+        return new ImportRecipeResult
+        {
+            Title = Title,
+            Description = Description,
+            PreparationTimeMinutes = PreparationTimeMinutes,
+            CookingTimeMinutes = CookingTimeMinutes,
+            Difficulty = Difficulty,
+            Category = Category,
+            Servings = Servings,
+            Source = Source,
+            Ingredients = Ingredients,
+            Steps = Steps,
+            Warnings = [.. Warnings, warningCode],
+        };
+    }
 }
 
 public sealed class ImportedIngredientLine

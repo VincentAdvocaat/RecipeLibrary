@@ -9,4 +9,5 @@ public static class ImportWarningCodes
     public const string HeuristicIngredients = "heuristic_ingredients";
     public const string LowConfidenceAiHint = "low_confidence_ai_hint";
     public const string AiFallbackFailed = "ai_fallback_failed";
+    public const string UrlContentTruncated = "url_content_truncated";
 }

@@ -175,10 +175,10 @@ public sealed class ChickpeaButterMasalaGoldenImportTests
     {
         public string? LastUrl { get; private set; }
 
-        public Task<string> FetchHtmlAsync(string url, CancellationToken ct = default)
+        public Task<RecipeImportFetchedContent> FetchHtmlAsync(string url, CancellationToken ct = default)
         {
             LastUrl = url;
-            return Task.FromResult(html);
+            return Task.FromResult(new RecipeImportFetchedContent(html, WasTruncated: false));
         }
     }
 

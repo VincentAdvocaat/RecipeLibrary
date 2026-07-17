@@ -15,27 +15,24 @@ public sealed class RecipeImportContentFetcher(
 {
     private const int MaxRedirects = 5;
 
-    public async Task<string> FetchHtmlAsync(string url, CancellationToken ct = default)
+    public async Task<RecipeImportFetchedContent> FetchHtmlAsync(string url, CancellationToken ct = default)
     {
-        var (body, finalUri) = await FetchBodyAsync(url, ct);
+        var page = await FetchBodyAsync(url, ct);
 
-        if (BloggerDynamicContent.IsDynamicShell(body)
-            && BloggerDynamicContent.TryGetPostId(body, out var postId))
-        {
-            var feedUri = BloggerDynamicContent.BuildAtomFeedUri(finalUri, postId);
-            var (atom, _) = await FetchBodyAsync(feedUri.ToString(), ct);
-            var entryHtml = BloggerDynamicContent.TryExtractHtmlFromAtom(atom);
-            if (!string.IsNullOrWhiteSpace(entryHtml))
+        var recovered = await BloggerDynamicContent.TryRecoverAsync(
+            page.Body,
+            page.FinalUri,
+            async (feedUri, token) =>
             {
-                var title = BloggerDynamicContent.TryGetEntryTitleFromAtom(atom);
-                return BloggerDynamicContent.WrapAsHtmlDocument(entryHtml, title);
-            }
-        }
+                var atom = await FetchBodyAsync(feedUri.ToString(), token);
+                return (atom.Body, atom.WasTruncated);
+            },
+            ct);
 
-        return body;
+        return recovered ?? new RecipeImportFetchedContent(page.Body, page.WasTruncated);
     }
 
-    private async Task<(string Body, Uri FinalUri)> FetchBodyAsync(string url, CancellationToken ct)
+    private async Task<(string Body, Uri FinalUri, bool WasTruncated)> FetchBodyAsync(string url, CancellationToken ct)
     {
         var client = httpClientFactory.CreateClient(RecipeImportServiceRegistration.HttpClientName);
         var current = await RecipeImportUrlSafety.ResolvePublicHttpEndpointAsync(url, ct);
@@ -73,8 +70,8 @@ public sealed class RecipeImportContentFetcher(
 
                 var maxBytes = options.Value.UrlFetch.MaxBytes;
                 await using var stream = await response.Content.ReadAsStreamAsync(ct);
-                var body = await RecipeImportBodyReader.ReadUtf8UpToMaxBytesAsync(stream, maxBytes, ct);
-                return (body, current.Uri);
+                var read = await RecipeImportBodyReader.ReadUtf8UpToMaxBytesAsync(stream, maxBytes, ct);
+                return (read.Text, current.Uri, read.WasTruncated);
             }
         }
 

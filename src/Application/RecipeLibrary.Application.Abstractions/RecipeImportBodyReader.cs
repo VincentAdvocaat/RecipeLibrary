@@ -7,7 +7,7 @@ namespace RecipeLibrary.Application.Abstractions;
 /// </summary>
 public static class RecipeImportBodyReader
 {
-    public static async Task<string> ReadUtf8UpToMaxBytesAsync(
+    public static async Task<RecipeImportBodyReadResult> ReadUtf8UpToMaxBytesAsync(
         Stream stream,
         int maxBytes,
         CancellationToken ct = default)
@@ -27,6 +27,7 @@ public static class RecipeImportBodyReader
         var buffer = new char[8192];
         var builder = new StringBuilder();
         var totalBytes = 0;
+        var wasTruncated = false;
 
         while (totalBytes < maxBytes)
         {
@@ -44,30 +45,70 @@ public static class RecipeImportBodyReader
                 continue;
             }
 
-            // Soft truncate: append only characters that still fit under MaxBytes.
+            // Soft truncate: append only complete UTF-16 units that still fit under MaxBytes.
             var remaining = maxBytes - totalBytes;
             var take = 0;
             var used = 0;
             while (take < read)
             {
-                var charBytes = Encoding.UTF8.GetByteCount(buffer.AsSpan(take, 1));
+                var unitLength = GetUtf16UnitLength(buffer, take, read);
+                if (unitLength == 0)
+                {
+                    break;
+                }
+
+                var charBytes = Encoding.UTF8.GetByteCount(buffer.AsSpan(take, unitLength));
                 if (used + charBytes > remaining)
                 {
                     break;
                 }
 
                 used += charBytes;
-                take++;
+                take += unitLength;
             }
 
             if (take > 0)
             {
                 builder.Append(buffer, 0, take);
+                totalBytes += used;
             }
 
+            wasTruncated = true;
             break;
         }
 
-        return builder.ToString();
+        // Exact MaxBytes fill via full chunks does not enter the soft-truncate path;
+        // peek so we still report truncation when more content remains.
+        if (!wasTruncated && totalBytes >= maxBytes)
+        {
+            var peek = await reader.ReadAsync(buffer.AsMemory(0, 1), ct);
+            if (peek > 0)
+            {
+                wasTruncated = true;
+            }
+        }
+
+        return new RecipeImportBodyReadResult(builder.ToString(), wasTruncated);
+    }
+
+    /// <summary>
+    /// Returns 2 for a surrogate pair, 1 for a BMP char, or 0 when a high surrogate lacks its pair in-buffer.
+    /// </summary>
+    private static int GetUtf16UnitLength(char[] buffer, int index, int length)
+    {
+        var c = buffer[index];
+        if (!char.IsHighSurrogate(c))
+        {
+            return 1;
+        }
+
+        if (index + 1 < length && char.IsLowSurrogate(buffer[index + 1]))
+        {
+            return 2;
+        }
+
+        return 0;
     }
 }
+
+public readonly record struct RecipeImportBodyReadResult(string Text, bool WasTruncated);

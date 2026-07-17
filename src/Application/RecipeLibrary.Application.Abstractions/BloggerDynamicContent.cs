@@ -18,13 +18,7 @@ public static partial class BloggerDynamicContent
             return false;
         }
 
-        // Blogger Dynamic Views: meta blogger-template=dynamic (often with meta fragment).
-        var hasTemplateMeta =
-            html.Contains("name='blogger-template'", StringComparison.OrdinalIgnoreCase)
-            || html.Contains("name=\"blogger-template\"", StringComparison.OrdinalIgnoreCase);
-
-        return hasTemplateMeta
-            && html.Contains("dynamic", StringComparison.OrdinalIgnoreCase);
+        return DynamicTemplateMetaRegex().IsMatch(html);
     }
 
     public static bool TryGetPostId(string html, out string postId)
@@ -63,6 +57,35 @@ public static partial class BloggerDynamicContent
         };
 
         return builder.Uri;
+    }
+
+    /// <summary>
+    /// When <paramref name="shellHtml"/> is a Blogger Dynamic Views shell, fetches Atom and wraps entry HTML.
+    /// </summary>
+    public static async Task<RecipeImportFetchedContent?> TryRecoverAsync(
+        string shellHtml,
+        Uri pageUri,
+        Func<Uri, CancellationToken, Task<(string Body, bool WasTruncated)>> fetchAtomAsync,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(pageUri);
+        ArgumentNullException.ThrowIfNull(fetchAtomAsync);
+
+        if (!IsDynamicShell(shellHtml) || !TryGetPostId(shellHtml, out var postId))
+        {
+            return null;
+        }
+
+        var feedUri = BuildAtomFeedUri(pageUri, postId);
+        var (atom, wasTruncated) = await fetchAtomAsync(feedUri, ct);
+        var entryHtml = TryExtractHtmlFromAtom(atom);
+        if (string.IsNullOrWhiteSpace(entryHtml))
+        {
+            return null;
+        }
+
+        var title = TryGetEntryTitleFromAtom(atom);
+        return new RecipeImportFetchedContent(WrapAsHtmlDocument(entryHtml, title), wasTruncated);
     }
 
     /// <summary>
@@ -134,6 +157,12 @@ public static partial class BloggerDynamicContent
             <body>{bodyHtml}</body></html>
             """;
     }
+
+    // Attribute order varies: content then name, or name then content.
+    [GeneratedRegex(
+        @"<meta\b[^>]*(?:\bname\s*=\s*['""]blogger-template['""][^>]*\bcontent\s*=\s*['""]dynamic['""]|\bcontent\s*=\s*['""]dynamic['""][^>]*\bname\s*=\s*['""]blogger-template['""])[^>]*/?>",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex DynamicTemplateMetaRegex();
 
     [GeneratedRegex(@"['""]postId['""]\s*:\s*['""](\d+)['""]", RegexOptions.CultureInvariant)]
     private static partial Regex PostIdRegex();

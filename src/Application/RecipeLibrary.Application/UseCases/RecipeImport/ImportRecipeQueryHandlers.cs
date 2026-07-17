@@ -36,9 +36,12 @@ public sealed class ImportRecipeFromUrlQueryHandler(
             return await recipeImportService.ImportPlainTextAsync(socialCaption, query.ParseOptions, ct);
         }
 
-        var html = await contentFetcher.FetchHtmlAsync(url, ct);
-        var text = recipeImportService.HtmlToRecipeText(html);
-        return await recipeImportService.ImportPlainTextAsync(text, query.ParseOptions, ct);
+        var fetched = await contentFetcher.FetchHtmlAsync(url, ct);
+        var text = recipeImportService.HtmlToRecipeText(fetched.Html);
+        var result = await recipeImportService.ImportPlainTextAsync(text, query.ParseOptions, ct);
+        return fetched.WasTruncated
+            ? result.WithWarning(ImportWarningCodes.UrlContentTruncated)
+            : result;
     }
 }
 

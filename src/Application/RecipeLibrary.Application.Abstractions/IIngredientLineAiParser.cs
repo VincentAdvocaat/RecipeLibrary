@@ -24,8 +24,11 @@ public sealed class AiParsedIngredientLine
 
 public interface IRecipeImportContentFetcher
 {
-    Task<string> FetchHtmlAsync(string url, CancellationToken ct = default);
+    Task<RecipeImportFetchedContent> FetchHtmlAsync(string url, CancellationToken ct = default);
 }
+
+/// <summary>HTML fetched for URL import, including whether the response was soft-truncated.</summary>
+public sealed record RecipeImportFetchedContent(string Html, bool WasTruncated);
 
 public interface IRecipeImageTextExtractor
 {
