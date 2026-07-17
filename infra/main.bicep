@@ -154,7 +154,8 @@ resource ensureOpenAiSecret 'Microsoft.Resources/deploymentScripts@2023-08-01' =
     timeout: 'PT10M'
     retentionInterval: 'PT1H'
     cleanupPreference: 'OnSuccess'
-    forceUpdateTag: 'v1'
+    // Bump when script body changes so ARM re-runs the deployment script.
+    forceUpdateTag: 'v2'
     environmentVariables: [
       {
         name: 'AZURE_CLIENT_ID'
@@ -171,7 +172,8 @@ resource ensureOpenAiSecret 'Microsoft.Resources/deploymentScripts@2023-08-01' =
     ]
     scriptContent: '''
 set -euo pipefail
-az login --identity --client-id "$AZURE_CLIENT_ID" >/dev/null
+# azCliVersion 2.67.0 supports --username for UAMI, not --client-id (added later).
+az login --identity --username "$AZURE_CLIENT_ID" >/dev/null
 if az keyvault secret show --vault-name "$KV_NAME" --name "$SECRET_NAME" --query name -o tsv >/dev/null 2>&1; then
   echo "Secret $SECRET_NAME already exists; leaving value unchanged."
 else
