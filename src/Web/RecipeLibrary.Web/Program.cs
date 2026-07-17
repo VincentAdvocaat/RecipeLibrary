@@ -168,10 +168,21 @@ if (app.Environment.IsEnvironment("Testing"))
     app.Services.EnsurePersistenceMigrated();
     app.Services.GetRequiredService<IPersistenceReadiness>().MarkReady();
 }
-else if (!app.Services.TryEnsurePersistenceMigrated())
+else if (!app.Services.TryEnsurePersistenceMigrated(out var persistenceError))
 {
-    app.Logger.LogWarning(
-        "Database is not ready yet (e.g. Azure SQL auto-pause). Serving the starting page until migrations succeed.");
+    var readiness = app.Services.GetRequiredService<IPersistenceReadiness>();
+    if (readiness.HasPermanentlyFailed)
+    {
+        app.Logger.LogError(
+            persistenceError,
+            "Database migration failed with a non-transient error. Serving the failed starting page.");
+    }
+    else
+    {
+        app.Logger.LogWarning(
+            persistenceError,
+            "Database is not ready yet (e.g. Azure SQL auto-pause). Serving the starting page until migrations succeed.");
+    }
 }
 
 // Configure the HTTP request pipeline.
@@ -214,11 +225,35 @@ if (authEnabled)
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.MapGet("/health", (IPersistenceReadiness readiness) => Results.Ok(new
+// Liveness/startup: always 200 so Container Apps keeps the revision alive during SQL resume.
+app.MapGet("/health", (IPersistenceReadiness readiness) =>
 {
-    status = "Healthy",
-    database = readiness.IsReady ? "Ready" : "Starting"
-})).AllowAnonymous();
+    var database = readiness.IsReady
+        ? "Ready"
+        : readiness.HasPermanentlyFailed
+            ? "Failed"
+            : "Starting";
+
+    return Results.Ok(new
+    {
+        status = "Healthy",
+        database
+    });
+}).AllowAnonymous();
+
+// Readiness: only Ready gets traffic; Starting/Failed return 503 so probes stop routing.
+app.MapGet("/health/ready", (IPersistenceReadiness readiness) =>
+{
+    if (readiness.IsReady)
+    {
+        return Results.Ok(new { status = "Healthy", database = "Ready" });
+    }
+
+    var database = readiness.HasPermanentlyFailed ? "Failed" : "Starting";
+    return Results.Json(
+        new { status = "Unavailable", database },
+        statusCode: StatusCodes.Status503ServiceUnavailable);
+}).AllowAnonymous();
 
 app.MapPost("/api/upload-recipe-image", async (IFormFile file, ICommandBus commandBus, CancellationToken ct) =>
 {
