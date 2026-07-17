@@ -22,3 +22,6 @@ param ghcrPassword = readEnvironmentVariable('GHCR_TOKEN')
 // param clientPublicIp = '203.0.113.10'
 
 param allowAzureServices = true
+
+// After the OpenAI secret exists in Key Vault, set true to wire RecipeImport AI into the Container App.
+param enableRecipeImportAi = false

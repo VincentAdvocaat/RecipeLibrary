@@ -146,7 +146,7 @@ stages:
                 set -euo pipefail
                 rg="${{ parameters.resourceGroupName }}"
 
-                echo "Hibernate keeps: SQL server/databases, storage accounts, managed identities, budgets."
+                echo "Hibernate keeps: SQL server/databases, storage accounts, Key Vault, managed identities, budgets."
                 echo "Hibernate deletes: Container App + Managed Environment (recreated by main deploy)."
 
                 if [ -n "$(containerAppName)" ]; then

@@ -41,6 +41,9 @@ param ghcrUsername string
 @description('GitHub PAT (or token) with read:packages used by Container Apps to pull from GHCR.')
 param ghcrPassword string
 
+@description('When true, wire RecipeImport AI env vars from Key Vault secret RecipeImport-OpenAi-ApiKey. Set the secret before enabling.')
+param enableRecipeImportAi bool = false
+
 var stableSuffix = toLower(uniqueString(subscription().subscriptionId, resourceGroup().id))
 var suffix = (nameSuffix == '') ? stableSuffix : toLower(nameSuffix)
 
@@ -50,6 +53,9 @@ var containerAppShortSuffix = take(suffix, 6)
 var containerAppName = toLower('ca-rl-${environment}-${containerAppShortSuffix}')
 var managedEnvName = toLower('cae-${projectName}-${environment}-${suffix}')
 var appIdentityName = toLower('id-${projectName}-${environment}-${suffix}')
+
+// Key Vault names: 3-24 chars, alphanumeric only.
+var keyVaultName = toLower('kv${uniqueString(resourceGroup().id, projectName, environment, 'openai')}')
 
 // Storage account names: 3-24 chars, lowercase alphanumeric. Bicep substring length is capped at 13.
 var storageAccountName = toLower('st${substring(uniqueString(resourceGroup().id, projectName, environment, 'blob'), 0, 13)}')
@@ -62,9 +68,56 @@ var sqlFqdn = '${sqlServerName}.database.windows.net'
 var containerImage = '${ghcrImageRepository}@${containerImageDigest}'
 var dataProtectionBlobUri = 'https://${storageAccount.name}.blob.core.windows.net/dataprotection/keys.xml'
 
+// Key Vault secret name (set via Azure CLI after deploy). Container Apps secret alias for secretRef.
+var openAiKeyVaultSecretName = 'RecipeImport-OpenAi-ApiKey'
+var openAiContainerAppSecretName = 'openai-api-key'
+
 resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: appIdentityName
   location: location
+}
+
+// RBAC-only vault; purge protection stays on (cannot be disabled later).
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  name: keyVaultName
+  location: location
+  properties: {
+    tenantId: tenantId
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    enableRbacAuthorization: true
+    enableSoftDelete: true
+    softDeleteRetentionInDays: 90
+    enablePurgeProtection: true
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
+var keyVaultSecretsOfficerRoleId = 'b86a8fe4-44ce-4338-a84b-9e22c2e38a1b'
+
+// Container App identity reads the OpenAI API key at runtime via secretRef.
+resource appKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, appIdentity.id, keyVaultSecretsUserRoleId)
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+    principalId: appIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Entra SQL admin can set/rotate the OpenAI secret from CLI/Portal without pipeline changes.
+resource adminKeyVaultSecretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, entraAdminObjectId, keyVaultSecretsOfficerRoleId)
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsOfficerRoleId)
+    principalId: entraAdminObjectId
+    principalType: 'User'
+  }
 }
 
 resource managedEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
@@ -178,6 +231,9 @@ resource sqlAllowClientIp 'Microsoft.Sql/servers/firewallRules@2023-05-01-previe
 resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: containerAppName
   location: location
+  dependsOn: [
+    appKeyVaultSecretsUser
+  ]
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -189,12 +245,24 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       // GHCR packages are private by default; Container Apps need registry credentials to pull.
-      secrets: [
-        {
-          name: 'ghcr-password'
-          value: ghcrPassword
-        }
-      ]
+      // OpenAI key is referenced from Key Vault (never stored as a plain Container App secret value).
+      secrets: concat(
+        [
+          {
+            name: 'ghcr-password'
+            value: ghcrPassword
+          }
+        ],
+        enableRecipeImportAi
+          ? [
+              {
+                name: openAiContainerAppSecretName
+                keyVaultUrl: '${keyVault.properties.vaultUri}secrets/${openAiKeyVaultSecretName}'
+                identity: appIdentity.id
+              }
+            ]
+          : []
+      )
       registries: [
         {
           server: 'ghcr.io'
@@ -221,44 +289,58 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             cpu: json('0.25')
             memory: '0.5Gi'
           }
-          env: [
-            {
-              name: 'ASPNETCORE_ENVIRONMENT'
-              value: 'test'
-            }
-            {
-              name: 'SKIP_SQL_WAIT'
-              value: 'true'
-            }
-            {
-              name: 'AZURE_CLIENT_ID'
-              value: appIdentity.properties.clientId
-            }
-            {
-              name: 'ConnectionStrings__RecipeDb'
-              value: 'Server=tcp:${sqlFqdn},1433;Database=${sqlDatabaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Managed Identity;User Id=${appIdentity.properties.clientId};'
-            }
-            {
-              name: 'RecipeFileStorage__Provider'
-              value: 'AzureBlob'
-            }
-            {
-              name: 'RecipeFileStorage__AzureBlob__AccountName'
-              value: storageAccount.name
-            }
-            {
-              name: 'RecipeFileStorage__AzureBlob__ContainerName'
-              value: recipeImagesContainer.name
-            }
-            {
-              name: 'DataProtection__ApplicationName'
-              value: '${projectName}-${environment}'
-            }
-            {
-              name: 'DataProtection__BlobUri'
-              value: dataProtectionBlobUri
-            }
-          ]
+          env: concat(
+            [
+              {
+                name: 'ASPNETCORE_ENVIRONMENT'
+                value: 'test'
+              }
+              {
+                name: 'SKIP_SQL_WAIT'
+                value: 'true'
+              }
+              {
+                name: 'AZURE_CLIENT_ID'
+                value: appIdentity.properties.clientId
+              }
+              {
+                name: 'ConnectionStrings__RecipeDb'
+                value: 'Server=tcp:${sqlFqdn},1433;Database=${sqlDatabaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Managed Identity;User Id=${appIdentity.properties.clientId};'
+              }
+              {
+                name: 'RecipeFileStorage__Provider'
+                value: 'AzureBlob'
+              }
+              {
+                name: 'RecipeFileStorage__AzureBlob__AccountName'
+                value: storageAccount.name
+              }
+              {
+                name: 'RecipeFileStorage__AzureBlob__ContainerName'
+                value: recipeImagesContainer.name
+              }
+              {
+                name: 'DataProtection__ApplicationName'
+                value: '${projectName}-${environment}'
+              }
+              {
+                name: 'DataProtection__BlobUri'
+                value: dataProtectionBlobUri
+              }
+            ],
+            enableRecipeImportAi
+              ? [
+                  {
+                    name: 'RecipeImport__Ai__Enabled'
+                    value: 'true'
+                  }
+                  {
+                    name: 'RecipeImport__Ai__ApiKey'
+                    secretRef: openAiContainerAppSecretName
+                  }
+                ]
+              : []
+          )
           probes: [
             {
               type: 'Startup'
@@ -320,3 +402,7 @@ output sqlDatabaseName string = sqlDb.name
 output storageAccountName string = storageAccount.name
 output recipeImagesContainerName string = recipeImagesContainer.name
 output dataProtectionContainerName string = dataProtectionContainer.name
+output keyVaultName string = keyVault.name
+output keyVaultUri string = keyVault.properties.vaultUri
+output openAiKeyVaultSecretName string = openAiKeyVaultSecretName
+output enableRecipeImportAi bool = enableRecipeImportAi
