@@ -130,7 +130,6 @@ stages:
                     containerImageDigest="$(containerImageDigest)" \
                     ghcrUsername="$(GHCR_USERNAME)" \
                     ghcrPassword="$(GHCR_TOKEN)" \
-                    enableRecipeImportAi="${ENABLE_RECIPE_IMPORT_AI:-false}" \
                   --query properties.outputs -o json)"
 
                 container_app_name="$(echo "$outputs" | jq -r '.containerAppName.value')"
@@ -238,7 +237,6 @@ stages:
                     containerImageDigest="$(containerImageDigest)" \
                     ghcrUsername="$(GHCR_USERNAME)" \
                     ghcrPassword="$(GHCR_TOKEN)" \
-                    enableRecipeImportAi="${ENABLE_RECIPE_IMPORT_AI:-false}" \
                   --query properties.outputs -o json)"
 
                 container_app_name="$(echo "$outputs" | jq -r '.containerAppName.value')"

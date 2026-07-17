@@ -1,8 +1,9 @@
 # OpenAI API key in Azure (Key Vault)
 
-Recipe import AI uses an OpenAI API key. In Azure the key lives in **Key Vault**;
-the Container App reads it via a Key Vault secret reference and managed identity.
-The key is **never** stored in the repo or as a plain Container App secret value.
+Recipe import AI is **on by default** in Azure. The OpenAI API key lives in
+**Key Vault**; the Container App reads it via a Key Vault secret reference and
+managed identity. The key is **never** stored in the repo or as a plain
+Container App secret value.
 
 ## Resources (from `infra/main.bicep`)
 
@@ -10,51 +11,43 @@ The key is **never** stored in the repo or as a plain Container App secret value
 |----------|---------|
 | Key Vault (RBAC, soft-delete, purge protection) | Stores `RecipeImport-OpenAi-ApiKey` |
 | App managed identity | **Key Vault Secrets User** (read at runtime) |
+| Bootstrap script identity | **Key Vault Secrets Officer** (creates placeholder once if missing) |
 | Entra SQL admin user | **Key Vault Secrets Officer** (set/rotate via CLI) |
+| Container App env | `RecipeImport__Ai__Enabled=true` + `RecipeImport__Ai__ApiKey` from Key Vault |
 
-## Deploy order
+First deploy creates a placeholder secret value `UNSET` if the secret does not
+exist yet. Later infrastructure deploys **do not overwrite** a secret you set
+via CLI.
 
-0. One-time: register `Microsoft.KeyVault` and widen the pipeline SP **Role Based
-   Access Control Administrator** condition so it may assign Key Vault Secrets
-   User/Officer (see `docs/azure/pipeline-setup.md`).
-1. Deploy `main.bicep` with `enableRecipeImportAi=false` (default). Key Vault is created.
-2. Set the secret with Azure CLI (below).
-3. Redeploy with `enableRecipeImportAi=true` (pipeline variable or Bicep param) so the
-   Container App gets `RecipeImport__Ai__Enabled` and `RecipeImport__Ai__ApiKey`.
+## One-time setup after first infra deploy
 
-Hibernate deletes the Container App but **keeps Key Vault**; after wake-up, keep
-`enableRecipeImportAi=true` so the secret reference is wired again.
+1. Widen the pipeline SP **Role Based Access Control Administrator** condition so
+   it may assign Key Vault Secrets User/Officer (see `docs/azure/pipeline-setup.md`).
+2. Register `Microsoft.KeyVault` if needed.
+3. Deploy once (Key Vault + AI wiring).
+4. Set your real OpenAI key with the CLI below and restart the Container App.
 
-## Pipeline variable
+Hibernate deletes the Container App but **keeps Key Vault**; after wake-up the
+secret reference is wired again automatically.
 
-Optional Azure DevOps variable (library or pipeline):
-
-| Name | Secret? | Example |
-|------|---------|---------|
-| `ENABLE_RECIPE_IMPORT_AI` | No | `true` after the Key Vault secret exists |
-
-## Azure CLI — set the OpenAI secret
-
-Replace resource group / names with deployment outputs (`keyVaultName`,
-`openAiKeyVaultSecretName`, `containerAppName`).
+## Azure CLI — set or rotate the OpenAI secret (no redeploy)
 
 ```bash
-# 1) Resolve Key Vault name from the last deploy (or copy from portal)
 RG=rg-recipelibrary-test-sec
 KV=$(az keyvault list -g "$RG" --query "[0].name" -o tsv)
+CA=$(az containerapp list -g "$RG" --query "[0].name" -o tsv)
 echo "Key Vault: $KV"
+echo "Container App: $CA"
 
-# 2) Store the OpenAI API key (you will be prompted if you omit the value flag)
+# Set or rotate the key (creates a new secret version; does not require Bicep deploy)
 az keyvault secret set \
   --vault-name "$KV" \
   --name "RecipeImport-OpenAi-ApiKey" \
   --value "sk-YOUR-OPENAI-KEY"
 
-# 3) Confirm (shows metadata only, not the secret value by default with show)
-az keyvault secret show \
-  --vault-name "$KV" \
-  --name "RecipeImport-OpenAi-ApiKey" \
-  --query "{name:name,enabled:attributes.enabled,updated:attributes.updated}" -o table
+# Restart so the app picks up the latest Key Vault secret version
+REV=$(az containerapp revision list -g "$RG" -n "$CA" --query "[0].name" -o tsv)
+az containerapp revision restart -g "$RG" -n "$CA" --revision "$REV"
 ```
 
 PowerShell:
@@ -62,27 +55,15 @@ PowerShell:
 ```powershell
 $RG = "rg-recipelibrary-test-sec"
 $KV = (az keyvault list -g $RG --query "[0].name" -o tsv)
+$CA = (az containerapp list -g $RG --query "[0].name" -o tsv)
+
 az keyvault secret set `
   --vault-name $KV `
   --name "RecipeImport-OpenAi-ApiKey" `
   --value "sk-YOUR-OPENAI-KEY"
-```
 
-Then enable AI on the next infra deploy (`enableRecipeImportAi=true` /
-`ENABLE_RECIPE_IMPORT_AI=true`). Until that flag is on, the app runs without AI
-(same as local with `Enabled=false`).
-
-## Rotate the key
-
-```bash
-az keyvault secret set \
-  --vault-name "$KV" \
-  --name "RecipeImport-OpenAi-ApiKey" \
-  --value "sk-NEW-KEY"
-
-# Restart Container App so it picks up the new secret version
-CA=$(az containerapp list -g "$RG" --query "[0].name" -o tsv)
-az containerapp revision restart -g "$RG" -n "$CA" --revision $(az containerapp revision list -g "$RG" -n "$CA" --query "[0].name" -o tsv)
+$REV = (az containerapp revision list -g $RG -n $CA --query "[0].name" -o tsv)
+az containerapp revision restart -g $RG -n $CA --revision $REV
 ```
 
 ## Local development

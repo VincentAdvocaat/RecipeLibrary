@@ -132,9 +132,11 @@ it to the pipeline):
 | `AZURE_ENTRA_ADMIN_OBJECT_ID` | `az ad signed-in-user show --query id -o tsv` |
 | `GHCR_USERNAME` | GitHub username or `github-actions` bot user |
 | `GHCR_TOKEN` | GitHub PAT with `write:packages` (classic) or fine-grained packages write |
-| `ENABLE_RECIPE_IMPORT_AI` | Optional non-secret: `true` after OpenAI key exists in Key Vault (see `docs/azure/openai-keyvault.md`) |
 
 These map to Bicep parameters and GHCR login. They are **not** checked into git.
+
+OpenAI API key for recipe import lives in Key Vault (not in ADO). See
+`docs/azure/openai-keyvault.md` — set/rotate with Azure CLI; no redeploy required.
 
 The public image repository defaults to `ghcr.io/vincentadvocaat/recipelibrary`
 (pipeline variable `ghcrImageRepository`). After the first push, keep the package

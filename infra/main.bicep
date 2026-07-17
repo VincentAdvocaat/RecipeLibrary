@@ -41,9 +41,6 @@ param ghcrUsername string
 @description('GitHub PAT (or token) with read:packages used by Container Apps to pull from GHCR.')
 param ghcrPassword string
 
-@description('When true, wire RecipeImport AI env vars from Key Vault secret RecipeImport-OpenAi-ApiKey. Set the secret before enabling.')
-param enableRecipeImportAi bool = false
-
 var stableSuffix = toLower(uniqueString(subscription().subscriptionId, resourceGroup().id))
 var suffix = (nameSuffix == '') ? stableSuffix : toLower(nameSuffix)
 
@@ -53,6 +50,7 @@ var containerAppShortSuffix = take(suffix, 6)
 var containerAppName = toLower('ca-rl-${environment}-${containerAppShortSuffix}')
 var managedEnvName = toLower('cae-${projectName}-${environment}-${suffix}')
 var appIdentityName = toLower('id-${projectName}-${environment}-${suffix}')
+var keyVaultScriptIdentityName = toLower('id-kvs-${environment}-${containerAppShortSuffix}')
 
 // Key Vault names: 3-24 chars, alphanumeric only.
 var keyVaultName = toLower('kv${uniqueString(resourceGroup().id, projectName, environment, 'openai')}')
@@ -68,12 +66,18 @@ var sqlFqdn = '${sqlServerName}.database.windows.net'
 var containerImage = '${ghcrImageRepository}@${containerImageDigest}'
 var dataProtectionBlobUri = 'https://${storageAccount.name}.blob.core.windows.net/dataprotection/keys.xml'
 
-// Key Vault secret name (set via Azure CLI after deploy). Container Apps secret alias for secretRef.
+// Key Vault secret name (rotate via Azure CLI without redeploy). Container Apps secret alias for secretRef.
 var openAiKeyVaultSecretName = 'RecipeImport-OpenAi-ApiKey'
 var openAiContainerAppSecretName = 'openai-api-key'
 
 resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: appIdentityName
+  location: location
+}
+
+// Used only by the one-time secret bootstrap script (not by the web app).
+resource keyVaultScriptIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: keyVaultScriptIdentityName
   location: location
 }
 
@@ -109,6 +113,17 @@ resource appKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04
   }
 }
 
+// Bootstrap identity may create the placeholder secret if it does not exist yet (never overwrites).
+resource scriptKeyVaultSecretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, keyVaultScriptIdentity.id, keyVaultSecretsOfficerRoleId)
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsOfficerRoleId)
+    principalId: keyVaultScriptIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // Entra SQL admin can set/rotate the OpenAI secret from CLI/Portal without pipeline changes.
 resource adminKeyVaultSecretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(keyVault.id, entraAdminObjectId, keyVaultSecretsOfficerRoleId)
@@ -117,6 +132,53 @@ resource adminKeyVaultSecretsOfficer 'Microsoft.Authorization/roleAssignments@20
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsOfficerRoleId)
     principalId: entraAdminObjectId
     principalType: 'User'
+  }
+}
+
+// Idempotent: create placeholder secret only when missing so later deploys do not wipe CLI rotations.
+resource ensureOpenAiSecret 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
+  name: 'ensure-openai-api-key'
+  location: location
+  kind: 'AzureCLI'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${keyVaultScriptIdentity.id}': {}
+    }
+  }
+  dependsOn: [
+    scriptKeyVaultSecretsOfficer
+  ]
+  properties: {
+    azCliVersion: '2.67.0'
+    timeout: 'PT10M'
+    retentionInterval: 'PT1H'
+    cleanupPreference: 'OnSuccess'
+    forceUpdateTag: 'v1'
+    environmentVariables: [
+      {
+        name: 'AZURE_CLIENT_ID'
+        value: keyVaultScriptIdentity.properties.clientId
+      }
+      {
+        name: 'KV_NAME'
+        value: keyVault.name
+      }
+      {
+        name: 'SECRET_NAME'
+        value: openAiKeyVaultSecretName
+      }
+    ]
+    scriptContent: '''
+set -euo pipefail
+az login --identity --client-id "$AZURE_CLIENT_ID" >/dev/null
+if az keyvault secret show --vault-name "$KV_NAME" --name "$SECRET_NAME" --query name -o tsv >/dev/null 2>&1; then
+  echo "Secret $SECRET_NAME already exists; leaving value unchanged."
+else
+  echo "Creating placeholder secret $SECRET_NAME (replace via az keyvault secret set)."
+  az keyvault secret set --vault-name "$KV_NAME" --name "$SECRET_NAME" --value "UNSET" >/dev/null
+fi
+'''
   }
 }
 
@@ -233,6 +295,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   location: location
   dependsOn: [
     appKeyVaultSecretsUser
+    ensureOpenAiSecret
   ]
   identity: {
     type: 'UserAssigned'
@@ -246,23 +309,17 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
       activeRevisionsMode: 'Single'
       // GHCR packages are private by default; Container Apps need registry credentials to pull.
       // OpenAI key is referenced from Key Vault (never stored as a plain Container App secret value).
-      secrets: concat(
-        [
-          {
-            name: 'ghcr-password'
-            value: ghcrPassword
-          }
-        ],
-        enableRecipeImportAi
-          ? [
-              {
-                name: openAiContainerAppSecretName
-                keyVaultUrl: '${keyVault.properties.vaultUri}secrets/${openAiKeyVaultSecretName}'
-                identity: appIdentity.id
-              }
-            ]
-          : []
-      )
+      secrets: [
+        {
+          name: 'ghcr-password'
+          value: ghcrPassword
+        }
+        {
+          name: openAiContainerAppSecretName
+          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/${openAiKeyVaultSecretName}'
+          identity: appIdentity.id
+        }
+      ]
       registries: [
         {
           server: 'ghcr.io'
@@ -289,58 +346,52 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             cpu: json('0.25')
             memory: '0.5Gi'
           }
-          env: concat(
-            [
-              {
-                name: 'ASPNETCORE_ENVIRONMENT'
-                value: 'test'
-              }
-              {
-                name: 'SKIP_SQL_WAIT'
-                value: 'true'
-              }
-              {
-                name: 'AZURE_CLIENT_ID'
-                value: appIdentity.properties.clientId
-              }
-              {
-                name: 'ConnectionStrings__RecipeDb'
-                value: 'Server=tcp:${sqlFqdn},1433;Database=${sqlDatabaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Managed Identity;User Id=${appIdentity.properties.clientId};'
-              }
-              {
-                name: 'RecipeFileStorage__Provider'
-                value: 'AzureBlob'
-              }
-              {
-                name: 'RecipeFileStorage__AzureBlob__AccountName'
-                value: storageAccount.name
-              }
-              {
-                name: 'RecipeFileStorage__AzureBlob__ContainerName'
-                value: recipeImagesContainer.name
-              }
-              {
-                name: 'DataProtection__ApplicationName'
-                value: '${projectName}-${environment}'
-              }
-              {
-                name: 'DataProtection__BlobUri'
-                value: dataProtectionBlobUri
-              }
-            ],
-            enableRecipeImportAi
-              ? [
-                  {
-                    name: 'RecipeImport__Ai__Enabled'
-                    value: 'true'
-                  }
-                  {
-                    name: 'RecipeImport__Ai__ApiKey'
-                    secretRef: openAiContainerAppSecretName
-                  }
-                ]
-              : []
-          )
+          env: [
+            {
+              name: 'ASPNETCORE_ENVIRONMENT'
+              value: 'test'
+            }
+            {
+              name: 'SKIP_SQL_WAIT'
+              value: 'true'
+            }
+            {
+              name: 'AZURE_CLIENT_ID'
+              value: appIdentity.properties.clientId
+            }
+            {
+              name: 'ConnectionStrings__RecipeDb'
+              value: 'Server=tcp:${sqlFqdn},1433;Database=${sqlDatabaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Managed Identity;User Id=${appIdentity.properties.clientId};'
+            }
+            {
+              name: 'RecipeFileStorage__Provider'
+              value: 'AzureBlob'
+            }
+            {
+              name: 'RecipeFileStorage__AzureBlob__AccountName'
+              value: storageAccount.name
+            }
+            {
+              name: 'RecipeFileStorage__AzureBlob__ContainerName'
+              value: recipeImagesContainer.name
+            }
+            {
+              name: 'DataProtection__ApplicationName'
+              value: '${projectName}-${environment}'
+            }
+            {
+              name: 'DataProtection__BlobUri'
+              value: dataProtectionBlobUri
+            }
+            {
+              name: 'RecipeImport__Ai__Enabled'
+              value: 'true'
+            }
+            {
+              name: 'RecipeImport__Ai__ApiKey'
+              secretRef: openAiContainerAppSecretName
+            }
+          ]
           probes: [
             {
               type: 'Startup'
@@ -405,4 +456,3 @@ output dataProtectionContainerName string = dataProtectionContainer.name
 output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVault.properties.vaultUri
 output openAiKeyVaultSecretName string = openAiKeyVaultSecretName
-output enableRecipeImportAi bool = enableRecipeImportAi
