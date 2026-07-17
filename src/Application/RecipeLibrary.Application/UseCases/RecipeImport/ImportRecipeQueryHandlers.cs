@@ -30,7 +30,7 @@ public sealed class ImportRecipeFromUrlQueryHandler(
 
         var html = await contentFetcher.FetchHtmlAsync(url, ct);
         var text = recipeImportService.HtmlToRecipeText(html);
-        return await recipeImportService.ImportPlainTextAsync(text, ct);
+        return await recipeImportService.ImportPlainTextAsync(text, query.ParseOptions, ct);
     }
 }
 
@@ -97,7 +97,7 @@ public sealed class ImportRecipeFromImageQueryHandler(
             ? textParts[0]
             : string.Join("\n\n", textParts);
 
-        return await recipeImportService.ImportPlainTextAsync(combined, ct);
+        return await recipeImportService.ImportPlainTextAsync(combined, query.ParseOptions, ct);
     }
 
     private static IReadOnlyList<ImportImageFile> ResolveImages(ImportRecipeFromImageQuery query)

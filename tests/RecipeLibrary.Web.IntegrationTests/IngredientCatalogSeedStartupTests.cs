@@ -17,10 +17,14 @@ public sealed class IngredientCatalogSeedStartupTests(SqlContainerFixture fixtur
         var db = scope.ServiceProvider.GetRequiredService<RecipeDbContext>();
 
         Assert.True(await db.Ingredients.CountAsync() > 100);
-        Assert.True(await db.Ingredients.AnyAsync(x => x.NormalizedName == "tomaat"));
+        Assert.True(await db.IngredientTranslations.AnyAsync(x =>
+            x.LanguageCode == "nl" && x.NormalizedDisplayName == "tomaat"));
         Assert.True(
-            await db.Ingredients.AnyAsync(x => x.NormalizedName == "gehakt")
-            || await db.IngredientAliases.AnyAsync(x => x.NormalizedAlias == "gehakt"));
+            await db.IngredientTranslations.AnyAsync(x =>
+                x.LanguageCode == "nl" && x.NormalizedDisplayName == "gehakt")
+            || await db.IngredientTranslationAliases.AnyAsync(x => x.NormalizedAlias == "gehakt"));
+        Assert.True(await db.IngredientTranslations.AnyAsync(x =>
+            x.LanguageCode == "en" && x.NormalizedDisplayName == "tomato"));
     }
 
     [Fact]
@@ -34,6 +38,8 @@ public sealed class IngredientCatalogSeedStartupTests(SqlContainerFixture fixtur
         var result = await seeder.SeedAsync();
 
         Assert.Equal(0, result.IngredientsInserted);
+        Assert.Equal(0, result.TranslationsInserted);
+        Assert.Equal(0, result.AliasesInserted);
         Assert.Equal(before, await db.Ingredients.CountAsync());
     }
 }

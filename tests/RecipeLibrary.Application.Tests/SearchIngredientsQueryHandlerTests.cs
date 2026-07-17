@@ -10,26 +10,35 @@ namespace RecipeLibrary.Application.Tests;
 public sealed class SearchIngredientsQueryHandlerTests
 {
     [Fact]
-    public async Task HandleAsync_ReturnsCanonicalName_NotEmpty()
+    public async Task HandleAsync_ReturnsDisplayName_NotEmpty()
     {
         var tomatoId = Guid.NewGuid();
         var repo = new CanonicalIngredientRepository(
         [
-            new CanonicalIngredient
-            {
-                Id = tomatoId,
-                CanonicalName = "tomaat",
-                NormalizedName = "tomaat",
-                CreatedAt = DateTimeOffset.UtcNow,
-            },
+            IngredientTestFactory.Create("tomaat", id: tomatoId),
         ]);
 
         var sut = new SearchIngredientsQueryHandler(repo, new IngredientTextNormalizer());
-        var result = await sut.HandleAsync(new SearchIngredientsQuery { Query = "toma" });
+        var result = await sut.HandleAsync(new SearchIngredientsQuery { Query = "toma", CultureName = "nl" });
 
         Assert.Single(result);
         Assert.Equal("tomaat", result[0].Name);
+        Assert.Equal("nl", result[0].LanguageCode);
         Assert.Equal(tomatoId, result[0].Id);
+    }
+
+    [Fact]
+    public async Task HandleAsync_FallsBackToEnglishDisplayName()
+    {
+        var tomato = IngredientTestFactory.Create("tomato", "en", catalogKey: "tomato");
+        var repo = new CanonicalIngredientRepository([tomato]);
+
+        var sut = new SearchIngredientsQueryHandler(repo, new IngredientTextNormalizer());
+        var result = await sut.HandleAsync(new SearchIngredientsQuery { Query = "tom", CultureName = "nl-NL" });
+
+        Assert.Single(result);
+        Assert.Equal("tomato", result[0].Name);
+        Assert.Equal("en", result[0].LanguageCode);
     }
 
     private sealed class CanonicalIngredientRepository(IReadOnlyList<CanonicalIngredient> ingredients)
@@ -39,22 +48,44 @@ public sealed class SearchIngredientsQueryHandlerTests
 
         public Task AddTagsAsync(Guid ingredientId, IReadOnlyList<(string Name, string NormalizedName)> tags, CancellationToken ct = default) => Task.CompletedTask;
 
-        public Task<CanonicalIngredient> CreateIngredientWithAliasAsync(string canonicalName, string normalizedName, string alias, string normalizedAlias, CancellationToken ct = default)
+        public Task<CanonicalIngredient> FindOrCreateAsync(
+            string languageCode,
+            string displayName,
+            string normalizedDisplayName,
+            string? alias,
+            string? normalizedAlias,
+            CancellationToken ct = default)
             => throw new NotImplementedException();
 
-        public Task<IReadOnlyList<CanonicalIngredient>> GetFuzzyCandidatesAsync(string normalizedQuery, int take, CancellationToken ct = default)
+        public Task<IReadOnlyList<CanonicalIngredient>> GetFuzzyCandidatesAsync(
+            string normalizedQuery,
+            IReadOnlyList<string> languageCodes,
+            int take,
+            CancellationToken ct = default)
             => Task.FromResult(ingredients);
 
-        public Task<CanonicalIngredient?> GetByNormalizedAliasAsync(string normalizedAlias, CancellationToken ct = default)
+        public Task<CanonicalIngredient?> GetByNormalizedAliasAsync(
+            string normalizedAlias,
+            IReadOnlyList<string> languageCodes,
+            CancellationToken ct = default)
             => Task.FromResult<CanonicalIngredient?>(null);
 
-        public Task<CanonicalIngredient?> GetByNormalizedNameAsync(string normalizedName, CancellationToken ct = default)
-            => Task.FromResult(ingredients.SingleOrDefault(x => x.NormalizedName == normalizedName));
+        public Task<CanonicalIngredient?> GetByNormalizedNameAsync(
+            string normalizedName,
+            IReadOnlyList<string> languageCodes,
+            CancellationToken ct = default)
+            => Task.FromResult(ingredients.FirstOrDefault(x =>
+                x.Translations.Any(t => t.NormalizedDisplayName == normalizedName)));
 
-        public Task<IReadOnlyList<CanonicalIngredient>> SearchAsync(string normalizedQuery, int take, CancellationToken ct = default)
+        public Task<IReadOnlyList<CanonicalIngredient>> SearchAsync(
+            string normalizedQuery,
+            IReadOnlyList<string> languageCodes,
+            int take,
+            CancellationToken ct = default)
         {
             var matches = ingredients
-                .Where(x => x.NormalizedName.Contains(normalizedQuery, StringComparison.Ordinal))
+                .Where(x => x.Translations.Any(t =>
+                    t.NormalizedDisplayName.Contains(normalizedQuery, StringComparison.Ordinal)))
                 .Take(take)
                 .ToList();
             return Task.FromResult<IReadOnlyList<CanonicalIngredient>>(matches);

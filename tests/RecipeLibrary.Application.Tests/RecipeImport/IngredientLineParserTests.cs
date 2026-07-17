@@ -43,6 +43,14 @@ public sealed class IngredientLineParserTests
     }
 
     [Fact]
+    public void Parse_DualMeasureLine_HasLowConfidence()
+    {
+        var result = _sut.Parse("390 gm/ 3 medium tomatoes");
+
+        Assert.True(result.Confidence < 0.7m);
+    }
+
+    [Fact]
     public void Parse_ParsesFractionTeaspoon()
     {
         var result = _sut.Parse("1/2 tl zout");

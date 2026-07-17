@@ -15,6 +15,19 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         @"(\d+)\s*\+\s*(\d+)\s*/\s*(\d+)",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex UnitPlusFractionPattern = new(
+        @"\b(?<whole>\d+)\s+(?<unit>tsp|tbsp|tl|el|teaspoon|teaspoons|tablespoon|tablespoons)\s*\+\s*(?<num>\d+)\s*/\s*(?<den>\d+)\b",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly HashSet<string> MeasureAdjectives = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "heaped",
+        "level",
+        "rounded",
+        "scant",
+        "packed",
+    };
+
     public ParsedIngredientLine Parse(string? rawLine)
     {
         var raw = (rawLine ?? string.Empty).Trim();
@@ -24,6 +37,7 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         }
 
         var normalized = NormalizeLine(raw);
+
         var tokens = Tokenize(normalized);
         if (tokens.Count == 0)
         {
@@ -76,6 +90,13 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
             index++;
         }
 
+        string? measureAdjective = null;
+        if (index < tokens.Count && MeasureAdjectives.Contains(tokens[index]))
+        {
+            measureAdjective = tokens[index].ToLowerInvariant();
+            index++;
+        }
+
         Unit unit = Unit.Piece;
         decimal unitMultiplier = 1m;
         var hasExplicitUnit = false;
@@ -89,6 +110,15 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         }
 
         var remainder = string.Join(' ', tokens.Skip(index)).Trim();
+        remainder = RewritePlusAsPlusWord(remainder);
+
+        if (unit == Unit.Milliliter && hasExplicitUnit)
+        {
+            var plusSplit = SplitLeadingNameFromPlusClause(remainder);
+            remainder = plusSplit.Name;
+            rangeNote = MergePreparation(rangeNote, plusSplit.PlusPrep);
+        }
+
         var (name, explicitPrep) = IngredientPreparationSplitter.Split(remainder);
         var resolved = lineResolver.Resolve(name, explicitPrep);
         var scaled = quantity * unitMultiplier;
@@ -110,7 +140,9 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
                 ? 0.75m
                 : 0.35m;
 
-        var preparation = MergePreparation(rangeNote, resolved.Preparation);
+        confidence = AdjustConfidenceForAmbiguity(normalized, remainder, unit, hasExplicitUnit, confidence);
+
+        var preparation = MergePreparation(measureAdjective, MergePreparation(rangeNote, resolved.Preparation));
 
         return new ParsedIngredientLine(
             raw,
@@ -120,6 +152,62 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
             preparation,
             confidence,
             ImportParseMethod.Deterministic);
+    }
+
+    private static decimal AdjustConfidenceForAmbiguity(
+        string normalized,
+        string remainder,
+        Unit unit,
+        bool hasExplicitUnit,
+        decimal confidence)
+    {
+        if (LooksLikeComplexIngredientLine(normalized))
+        {
+            return Math.Min(confidence, 0.65m);
+        }
+
+        if (hasExplicitUnit && unit == Unit.Gram && LooksLikeDualMeasureRemainder(remainder))
+        {
+            return Math.Min(confidence, 0.65m);
+        }
+
+        return confidence;
+    }
+
+    private static bool LooksLikeDualMeasureRemainder(string remainder) =>
+        Regex.IsMatch(remainder.Trim(), @"^\d", RegexOptions.CultureInvariant);
+
+    private static bool LooksLikeComplexIngredientLine(string normalized) =>
+        normalized.Length > 100
+        || (normalized.Contains("can", StringComparison.OrdinalIgnoreCase) && normalized.Contains('('))
+        || Regex.IsMatch(normalized, @"\b\d+\s+drops?\b", RegexOptions.IgnoreCase);
+
+    private static string RewritePlusAsPlusWord(string remainder)
+    {
+        if (remainder.Length == 0)
+        {
+            return remainder;
+        }
+
+        return Regex.Replace(
+            remainder,
+            @"\s\+\s+",
+            " plus ",
+            RegexOptions.CultureInvariant);
+    }
+
+    private static (string Name, string? PlusPrep) SplitLeadingNameFromPlusClause(string remainder)
+    {
+        var marker = " plus ";
+        var idx = remainder.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (idx <= 0)
+        {
+            return (remainder, null);
+        }
+
+        var name = remainder[..idx].Trim();
+        var plusPrep = remainder[idx..].Trim(); // keep leading "plus ..."
+        return (name, plusPrep);
     }
 
     private static ParsedIngredientLine ParseHandful(string raw, IReadOnlyList<string> tokens)
@@ -174,7 +262,6 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
     {
         var (name, explicitPrep) = IngredientPreparationSplitter.Split(normalized);
         var resolved = lineResolver.Resolve(name, explicitPrep);
-        // Bare lines (e.g. "olijfolie", "eieren") stay unmeasured without inventing "naar smaak".
         return Unmeasured(raw, resolved.DisplayName, resolved.Preparation, confidence);
     }
 
@@ -196,8 +283,29 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         var value = raw.Trim();
         value = value.TrimStart('-', '•', '*', '▢', ' ');
         value = ReplaceUnicodeFractions(value);
+        // "1/4th" / "1/2nd" → proper fraction token (before unit+fraction rewrite)
+        value = Regex.Replace(value, @"\b(\d+)\s*/\s*(\d+)\s*(?:st|nd|rd|th)\b", "$1/$2", RegexOptions.IgnoreCase);
+        // "2 tsp + 1/4 salt" → "2.25 tsp salt"
+        value = UnitPlusFractionPattern.Replace(
+            value,
+            match =>
+            {
+                var whole = decimal.Parse(match.Groups["whole"].Value, CultureInfo.InvariantCulture);
+                var num = decimal.Parse(match.Groups["num"].Value, CultureInfo.InvariantCulture);
+                var den = decimal.Parse(match.Groups["den"].Value, CultureInfo.InvariantCulture);
+                if (den == 0)
+                {
+                    return match.Value;
+                }
+
+                var sum = whole + (num / den);
+                return " " + sum.ToString(CultureInfo.InvariantCulture) + " " + match.Groups["unit"].Value + " ";
+            });
         value = NormalizeMixedPlus(value);
-        return value.Trim();
+        value = Regex.Replace(value, @"\b(\d+)\s+to\s+(\d+)\b", "$1-$2", RegexOptions.IgnoreCase);
+        value = Regex.Replace(value, @"\bgm\s*/", "g ", RegexOptions.IgnoreCase);
+        value = Regex.Replace(value, @"\bgm\b", "g", RegexOptions.IgnoreCase);
+        return Regex.Replace(value, @"\s+", " ").Trim();
     }
 
     private static string ReplaceUnicodeFractions(string value)
@@ -341,19 +449,19 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         return false;
     }
 
-    private static string? MergePreparation(string? rangeNote, string? preparation)
+    private static string? MergePreparation(string? left, string? right)
     {
-        if (rangeNote is null)
+        if (left is null)
         {
-            return preparation;
+            return right;
         }
 
-        if (preparation is null)
+        if (right is null)
         {
-            return rangeNote;
+            return left;
         }
 
-        return $"{rangeNote}; {preparation}";
+        return $"{left}; {right}";
     }
 }
 

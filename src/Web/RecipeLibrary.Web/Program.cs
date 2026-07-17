@@ -331,11 +331,18 @@ app.MapPost("/recipes/import-image", async (
         }
 
         var language = form["language"].ToString();
+        var useAiFallback = !string.Equals(form["useAiFallback"].ToString(), "false", StringComparison.OrdinalIgnoreCase);
+        var useFullRecipeAi = string.Equals(form["useFullRecipeAi"].ToString(), "true", StringComparison.OrdinalIgnoreCase);
         var result = await queryBus.QueryAsync<ImportRecipeFromImageQuery, ImportRecipeResult>(
             new ImportRecipeFromImageQuery
             {
                 Images = images,
                 Language = string.IsNullOrWhiteSpace(language) ? "nld" : language,
+                ParseOptions = new ImportRecipeParseOptions
+                {
+                    UseAiFallback = useAiFallback,
+                    UseFullRecipeAi = useFullRecipeAi,
+                },
             },
             ct);
 

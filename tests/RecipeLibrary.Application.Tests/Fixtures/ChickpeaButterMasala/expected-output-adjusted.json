@@ -1,0 +1,266 @@
+{
+  "title": "Chickpea Butter Masala (Chole Butter Masala)",
+  "description": null,
+  "preparationTimeMinutes": 0,
+  "cookingTimeMinutes": 0,
+  "category": 0,
+  "servings": 5,
+  "difficulty": 0,
+  "imageUrl": null,
+  "ingredients": [
+    {
+      "name": "tomatoes",
+      "preparation": "medium",
+      "quantity": 3,
+      "unit": "piece",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "garlic",
+      "preparation": "",
+      "quantity": 4,
+      "unit": "cloves",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "ginger",
+      "preparation": "1-inch",
+      "quantity": 1,
+      "unit": "piece",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "oil",
+      "preparation": null,
+      "quantity": 1,
+      "unit": "Tablespoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "butter",
+      "preparation": "",
+      "quantity": 2,
+      "unit": "Tablespoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "onion",
+      "preparation": "large, finely chopped",
+      "quantity": 1,
+      "unit": "piece",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "tomato paste",
+      "preparation": "(optional, for added richness)",
+      "quantity": 0.5,
+      "unit": "Tablespoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "turmeric powder",
+      "preparation": null,
+      "quantity": 0.5,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "Kashmiri chili powder",
+      "preparation": "heaped",
+      "quantity": 1,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "ground coriander",
+      "preparation": "(dhania powder)",
+      "quantity": 2,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "ground cumin",
+      "preparation": "(jeera powder)",
+      "quantity": 1,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "salt",
+      "preparation": "adjust to taste",
+      "quantity": 2.25,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "sugar",
+      "preparation": "to balance the flavors",
+      "quantity": 2,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "garam masala powder",
+      "preparation": null,
+      "quantity": 1,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "dried fenugreek leaves",
+      "preparation": "(kasoori methi), crushed",
+      "quantity": 1,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "black pepper powder",
+      "preparation": null,
+      "quantity": 0.25,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "chickpeas",
+      "preparation": "drained and rinsed from 1 large can (822 g with liquid / 484 g drained); save 1/3 cup for thickening",
+      "quantity": 484,
+      "unit": "Gram",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "hot water",
+      "preparation": "plus 1/2 cup used to puree the chickpeas",
+      "quantity": 1,
+      "unit": "cup",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "heavy cream",
+      "preparation": "or coconut cream/milk for a dairy-free option",
+      "quantity": 0.3,
+      "unit": "cup",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "fresh coriander leaves",
+      "preparation": "chopped",
+      "quantity": 2,
+      "unit": "Tablespoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "butter",
+      "preparation": "for garnish",
+      "quantity": 1,
+      "unit": "Tablespoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "oil",
+      "preparation": "1 drop, for garnish",
+      "quantity": null,
+      "unit": null,
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "sweet paprika",
+      "preparation": "(or Kashmiri chili powder)",
+      "quantity": 1,
+      "unit": "Teaspoon",
+      "createAsNewIngredient": false
+    },
+    {
+      "name": "fresh coriander leaves and cream",
+      "preparation": "for drizzling",
+      "quantity": null,
+      "unit": null,
+      "createAsNewIngredient": false
+    }
+  ],
+  "instructionSteps": [
+    {
+      "stepNumber": 1,
+      "text": "Blend the tomatoes, garlic, and ginger into a smooth puree. Set aside."
+    },
+    {
+      "stepNumber": 2,
+      "text": "In a pot, heat oil and butter over medium heat."
+    },
+    {
+      "stepNumber": 3,
+      "text": "Add finely chopped onions and ¼ tsp salt. Sauté until they turn light brown (not too dark)."
+    },
+    {
+      "stepNumber": 4,
+      "text": "Stir in the tomato paste and fry on medium-low heat for a minute."
+    },
+    {
+      "stepNumber": 5,
+      "text": "Add turmeric, Kashmiri chili powder, coriander, and cumin powder."
+    },
+    {
+      "stepNumber": 6,
+      "text": "Fry the spices on low heat for a few seconds, then add the blended tomato puree."
+    },
+    {
+      "stepNumber": 7,
+      "text": "Cover and cook on medium heat for 5 minutes."
+    },
+    {
+      "stepNumber": 8,
+      "text": "Stir, cover partially, and let it thicken."
+    },
+    {
+      "stepNumber": 9,
+      "text": "Stir in salt, sugar, garam masala, and crushed kasoori methi."
+    },
+    {
+      "stepNumber": 10,
+      "text": "Add the drained chickpeas and mix well to coat them in the masala."
+    },
+    {
+      "stepNumber": 11,
+      "text": "Pour in 1 cup hot water and let the flavors blend."
+    },
+    {
+      "stepNumber": 12,
+      "text": "Blend the reserved ⅓ cup chickpeas with ½ cup water to a smooth paste."
+    },
+    {
+      "stepNumber": 13,
+      "text": "Add this puree to the curry to create a rich, thick consistency."
+    },
+    {
+      "stepNumber": 14,
+      "text": "Stir in black pepper powder."
+    },
+    {
+      "stepNumber": 15,
+      "text": "Cover and let it simmer on low heat for 15 minutes, stirring occasionally."
+    },
+    {
+      "stepNumber": 16,
+      "text": "Do a taste test and adjust the seasonings if needed."
+    },
+    {
+      "stepNumber": 17,
+      "text": "Add chopped coriander leaves and ⅓ cup heavy cream (or coconut cream for a dairy-free option)."
+    },
+    {
+      "stepNumber": 18,
+      "text": "Cover and cook on low heat for another 5 minutes."
+    },
+    {
+      "stepNumber": 19,
+      "text": "In a small pan, heat butter with just a drop of oil over low heat."
+    },
+    {
+      "stepNumber": 20,
+      "text": "Once melted, turn off the heat and stir in sweet paprika (or Kashmiri chili powder)."
+    },
+    {
+      "stepNumber": 21,
+      "text": "Drizzle this aromatic butter over the chickpea curry."
+    }
+  ]
+}

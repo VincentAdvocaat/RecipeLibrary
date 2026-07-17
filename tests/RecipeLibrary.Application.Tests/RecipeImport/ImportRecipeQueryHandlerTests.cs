@@ -223,11 +223,7 @@ public sealed class ImportRecipeQueryHandlerTests
             }));
     }
 
-    private static RecipeImportService CreateService() =>
-        new(
-            new RecipeTextParser(new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser()))),
-            new HtmlRecipeTextExtractor(),
-            new IngredientMatcher(new EmptyIngredientRepository(), new IngredientTextNormalizer(), new IngredientSimilarityScorer()));
+    private static RecipeImportService CreateService() => ImportTestFactory.CreateImportService();
 
     private static string GetFixturePath(string fileName) =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "recipe-import", fileName);
@@ -236,11 +232,11 @@ public sealed class ImportRecipeQueryHandlerTests
     {
         public Task AddMatchLogAsync(Domain.Entities.IngredientMatchLog log, CancellationToken ct = default) => Task.CompletedTask;
         public Task AddTagsAsync(Guid ingredientId, IReadOnlyList<(string Name, string NormalizedName)> tags, CancellationToken ct = default) => Task.CompletedTask;
-        public Task<Domain.Entities.CanonicalIngredient> CreateIngredientWithAliasAsync(string canonicalName, string normalizedName, string alias, string normalizedAlias, CancellationToken ct = default) => throw new NotImplementedException();
-        public Task<IReadOnlyList<Domain.Entities.CanonicalIngredient>> GetFuzzyCandidatesAsync(string normalizedQuery, int take, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Domain.Entities.CanonicalIngredient>>([]);
-        public Task<Domain.Entities.CanonicalIngredient?> GetByNormalizedAliasAsync(string normalizedAlias, CancellationToken ct = default) => Task.FromResult<Domain.Entities.CanonicalIngredient?>(null);
-        public Task<Domain.Entities.CanonicalIngredient?> GetByNormalizedNameAsync(string normalizedName, CancellationToken ct = default) => Task.FromResult<Domain.Entities.CanonicalIngredient?>(null);
-        public Task<IReadOnlyList<Domain.Entities.CanonicalIngredient>> SearchAsync(string normalizedQuery, int take, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Domain.Entities.CanonicalIngredient>>([]);
+        public Task<Domain.Entities.CanonicalIngredient> FindOrCreateAsync(string languageCode, string displayName, string normalizedDisplayName, string? alias, string? normalizedAlias, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyList<Domain.Entities.CanonicalIngredient>> GetFuzzyCandidatesAsync(string normalizedQuery, IReadOnlyList<string> languageCodes, int take, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Domain.Entities.CanonicalIngredient>>([]);
+        public Task<Domain.Entities.CanonicalIngredient?> GetByNormalizedAliasAsync(string normalizedAlias, IReadOnlyList<string> languageCodes, CancellationToken ct = default) => Task.FromResult<Domain.Entities.CanonicalIngredient?>(null);
+        public Task<Domain.Entities.CanonicalIngredient?> GetByNormalizedNameAsync(string normalizedName, IReadOnlyList<string> languageCodes, CancellationToken ct = default) => Task.FromResult<Domain.Entities.CanonicalIngredient?>(null);
+        public Task<IReadOnlyList<Domain.Entities.CanonicalIngredient>> SearchAsync(string normalizedQuery, IReadOnlyList<string> languageCodes, int take, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Domain.Entities.CanonicalIngredient>>([]);
         public Task<IReadOnlyList<Domain.Entities.Tag>> SearchTagsAsync(string normalizedQuery, int take, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Domain.Entities.Tag>>([]);
     }
 

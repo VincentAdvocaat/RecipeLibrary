@@ -96,6 +96,9 @@
   <data name="RecipeCreate.PhotoImport.Error.UploadTimeout" xml:space="preserve"><value>The upload timed out. Try fewer or smaller photos.</value></data>
   <data name="RecipeCreate.PhotoImport.Experimental.Disclaimer" xml:space="preserve"><value>Experimental: photo import is not reliable yet. Prefer text or URL import; results may fail or be incomplete.</value></data>
   <data name="RecipeCreate.Import.Responsibility.Hint" xml:space="preserve"><value>Only import text, screenshots, or links you have the right to use. You are responsible for the content you add.</value></data>
+  <data name="RecipeCreate.Import.AiFallback.Label" xml:space="preserve"><value>Use AI for uncertain ingredient lines</value></data>
+  <data name="RecipeCreate.Import.FullRecipeAi.Label" xml:space="preserve"><value>Parse the entire recipe with AI (experimental)</value></data>
+  <data name="RecipeCreate.Import.FullRecipeAi.Hint" xml:space="preserve"><value>HTML and page noise are removed first. Use this to compare AI output against the standard parser.</value></data>
   <data name="RecipeCreate.Import.ReviewBanner" xml:space="preserve"><value>We filled in this recipe for you. Please check that everything looks right before you save.</value></data>
   <data name="RecipeCreate.Import.Ingredient.CheckHint" xml:space="preserve"><value>Please check if this looks right.</value></data>
   <data name="RecipeCreate.Import.Warning.JsonLdParseSkipped" xml:space="preserve"><value>Some page data could not be read; we kept looking.</value></data>

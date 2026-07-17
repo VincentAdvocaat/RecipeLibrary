@@ -11,9 +11,9 @@ public sealed class AiParsedIngredientLine
 {
     public string RawLine { get; init; } = string.Empty;
 
-    public decimal Quantity { get; init; }
+    public decimal? Quantity { get; init; }
 
-    public string Unit { get; init; } = string.Empty;
+    public string? Unit { get; init; }
 
     public string Name { get; init; } = string.Empty;
 

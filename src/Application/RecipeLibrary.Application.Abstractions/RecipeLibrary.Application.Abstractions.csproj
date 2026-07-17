@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\RecipeLibrary.Application.Contracts\RecipeLibrary.Application.Contracts.csproj" />
     <ProjectReference Include="..\..\Domain\RecipeLibrary.Domain\RecipeLibrary.Domain.csproj" />
   </ItemGroup>
 

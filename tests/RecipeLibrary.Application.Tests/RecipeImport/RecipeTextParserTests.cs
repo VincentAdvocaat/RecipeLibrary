@@ -1,5 +1,4 @@
 using RecipeLibrary.Application.Contracts;
-using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.RecipeImport;
 using Xunit;
 
@@ -7,15 +6,14 @@ namespace RecipeLibrary.Application.Tests.RecipeImport;
 
 public sealed class RecipeTextParserTests
 {
-    private readonly RecipeTextParser _sut = new(
-        new IngredientLineParser(new IngredientLineResolver(new IngredientNameParser())));
+    private readonly RecipeTextParser _sut = ImportTestFactory.CreateTextParser();
 
     [Fact]
-    public void Parse_ParsesPlainTextSections()
+    public async Task Parse_ParsesPlainTextSections()
     {
         var text = File.ReadAllText(GetFixturePath("plain-pasta.txt"));
 
-        var result = _sut.Parse(text);
+        var result = await _sut.ParseAsync(text, new ImportRecipeParseOptions { UseAiFallback = false });
 
         Assert.Equal(ImportSource.PlainText, result.Source);
         Assert.Equal("Snelle pasta", result.Title);
@@ -24,12 +22,12 @@ public sealed class RecipeTextParserTests
     }
 
     [Fact]
-    public void Parse_ParsesHtmlViaHtmlExtractorThenParser()
+    public async Task Parse_ParsesHtmlViaHtmlExtractorThenParser()
     {
         var html = File.ReadAllText(GetFixturePath("jsonld-pasta.html"));
         var text = new HtmlRecipeTextExtractor().Extract(html);
 
-        var result = _sut.Parse(text);
+        var result = await _sut.ParseAsync(text, new ImportRecipeParseOptions { UseAiFallback = false });
 
         Assert.Equal("Snelle pasta", result.Title);
         Assert.True(result.Ingredients.Count >= 3);
