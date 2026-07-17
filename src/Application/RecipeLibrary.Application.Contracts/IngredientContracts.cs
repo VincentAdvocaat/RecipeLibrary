@@ -15,6 +15,11 @@ public sealed class ParseIngredientLineResult
 public sealed class MatchIngredientCommand : ICommand<MatchIngredientResult>
 {
     public string Input { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Optional BCP-47 culture; defaults to current UI culture when omitted.
+    /// </summary>
+    public string? CultureName { get; init; }
 }
 
 public sealed class IngredientSuggestionItem

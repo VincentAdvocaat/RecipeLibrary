@@ -18,7 +18,7 @@ using RecipeLibrary.Infrastructure.Persistence;
 using RecipeLibrary.Infrastructure.RecipeImport;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Web.Services;
-using Microsoft.EntityFrameworkCore;
+using RecipeLibrary.Web.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -115,6 +115,7 @@ if (string.IsNullOrWhiteSpace(recipeDbConnectionString))
 }
 
 builder.Services.AddPersistence(recipeDbConnectionString);
+builder.Services.AddHostedService<PersistenceWarmupHostedService>();
 builder.Services.AddRecipeImport(builder.Configuration);
 builder.Services.AddApplication();
 
@@ -141,29 +142,36 @@ ConfigureDataProtection(builder);
 builder.Services.AddScoped(sp =>
 {
     var nav = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
-    return new HttpClient
+    // Blazor Server loopback HttpClient does not forward the browser culture cookie.
+    // Accept-Language lets RequestLocalization set CurrentUICulture for ingredient i18n APIs.
+    var client = new HttpClient
     {
         BaseAddress = new Uri(nav.BaseUri),
         // OCR of multiple screenshots can take longer than the default 100s.
         Timeout = TimeSpan.FromMinutes(5),
     };
+    var uiCulture = CultureInfo.CurrentUICulture.Name;
+    if (!string.IsNullOrWhiteSpace(uiCulture))
+    {
+        client.DefaultRequestHeaders.AcceptLanguage.ParseAdd(uiCulture);
+    }
+
+    return client;
 });
 
 var app = builder.Build();
 
-app.Services.EnsurePersistenceMigrated();
-
-// Developer feedback: log only when DB is unreachable in Development (e.g. SQL container not running).
-if (app.Environment.IsDevelopment())
+// Prefer a synchronous migrate on startup. When Azure SQL is paused (error 40613), continue so the
+// app can serve a "starting" page while PersistenceWarmupHostedService retries in the background.
+if (app.Environment.IsEnvironment("Testing"))
 {
-    using (var scope = app.Services.CreateScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<RecipeDbContext>();
-        if (!db.Database.CanConnect())
-        {
-            app.Logger.LogWarning("Cannot connect to RecipeDb. Is the SQL container running?");
-        }
-    }
+    app.Services.EnsurePersistenceMigrated();
+    app.Services.GetRequiredService<IPersistenceReadiness>().MarkReady();
+}
+else if (!app.Services.TryEnsurePersistenceMigrated())
+{
+    app.Logger.LogWarning(
+        "Database is not ready yet (e.g. Azure SQL auto-pause). Serving the starting page until migrations succeed.");
 }
 
 // Configure the HTTP request pipeline.
@@ -185,6 +193,9 @@ app.UseHttpsRedirection();
 var localizationOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<RequestLocalizationOptions>>().Value;
 app.UseRequestLocalization(localizationOptions);
 
+// Before auth: otherwise FallbackPolicy challenges to login while SQL is still waking up.
+app.UseMiddleware<PersistenceReadinessMiddleware>();
+
 if (authEnabled)
 {
     app.UseAuthentication();
@@ -203,7 +214,11 @@ if (authEnabled)
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.MapGet("/health", () => Results.Ok(new { status = "Healthy" })).AllowAnonymous();
+app.MapGet("/health", (IPersistenceReadiness readiness) => Results.Ok(new
+{
+    status = "Healthy",
+    database = readiness.IsReady ? "Ready" : "Starting"
+})).AllowAnonymous();
 
 app.MapPost("/api/upload-recipe-image", async (IFormFile file, ICommandBus commandBus, CancellationToken ct) =>
 {
@@ -252,8 +267,19 @@ app.MapPost("/ingredients/parse-line", (ParseIngredientLineRequest request, Ingr
 
 app.MapPost("/recipes/import", async (ImportRecipeContentQuery query, IQueryBus queryBus, CancellationToken ct) =>
 {
-    var result = await queryBus.QueryAsync<ImportRecipeContentQuery, ImportRecipeResult>(query, ct);
-    return Results.Ok(result);
+    try
+    {
+        var result = await queryBus.QueryAsync<ImportRecipeContentQuery, ImportRecipeResult>(query, ct);
+        return Results.Ok(result);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
 }).DisableAntiforgery().ApplyAuth(authEnabled);
 
 app.MapPost("/recipes/import-url", async (ImportRecipeFromUrlQuery query, IQueryBus queryBus, CancellationToken ct) =>
@@ -358,10 +384,10 @@ app.MapPost("/recipes/import-image", async (
     }
 }).DisableAntiforgery().ApplyAuth(authEnabled);
 
-app.MapGet("/ingredients/search", async (string q, IQueryBus queryBus, CancellationToken ct) =>
+app.MapGet("/ingredients/search", async (string q, string? culture, IQueryBus queryBus, CancellationToken ct) =>
 {
     var result = await queryBus.QueryAsync<SearchIngredientsQuery, IReadOnlyList<IngredientLookupItem>>(
-        new SearchIngredientsQuery { Query = q },
+        new SearchIngredientsQuery { Query = q, CultureName = culture },
         ct);
     return Results.Ok(result);
 }).DisableAntiforgery().ApplyAuth(authEnabled);

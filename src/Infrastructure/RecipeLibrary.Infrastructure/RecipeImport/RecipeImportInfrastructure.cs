@@ -313,7 +313,7 @@ internal static class OpenAiRecipeJson
         string userContent,
         CancellationToken ct)
     {
-        var client = httpClientFactory.CreateClient(RecipeImportServiceRegistration.HttpClientName);
+        var client = httpClientFactory.CreateClient(RecipeImportServiceRegistration.AiHttpClientName);
         var endpoint = string.IsNullOrWhiteSpace(aiOptions.Endpoint)
             ? "https://api.openai.com/v1/chat/completions"
             : aiOptions.Endpoint.TrimEnd('/');
@@ -342,26 +342,42 @@ internal static class OpenAiRecipeJson
             Encoding.UTF8,
             "application/json");
 
-        using var response = await client.SendAsync(request, ct);
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
+        HttpResponseMessage response;
+        try
         {
-            throw new InvalidOperationException($"AI parser request failed: {(int)response.StatusCode} {body}");
+            response = await client.SendAsync(request, ct);
+        }
+        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            throw new InvalidOperationException("AI parser request timed out.", ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new InvalidOperationException("AI parser request failed to connect.", ex);
         }
 
-        using var document = JsonDocument.Parse(body);
-        var content = document.RootElement
-            .GetProperty("choices")[0]
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString();
-
-        if (string.IsNullOrWhiteSpace(content))
+        using (response)
         {
-            throw new InvalidOperationException("AI parser returned empty content.");
-        }
+            var body = await response.Content.ReadAsStringAsync(ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"AI parser request failed: {(int)response.StatusCode} {body}");
+            }
 
-        return content;
+            using var document = JsonDocument.Parse(body);
+            var content = document.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString();
+
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                throw new InvalidOperationException("AI parser returned empty content.");
+            }
+
+            return content;
+        }
     }
 }
 

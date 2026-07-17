@@ -32,6 +32,9 @@ public sealed class RecipeImportAiOptions
     public string? Endpoint { get; init; }
 
     public decimal ConfidenceThreshold { get; init; } = 0.7m;
+
+    /// <summary>HTTP timeout for OpenAI chat completions (full-recipe and ingredient-line parsing).</summary>
+    public int TimeoutSeconds { get; init; } = 120;
 }
 
 public sealed class RecipeImportUrlFetchOptions

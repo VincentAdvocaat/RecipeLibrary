@@ -344,8 +344,7 @@
             return;
         }
 
-        var encoded = Uri.EscapeDataString(query);
-        var suggestions = await Http.GetFromJsonAsync<List<IngredientLookupItem>>($"/ingredients/search?q={encoded}") ?? [];
+        var suggestions = await Http.GetFromJsonAsync<List<IngredientLookupItem>>(IngredientApi.SearchUrl(query)) ?? [];
         _ingredientSuggestions[index] = suggestions;
         StateHasChanged();
     }
@@ -472,7 +471,7 @@
                 continue;
             }
 
-            var match = await Http.PostAsJsonAsync("/ingredients/match", new MatchIngredientCommand { Input = input });
+            var match = await Http.PostAsJsonAsync("/ingredients/match", IngredientApi.MatchCommand(input));
             var payload = await match.Content.ReadFromJsonAsync<MatchIngredientResult>();
             if (payload?.Ingredient?.Id is not Guid ingredientId)
             {
