@@ -1,3 +1,4 @@
+using System.Globalization;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
@@ -71,6 +72,63 @@ public sealed class RecipeIngredientBuilderTests
         Assert.Single(ingredients);
         Assert.NotEqual(existingId, ingredients[0].IngredientId);
         Assert.Equal(1, repo.CreateCallCount);
+    }
+
+    [Fact]
+    public async Task BuildAsync_CreateAsNewIngredient_UsesStorageLanguageCode()
+    {
+        var previousUi = CultureInfo.CurrentUICulture;
+        var previousCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("nl-NL");
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("nl-NL");
+
+            var recipeId = Guid.NewGuid();
+            var repo = new LanguageTrackingIngredientRepository();
+            var sut = new IngredientLineResolver(new IngredientNameParser());
+
+            await RecipeIngredientBuilder.BuildAsync(
+                recipeId,
+                [
+                    new CreateRecipeIngredientDto
+                    {
+                        Name = "tomaat",
+                        Quantity = 1,
+                        Unit = nameof(Unit.Gram),
+                        CreateAsNewIngredient = true,
+                    },
+                ],
+                repo,
+                new IngredientTextNormalizer(),
+                new IngredientMatcher(repo, new IngredientTextNormalizer(), new IngredientSimilarityScorer()),
+                sut,
+                CancellationToken.None);
+
+            Assert.Equal("nl", repo.LastLanguageCode);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previousUi;
+            CultureInfo.CurrentCulture = previousCulture;
+        }
+    }
+
+    private sealed class LanguageTrackingIngredientRepository : IngredientRepositoryStub
+    {
+        public string? LastLanguageCode { get; private set; }
+
+        public override Task<CanonicalIngredient> FindOrCreateAsync(
+            string languageCode,
+            string displayName,
+            string normalizedDisplayName,
+            string? alias,
+            string? normalizedAlias,
+            CancellationToken ct = default)
+        {
+            LastLanguageCode = languageCode;
+            return Task.FromResult(IngredientTestFactory.Create(displayName, languageCode));
+        }
     }
 
     private sealed class FakeIngredientRepository(IReadOnlyList<CanonicalIngredient> ingredients)

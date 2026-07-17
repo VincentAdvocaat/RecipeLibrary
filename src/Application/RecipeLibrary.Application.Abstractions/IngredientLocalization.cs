@@ -63,6 +63,22 @@ public static class IngredientLanguageFallback
 
         return code.Trim().Replace("_", "-", StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// Maps UI culture to the short language tag used when persisting ingredient translations (e.g. nl-NL → nl).
+    /// </summary>
+    public static string ResolveStorageLanguageCode(string? cultureName)
+    {
+        foreach (var code in ResolveChain(cultureName))
+        {
+            if (!code.Contains('-', StringComparison.Ordinal))
+            {
+                return code;
+            }
+        }
+
+        return TerminalLanguage;
+    }
 }
 
 /// <summary>

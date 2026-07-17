@@ -131,7 +131,7 @@ public sealed class EfIngredientRepository(RecipeDbContext dbContext) : IIngredi
         string? normalizedAlias,
         CancellationToken ct = default)
     {
-        var language = IngredientLanguageFallback.NormalizeLanguageCode(languageCode);
+        var language = IngredientLanguageFallback.ResolveStorageLanguageCode(languageCode);
         if (language.Length == 0)
         {
             throw new ArgumentException("Language code is required.", nameof(languageCode));

@@ -20,7 +20,7 @@ internal static class RecipeIngredientBuilder
     {
         var ingredients = new List<Ingredient>();
         var cultureName = CultureInfo.CurrentUICulture.Name;
-        var languageCode = IngredientLanguageFallback.ResolveChain(cultureName)[0];
+        var languageCode = IngredientLanguageFallback.ResolveStorageLanguageCode(cultureName);
 
         foreach (var ingredientDto in ingredientDtos)
         {

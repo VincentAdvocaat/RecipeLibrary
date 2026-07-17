@@ -25,6 +25,19 @@ public sealed class IngredientLanguageFallbackTests
         Assert.Equal(["en"], chain);
     }
 
+    [Theory]
+    [InlineData("nl-NL", "nl")]
+    [InlineData("nl-BE", "nl")]
+    [InlineData("nl", "nl")]
+    [InlineData("en-US", "en")]
+    [InlineData("en", "en")]
+    [InlineData(null, "en")]
+    public void ResolveStorageLanguageCode_UsesShortCatalogTag(string? culture, string expected)
+    {
+        var code = IngredientLanguageFallback.ResolveStorageLanguageCode(culture);
+        Assert.Equal(expected, code);
+    }
+
     [Fact]
     public void DisplayResolver_FallsBackToCatalogKey()
     {
