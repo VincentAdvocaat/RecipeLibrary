@@ -141,12 +141,21 @@ ConfigureDataProtection(builder);
 builder.Services.AddScoped(sp =>
 {
     var nav = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
-    return new HttpClient
+    // Blazor Server loopback HttpClient does not forward the browser culture cookie.
+    // Accept-Language lets RequestLocalization set CurrentUICulture for ingredient i18n APIs.
+    var client = new HttpClient
     {
         BaseAddress = new Uri(nav.BaseUri),
         // OCR of multiple screenshots can take longer than the default 100s.
         Timeout = TimeSpan.FromMinutes(5),
     };
+    var uiCulture = CultureInfo.CurrentUICulture.Name;
+    if (!string.IsNullOrWhiteSpace(uiCulture))
+    {
+        client.DefaultRequestHeaders.AcceptLanguage.ParseAdd(uiCulture);
+    }
+
+    return client;
 });
 
 var app = builder.Build();
@@ -358,10 +367,10 @@ app.MapPost("/recipes/import-image", async (
     }
 }).DisableAntiforgery().ApplyAuth(authEnabled);
 
-app.MapGet("/ingredients/search", async (string q, IQueryBus queryBus, CancellationToken ct) =>
+app.MapGet("/ingredients/search", async (string q, string? culture, IQueryBus queryBus, CancellationToken ct) =>
 {
     var result = await queryBus.QueryAsync<SearchIngredientsQuery, IReadOnlyList<IngredientLookupItem>>(
-        new SearchIngredientsQuery { Query = q },
+        new SearchIngredientsQuery { Query = q, CultureName = culture },
         ct);
     return Results.Ok(result);
 }).DisableAntiforgery().ApplyAuth(authEnabled);
