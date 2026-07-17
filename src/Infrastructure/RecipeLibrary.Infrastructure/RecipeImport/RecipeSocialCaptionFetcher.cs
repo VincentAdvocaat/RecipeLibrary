@@ -66,10 +66,21 @@ public sealed class RecipeSocialCaptionFetcher(
     {
         if (TryGetConfiguredYouTubeApiKey(options.Value.YouTube.ApiKey, out var apiKey))
         {
-            var fromDataApi = await FetchYouTubeDataApiDescriptionAsync(videoId, apiKey, ct);
-            if (!string.IsNullOrWhiteSpace(fromDataApi))
+            try
             {
-                return fromDataApi;
+                var fromDataApi = await FetchYouTubeDataApiDescriptionAsync(videoId, apiKey, ct);
+                if (!string.IsNullOrWhiteSpace(fromDataApi))
+                {
+                    return fromDataApi;
+                }
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                // Data API timeout/network/malformed JSON: continue to InnerTube.
             }
         }
 

@@ -150,6 +150,65 @@ public sealed class RecipeSocialCaptionFetcherTests
     }
 
     [Fact]
+    public async Task TryFetchCaptionAsync_FallsBackToInnerTubeWhenDataApiThrows()
+    {
+        var handler = new ScriptedHandler(request =>
+        {
+            if (request.RequestUri!.Host.Contains("googleapis.com", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new HttpRequestException("Simulated Data API transport failure");
+            }
+
+            if (request.Method == HttpMethod.Post
+                && request.RequestUri.AbsolutePath.Contains("youtubei", StringComparison.OrdinalIgnoreCase))
+            {
+                return JsonResponse("""
+                    {"videoDetails":{"shortDescription":"From InnerTube after throw"}}
+                    """);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var sut = CreateSut(handler, youtubeApiKey: "AIzaSyTestKey");
+        var caption = await sut.TryFetchCaptionAsync(ShortsUrl);
+
+        Assert.Equal("From InnerTube after throw", caption);
+        Assert.Equal(2, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task TryFetchCaptionAsync_FallsBackToInnerTubeWhenDataApiReturnsMalformedJson()
+    {
+        var handler = new ScriptedHandler(request =>
+        {
+            if (request.RequestUri!.Host.Contains("googleapis.com", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{not-json", Encoding.UTF8, "application/json"),
+                };
+            }
+
+            if (request.Method == HttpMethod.Post
+                && request.RequestUri.AbsolutePath.Contains("youtubei", StringComparison.OrdinalIgnoreCase))
+            {
+                return JsonResponse("""
+                    {"videoDetails":{"shortDescription":"From InnerTube after bad JSON"}}
+                    """);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var sut = CreateSut(handler, youtubeApiKey: "AIzaSyTestKey");
+        var caption = await sut.TryFetchCaptionAsync(ShortsUrl);
+
+        Assert.Equal("From InnerTube after bad JSON", caption);
+        Assert.Equal(2, handler.RequestCount);
+    }
+
+    [Fact]
     public async Task TryFetchCaptionAsync_SkipsDataApiWhenKeyUnset()
     {
         var handler = new ScriptedHandler(request =>
