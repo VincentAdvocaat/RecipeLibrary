@@ -258,8 +258,19 @@ app.MapPost("/ingredients/parse-line", (ParseIngredientLineRequest request, Ingr
 
 app.MapPost("/recipes/import", async (ImportRecipeContentQuery query, IQueryBus queryBus, CancellationToken ct) =>
 {
-    var result = await queryBus.QueryAsync<ImportRecipeContentQuery, ImportRecipeResult>(query, ct);
-    return Results.Ok(result);
+    try
+    {
+        var result = await queryBus.QueryAsync<ImportRecipeContentQuery, ImportRecipeResult>(query, ct);
+        return Results.Ok(result);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
 }).DisableAntiforgery().ApplyAuth(authEnabled);
 
 app.MapPost("/recipes/import-url", async (ImportRecipeFromUrlQuery query, IQueryBus queryBus, CancellationToken ct) =>
