@@ -30,7 +30,7 @@ public sealed class RecipeImportUrlFetchOptions
 {
     public int TimeoutSeconds { get; init; } = 10;
 
-    public int MaxBytes { get; init; } = 524_288;
+    public int MaxBytes { get; init; } = 2_097_152;
 }
 
 public sealed class RecipeImportOcrOptions
