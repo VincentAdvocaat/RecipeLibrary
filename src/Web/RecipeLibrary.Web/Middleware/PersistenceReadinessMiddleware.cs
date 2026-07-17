@@ -9,6 +9,7 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
 {
     private static readonly PathString StartingPath = new("/starting");
     private static readonly PathString HealthPath = new("/health");
+    private static readonly PathString CulturePath = new("/culture");
     private static readonly PathString BlazorPath = new("/_blazor");
     private static readonly PathString FrameworkPath = new("/_framework");
     private static readonly PathString ContentPath = new("/_content");
@@ -27,8 +28,10 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
             context.Response.Headers.CacheControl = "no-store";
             await context.Response.WriteAsJsonAsync(new
             {
-                status = "Starting",
-                message = "The database is starting. Please retry shortly."
+                status = readiness.HasPermanentlyFailed ? "Failed" : "Starting",
+                message = readiness.HasPermanentlyFailed
+                    ? "The database failed to start. Check application logs."
+                    : "The database is starting. Please retry shortly."
             });
             return;
         }
@@ -39,6 +42,7 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
     private static bool IsExempt(PathString path) =>
         path.StartsWithSegments(StartingPath)
         || path.StartsWithSegments(HealthPath)
+        || path.StartsWithSegments(CulturePath)
         || path.StartsWithSegments(BlazorPath)
         || path.StartsWithSegments(FrameworkPath)
         || path.StartsWithSegments(ContentPath)
@@ -51,9 +55,15 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
         || path.Value?.EndsWith(".css", StringComparison.OrdinalIgnoreCase) == true
         || path.Value?.EndsWith(".map", StringComparison.OrdinalIgnoreCase) == true
         || path.Value?.EndsWith(".png", StringComparison.OrdinalIgnoreCase) == true
+        || path.Value?.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) == true
+        || path.Value?.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) == true
+        || path.Value?.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) == true
+        || path.Value?.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) == true
         || path.Value?.EndsWith(".ico", StringComparison.OrdinalIgnoreCase) == true
         || path.Value?.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) == true
-        || path.Value?.EndsWith(".woff2", StringComparison.OrdinalIgnoreCase) == true;
+        || path.Value?.EndsWith(".woff", StringComparison.OrdinalIgnoreCase) == true
+        || path.Value?.EndsWith(".woff2", StringComparison.OrdinalIgnoreCase) == true
+        || path.Value?.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) == true;
 
     private static bool IsApiOrNonHtmlRequest(HttpRequest request)
     {

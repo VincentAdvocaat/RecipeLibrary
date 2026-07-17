@@ -66,14 +66,21 @@ public static class PersistenceServiceRegistration
 
     /// <summary>
     /// Tries to migrate and seed; on success marks <see cref="IPersistenceReadiness"/> ready.
-    /// Returns false when the database is temporarily unavailable (e.g. Azure SQL auto-pause).
+    /// Returns false when the database is temporarily unavailable (e.g. Azure SQL auto-pause)
+    /// or when a non-transient failure permanently stops warmup (see <paramref name="error"/>).
     /// </summary>
-    public static bool TryEnsurePersistenceMigrated(this IServiceProvider services)
+    public static bool TryEnsurePersistenceMigrated(this IServiceProvider services, out Exception? error)
     {
+        error = null;
         var readiness = services.GetRequiredService<IPersistenceReadiness>();
         if (readiness.IsReady)
         {
             return true;
+        }
+
+        if (readiness.HasPermanentlyFailed)
+        {
+            return false;
         }
 
         try
@@ -82,8 +89,17 @@ public static class PersistenceServiceRegistration
             readiness.MarkReady();
             return true;
         }
-        catch
+        catch (Exception ex) when (SqlTransientExceptionDetector.IsTransient(ex))
         {
+            error = ex;
+            return false;
+        }
+        catch (Exception ex)
+        {
+            // Keep the process up so the starting/failed page can surface misconfiguration
+            // instead of crash-looping the Container App revision.
+            error = ex;
+            readiness.MarkPermanentlyFailed();
             return false;
         }
     }

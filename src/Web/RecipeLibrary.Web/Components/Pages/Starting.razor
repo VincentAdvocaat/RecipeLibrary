@@ -5,21 +5,30 @@
 @inject NavigationManager Navigation
 @implements IAsyncDisposable
 
-<PageTitle>@L["Starting.PageTitle"]</PageTitle>
+<PageTitle>@(Readiness.HasPermanentlyFailed ? L["Starting.Failed.PageTitle"] : L["Starting.PageTitle"])</PageTitle>
 
 <div class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
     <div class="max-w-lg w-full bg-white border border-gray-200 rounded-lg p-8 text-center shadow-sm"
-         data-testid="starting-ready"
-         aria-busy="true">
-        <div class="flex justify-center mb-5"
-             role="status"
-             aria-label="@L["Starting.Spinner.AriaLabel"]">
-            <span class="inline-block h-10 w-10 rounded-full border-4 border-gray-200 border-t-gray-700 animate-spin"
-                  aria-hidden="true"></span>
-        </div>
-        <h1 class="text-2xl font-semibold text-gray-900 mb-3">@L["Starting.Heading"]</h1>
-        <p class="text-gray-600 mb-6">@L["Starting.Message"]</p>
-        <p class="text-sm text-gray-500 mb-6" aria-live="polite">@L["Starting.Status"]</p>
+         data-testid="@(Readiness.HasPermanentlyFailed ? "starting-failed" : "starting-page")"
+         aria-busy="@(!Readiness.HasPermanentlyFailed)">
+        @if (!Readiness.HasPermanentlyFailed)
+        {
+            <div class="flex justify-center mb-5"
+                 role="status"
+                 aria-label="@L["Starting.Spinner.AriaLabel"]">
+                <span class="inline-block h-10 w-10 rounded-full border-4 border-gray-200 border-t-gray-700 animate-spin"
+                      aria-hidden="true"></span>
+            </div>
+        }
+        <h1 class="text-2xl font-semibold text-gray-900 mb-3">
+            @(Readiness.HasPermanentlyFailed ? L["Starting.Failed.Heading"] : L["Starting.Heading"])
+        </h1>
+        <p class="text-gray-600 mb-6">
+            @(Readiness.HasPermanentlyFailed ? L["Starting.Failed.Message"] : L["Starting.Message"])
+        </p>
+        <p class="text-sm text-gray-500 mb-6" aria-live="polite">
+            @(Readiness.HasPermanentlyFailed ? L["Starting.Failed.Status"] : L["Starting.Status"])
+        </p>
         <button type="button"
                 class="px-4 py-2 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
                 @onclick="Reload">
@@ -39,6 +48,11 @@
             return;
         }
 
+        if (Readiness.HasPermanentlyFailed)
+        {
+            return;
+        }
+
         _cts = new CancellationTokenSource();
         _ = PollUntilReadyAsync(_cts.Token);
     }
@@ -50,6 +64,12 @@
         {
             while (await timer.WaitForNextTickAsync(ct))
             {
+                if (Readiness.HasPermanentlyFailed)
+                {
+                    await InvokeAsync(StateHasChanged);
+                    return;
+                }
+
                 if (!Readiness.IsReady)
                 {
                     continue;

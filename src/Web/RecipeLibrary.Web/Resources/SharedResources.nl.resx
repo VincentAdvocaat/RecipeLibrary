@@ -203,6 +203,10 @@
   <data name="Starting.Status" xml:space="preserve"><value>Wachten op de database…</value></data>
   <data name="Starting.Spinner.AriaLabel" xml:space="preserve"><value>Nog bezig met starten</value></data>
   <data name="Starting.RetryButton" xml:space="preserve"><value>Opnieuw proberen</value></data>
+  <data name="Starting.Failed.PageTitle" xml:space="preserve"><value>Starten mislukt</value></data>
+  <data name="Starting.Failed.Heading" xml:space="preserve"><value>De app kon niet starten</value></data>
+  <data name="Starting.Failed.Message" xml:space="preserve"><value>De database werd niet beschikbaar. Controleer de logs of probeer opnieuw wanneer de database online is.</value></data>
+  <data name="Starting.Failed.Status" xml:space="preserve"><value>Database starten mislukt</value></data>
   <data name="RecipeDetail.PageTitle" xml:space="preserve"><value>{0} — Recept</value></data>
   <data name="RecipeDetail.BackToOverview" xml:space="preserve"><value>Terug naar overzicht</value></data>
   <data name="RecipeDetail.Instructions.SectionLabel" xml:space="preserve"><value>Bereiding</value></data>
