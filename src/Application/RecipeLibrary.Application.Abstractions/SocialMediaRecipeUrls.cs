@@ -121,7 +121,15 @@ public static partial class SocialMediaRecipeUrls
             }
 
             var raw = eq >= 0 ? pair[(eq + 1)..] : [];
-            value = Uri.UnescapeDataString(raw.ToString());
+            try
+            {
+                value = Uri.UnescapeDataString(raw.ToString());
+            }
+            catch (UriFormatException)
+            {
+                return false;
+            }
+
             return value.Length > 0;
         }
 

@@ -158,6 +158,27 @@ public sealed class IngredientLineParserTests
     }
 
     [Fact]
+    public void Parse_MeasuredLineWithNaarSmaak_KeepsQuantityAndUnit()
+    {
+        var result = _sut.Parse("1 el olie naar smaak");
+
+        Assert.Equal(1, result.Quantity);
+        Assert.Equal(nameof(Unit.Tablespoon), result.Unit);
+        Assert.Equal("olie", result.Name);
+        Assert.Equal("naar smaak", result.Preparation);
+    }
+
+    [Fact]
+    public void Parse_VagueQuantityWithNaarSmaak_KeepsVagueMeasure()
+    {
+        var result = _sut.Parse("snufje peper naar smaak");
+
+        Assert.Equal(1, result.Quantity);
+        Assert.Equal(nameof(Unit.Teaspoon), result.Unit);
+        Assert.Contains("peper", result.Name, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Parse_ParsesListIndexBeforeQuantityAndSliceUnit()
     {
         var result = _sut.Parse("1 8 sneetjes stokbrood");

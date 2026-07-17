@@ -17,22 +17,34 @@ public sealed class RecipeSocialCaptionFetcher(
 
     public async Task<string?> TryFetchCaptionAsync(string url, CancellationToken ct = default)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        try
         {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return null;
+            }
+
+            if (SocialMediaRecipeUrls.TryGetInstagramCanonicalPostUrl(uri, out var canonicalIg))
+            {
+                return await FetchInstagramCaptionAsync(canonicalIg, ct);
+            }
+
+            if (SocialMediaRecipeUrls.TryGetYouTubeVideoId(uri, out var videoId))
+            {
+                return await FetchYouTubeDescriptionAsync(videoId, ct);
+            }
+
             return null;
         }
-
-        if (SocialMediaRecipeUrls.TryGetInstagramCanonicalPostUrl(uri, out var canonicalIg))
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            return await FetchInstagramCaptionAsync(canonicalIg, ct);
+            throw;
         }
-
-        if (SocialMediaRecipeUrls.TryGetYouTubeVideoId(uri, out var videoId))
+        catch (Exception)
         {
-            return await FetchYouTubeDescriptionAsync(videoId, ct);
+            // Transient network/timeout/oversize/malformed JSON: let callers fall back to HTML.
+            return null;
         }
-
-        return null;
     }
 
     private async Task<string?> FetchInstagramCaptionAsync(string canonicalPostUrl, CancellationToken ct)
@@ -172,7 +184,8 @@ public sealed class RecipeSocialCaptionFetcher(
             totalBytes += Encoding.UTF8.GetByteCount(buffer.AsSpan(0, read));
             if (totalBytes > maxBytes)
             {
-                throw new InvalidOperationException($"Response exceeded maximum size of {maxBytes} bytes.");
+                // Oversized bodies are treated as fetch failure (TryFetchCaptionAsync → null).
+                return string.Empty;
             }
 
             builder.Append(buffer, 0, read);

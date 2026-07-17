@@ -42,11 +42,6 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
 
         var normalized = NormalizeLine(raw);
 
-        if (normalized.Contains("naar smaak", StringComparison.OrdinalIgnoreCase))
-        {
-            return ParseToTaste(raw, normalized);
-        }
-
         if (TryParseJuiceOfPhrase(normalized, out var juiceQuantity, out var juiceRest))
         {
             var juiceResolved = lineResolver.Resolve(juiceRest, "juice");
@@ -74,6 +69,14 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         if (UnitAliasMap.IsVagueQuantityWord(tokens[0]))
         {
             return ParseVagueQuantity(raw, tokens);
+        }
+
+        // After handful/vague so "snufje peper naar smaak" keeps the vague measure,
+        // and "1 el olie naar smaak" can still parse quantity/unit below.
+        if (normalized.Contains("naar smaak", StringComparison.OrdinalIgnoreCase)
+            && !TryParseQuantityToken(tokens[0], out _, out _))
+        {
+            return ParseToTaste(raw, normalized);
         }
 
         var index = 0;
@@ -129,6 +132,17 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         var remainder = string.Join(' ', tokens.Skip(index)).Trim();
         remainder = RewritePlusAsPlusWord(remainder);
 
+        string? toTastePrep = null;
+        if (remainder.Contains("naar smaak", StringComparison.OrdinalIgnoreCase))
+        {
+            remainder = remainder
+                .Replace("naar smaak", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Trim()
+                .TrimEnd(',')
+                .Trim();
+            toTastePrep = "naar smaak";
+        }
+
         if (hasExplicitUnit && unit is Unit.Milliliter or Unit.Cup)
         {
             var plusSplit = SplitLeadingNameFromPlusClause(remainder);
@@ -159,7 +173,9 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
 
         confidence = AdjustConfidenceForAmbiguity(normalized, remainder, unit, hasExplicitUnit, confidence);
 
-        var preparation = MergePreparation(measureAdjective, MergePreparation(rangeNote, resolved.Preparation));
+        var preparation = MergePreparation(
+            measureAdjective,
+            MergePreparation(rangeNote, MergePreparation(toTastePrep, resolved.Preparation)));
 
         return new ParsedIngredientLine(
             raw,

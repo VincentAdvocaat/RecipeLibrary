@@ -36,4 +36,13 @@ public sealed class SocialMediaRecipeUrlsTests
         var uri = new Uri(input);
         Assert.False(SocialMediaRecipeUrls.IsSocialRecipeUrl(uri));
     }
+
+    [Fact]
+    public void TryGetYouTubeVideoId_RejectsMalformedPercentEncoding()
+    {
+        var uri = new Uri("https://www.youtube.com/watch?v=%E0%A4%A");
+
+        Assert.False(SocialMediaRecipeUrls.TryGetYouTubeVideoId(uri, out _));
+        Assert.False(SocialMediaRecipeUrls.IsSocialRecipeUrl(uri));
+    }
 }
