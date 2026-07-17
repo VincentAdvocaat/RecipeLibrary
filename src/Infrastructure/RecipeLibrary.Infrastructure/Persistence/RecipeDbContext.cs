@@ -11,7 +11,8 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
     public DbSet<Ingredient> RecipeIngredients => Set<Ingredient>();
     public DbSet<InstructionStep> InstructionSteps => Set<InstructionStep>();
     public DbSet<CanonicalIngredient> Ingredients => Set<CanonicalIngredient>();
-    public DbSet<IngredientAlias> IngredientAliases => Set<IngredientAlias>();
+    public DbSet<IngredientTranslation> IngredientTranslations => Set<IngredientTranslation>();
+    public DbSet<IngredientTranslationAlias> IngredientTranslationAliases => Set<IngredientTranslationAlias>();
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<IngredientTag> IngredientTags => Set<IngredientTag>();
     public DbSet<IngredientMatchLog> IngredientMatchLogs => Set<IngredientMatchLog>();
@@ -116,25 +117,50 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
             b.HasKey(x => x.Id);
             b.ToTable("Ingredients");
 
-            b.Property(x => x.CanonicalName)
-                .HasMaxLength(200)
-                .IsRequired();
+            b.Property(x => x.CatalogKey)
+                .HasMaxLength(200);
 
-            b.Property(x => x.NormalizedName)
-                .HasMaxLength(200)
-                .IsRequired();
-
-            b.HasIndex(x => x.NormalizedName)
-                .IsUnique();
+            b.HasIndex(x => x.CatalogKey)
+                .IsUnique()
+                .HasFilter("[CatalogKey] IS NOT NULL");
 
             b.Property(x => x.CreatedAt)
                 .IsRequired();
         });
 
-        modelBuilder.Entity<IngredientAlias>(b =>
+        modelBuilder.Entity<IngredientTranslation>(b =>
         {
             b.HasKey(x => x.Id);
-            b.ToTable("IngredientAliases");
+            b.ToTable("IngredientTranslations");
+
+            b.Property(x => x.LanguageCode)
+                .HasMaxLength(35)
+                .IsRequired();
+
+            b.Property(x => x.DisplayName)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            b.Property(x => x.NormalizedDisplayName)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            b.HasIndex(x => new { x.IngredientId, x.LanguageCode })
+                .IsUnique();
+
+            // Non-unique monitoring/lookup index — catalog curation owns duplicate policy.
+            b.HasIndex(x => new { x.LanguageCode, x.NormalizedDisplayName });
+
+            b.HasOne(x => x.Ingredient)
+                .WithMany(x => x.Translations)
+                .HasForeignKey(x => x.IngredientId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IngredientTranslationAlias>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.ToTable("IngredientTranslationAliases");
 
             b.Property(x => x.Alias)
                 .HasMaxLength(200)
@@ -144,12 +170,12 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
                 .HasMaxLength(200)
                 .IsRequired();
 
-            b.HasIndex(x => x.NormalizedAlias)
-                .IsUnique();
+            // Non-unique monitoring/lookup index — catalog curation owns duplicate policy.
+            b.HasIndex(x => x.NormalizedAlias);
 
-            b.HasOne(x => x.Ingredient)
+            b.HasOne(x => x.Translation)
                 .WithMany(x => x.Aliases)
-                .HasForeignKey(x => x.IngredientId)
+                .HasForeignKey(x => x.IngredientTranslationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

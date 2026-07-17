@@ -1,3 +1,4 @@
+using System.Globalization;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
@@ -18,6 +19,8 @@ internal static class RecipeIngredientBuilder
         CancellationToken ct)
     {
         var ingredients = new List<Ingredient>();
+        var cultureName = CultureInfo.CurrentUICulture.Name;
+        var languageCode = IngredientLanguageFallback.ResolveChain(cultureName)[0];
 
         foreach (var ingredientDto in ingredientDtos)
         {
@@ -28,7 +31,8 @@ internal static class RecipeIngredientBuilder
             if (ingredientDto.CreateAsNewIngredient)
             {
                 var normalized = normalizer.Normalize(resolved.DisplayName);
-                canonicalIngredient = await ingredientRepository.CreateIngredientWithAliasAsync(
+                canonicalIngredient = await ingredientRepository.FindOrCreateAsync(
+                    languageCode,
                     resolved.DisplayName,
                     normalized,
                     rawName,
@@ -37,11 +41,12 @@ internal static class RecipeIngredientBuilder
             }
             else
             {
-                var match = await matcher.MatchAsync(resolved.DisplayName, ct);
+                var match = await matcher.MatchAsync(resolved.DisplayName, cultureName, ct);
                 canonicalIngredient = match.Ingredient
-                    ?? await CreateNewIngredientAsync(
+                    ?? await FindOrCreateNewIngredientAsync(
                         ingredientRepository,
                         normalizer,
+                        languageCode,
                         resolved.DisplayName,
                         rawName,
                         ct);
@@ -71,15 +76,17 @@ internal static class RecipeIngredientBuilder
         return ingredients;
     }
 
-    private static async Task<CanonicalIngredient> CreateNewIngredientAsync(
+    private static Task<CanonicalIngredient> FindOrCreateNewIngredientAsync(
         IIngredientRepository ingredientRepository,
         IIngredientTextNormalizer normalizer,
+        string languageCode,
         string displayName,
         string rawName,
         CancellationToken ct)
     {
         var normalized = normalizer.Normalize(displayName);
-        return await ingredientRepository.CreateIngredientWithAliasAsync(
+        return ingredientRepository.FindOrCreateAsync(
+            languageCode,
             displayName,
             normalized,
             rawName,

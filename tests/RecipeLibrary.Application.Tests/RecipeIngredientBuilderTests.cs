@@ -15,14 +15,8 @@ public sealed class RecipeIngredientBuilderTests
     {
         var recipeId = Guid.NewGuid();
         var canonicalId = Guid.NewGuid();
-        var canonical = new CanonicalIngredient
-        {
-            Id = canonicalId,
-            CanonicalName = "Wortel",
-            NormalizedName = "wortel",
-            CreatedAt = DateTimeOffset.UtcNow,
-        };
-        var repo = new FakeIngredientRepository([canonical], new Dictionary<string, string>());
+        var canonical = IngredientTestFactory.Create("Wortel", id: canonicalId);
+        var repo = new FakeIngredientRepository([canonical]);
         var sut = new IngredientLineResolver(new IngredientNameParser());
 
         var ingredients = await RecipeIngredientBuilder.BuildAsync(
@@ -53,13 +47,7 @@ public sealed class RecipeIngredientBuilderTests
     {
         var recipeId = Guid.NewGuid();
         var existingId = Guid.NewGuid();
-        var existing = new CanonicalIngredient
-        {
-            Id = existingId,
-            CanonicalName = "gember",
-            NormalizedName = "gember",
-            CreatedAt = DateTimeOffset.UtcNow,
-        };
+        var existing = IngredientTestFactory.Create("gember", id: existingId);
         var repo = new TrackingIngredientRepository([existing]);
         var sut = new IngredientLineResolver(new IngredientNameParser());
 
@@ -85,86 +73,67 @@ public sealed class RecipeIngredientBuilderTests
         Assert.Equal(1, repo.CreateCallCount);
     }
 
-    private sealed class FakeIngredientRepository(
-        IReadOnlyList<CanonicalIngredient> ingredients,
-        IReadOnlyDictionary<string, string> aliases)
-        : IIngredientRepository
+    private sealed class FakeIngredientRepository(IReadOnlyList<CanonicalIngredient> ingredients)
+        : IngredientRepositoryStub
     {
-        public Task AddMatchLogAsync(IngredientMatchLog log, CancellationToken ct = default) => Task.CompletedTask;
-
-        public Task AddTagsAsync(Guid ingredientId, IReadOnlyList<(string Name, string NormalizedName)> tags, CancellationToken ct = default) =>
-            Task.CompletedTask;
-
-        public Task<CanonicalIngredient> CreateIngredientWithAliasAsync(
-            string canonicalName,
-            string normalizedName,
-            string alias,
-            string normalizedAlias,
+        public override Task<IReadOnlyList<CanonicalIngredient>> GetFuzzyCandidatesAsync(
+            string normalizedQuery,
+            IReadOnlyList<string> languageCodes,
+            int take,
             CancellationToken ct = default) =>
-            throw new NotSupportedException();
-
-        public Task<IReadOnlyList<CanonicalIngredient>> GetFuzzyCandidatesAsync(string normalizedQuery, int take, CancellationToken ct = default) =>
             Task.FromResult(ingredients);
 
-        public Task<CanonicalIngredient?> GetByNormalizedAliasAsync(string normalizedAlias, CancellationToken ct = default)
-        {
-            if (!aliases.TryGetValue(normalizedAlias, out var canonical))
-            {
-                return Task.FromResult<CanonicalIngredient?>(null);
-            }
+        public override Task<CanonicalIngredient?> GetByNormalizedNameAsync(
+            string normalizedName,
+            IReadOnlyList<string> languageCodes,
+            CancellationToken ct = default) =>
+            Task.FromResult(ingredients.FirstOrDefault(x =>
+                x.Translations.Any(t => t.NormalizedDisplayName == normalizedName)));
 
-            return Task.FromResult(ingredients.FirstOrDefault(x => x.NormalizedName == canonical));
-        }
-
-        public Task<CanonicalIngredient?> GetByNormalizedNameAsync(string normalizedName, CancellationToken ct = default) =>
-            Task.FromResult(ingredients.SingleOrDefault(x => x.NormalizedName == normalizedName));
-
-        public Task<IReadOnlyList<CanonicalIngredient>> SearchAsync(string normalizedQuery, int take, CancellationToken ct = default) =>
+        public override Task<IReadOnlyList<CanonicalIngredient>> SearchAsync(
+            string normalizedQuery,
+            IReadOnlyList<string> languageCodes,
+            int take,
+            CancellationToken ct = default) =>
             Task.FromResult(ingredients);
-
-        public Task<IReadOnlyList<Tag>> SearchTagsAsync(string normalizedQuery, int take, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Tag>>([]);
     }
 
-    private sealed class TrackingIngredientRepository(IReadOnlyList<CanonicalIngredient> ingredients) : IIngredientRepository
+    private sealed class TrackingIngredientRepository(IReadOnlyList<CanonicalIngredient> ingredients)
+        : IngredientRepositoryStub
     {
         public int CreateCallCount { get; private set; }
 
-        public Task AddMatchLogAsync(IngredientMatchLog log, CancellationToken ct = default) => Task.CompletedTask;
-
-        public Task AddTagsAsync(Guid ingredientId, IReadOnlyList<(string Name, string NormalizedName)> tags, CancellationToken ct = default) =>
-            Task.CompletedTask;
-
-        public Task<CanonicalIngredient> CreateIngredientWithAliasAsync(
-            string canonicalName,
-            string normalizedName,
-            string alias,
-            string normalizedAlias,
+        public override Task<CanonicalIngredient> FindOrCreateAsync(
+            string languageCode,
+            string displayName,
+            string normalizedDisplayName,
+            string? alias,
+            string? normalizedAlias,
             CancellationToken ct = default)
         {
             CreateCallCount++;
-            return Task.FromResult(new CanonicalIngredient
-            {
-                Id = Guid.NewGuid(),
-                CanonicalName = canonicalName,
-                NormalizedName = normalizedName,
-                CreatedAt = DateTimeOffset.UtcNow,
-            });
+            return Task.FromResult(IngredientTestFactory.Create(displayName, languageCode));
         }
 
-        public Task<IReadOnlyList<CanonicalIngredient>> GetFuzzyCandidatesAsync(string normalizedQuery, int take, CancellationToken ct = default) =>
+        public override Task<IReadOnlyList<CanonicalIngredient>> GetFuzzyCandidatesAsync(
+            string normalizedQuery,
+            IReadOnlyList<string> languageCodes,
+            int take,
+            CancellationToken ct = default) =>
             Task.FromResult(ingredients);
 
-        public Task<CanonicalIngredient?> GetByNormalizedAliasAsync(string normalizedAlias, CancellationToken ct = default) =>
-            Task.FromResult<CanonicalIngredient?>(null);
+        public override Task<CanonicalIngredient?> GetByNormalizedNameAsync(
+            string normalizedName,
+            IReadOnlyList<string> languageCodes,
+            CancellationToken ct = default) =>
+            Task.FromResult(ingredients.FirstOrDefault(x =>
+                x.Translations.Any(t => t.NormalizedDisplayName == normalizedName)));
 
-        public Task<CanonicalIngredient?> GetByNormalizedNameAsync(string normalizedName, CancellationToken ct = default) =>
-            Task.FromResult(ingredients.SingleOrDefault(x => x.NormalizedName == normalizedName));
-
-        public Task<IReadOnlyList<CanonicalIngredient>> SearchAsync(string normalizedQuery, int take, CancellationToken ct = default) =>
+        public override Task<IReadOnlyList<CanonicalIngredient>> SearchAsync(
+            string normalizedQuery,
+            IReadOnlyList<string> languageCodes,
+            int take,
+            CancellationToken ct = default) =>
             Task.FromResult(ingredients);
-
-        public Task<IReadOnlyList<Tag>> SearchTagsAsync(string normalizedQuery, int take, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Tag>>([]);
     }
 }
