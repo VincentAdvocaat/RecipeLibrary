@@ -15,6 +15,8 @@ public static class PersistenceServiceRegistration
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
+        services.AddSingleton<IPersistenceReadiness, PersistenceReadiness>();
+
         services.AddDbContext<RecipeDbContext>(options =>
             options.UseSqlServer(connectionString, sql =>
             {
@@ -36,11 +38,62 @@ public static class PersistenceServiceRegistration
     /// </summary>
     public static void EnsurePersistenceMigrated(this IServiceProvider services)
     {
-        using var scope = services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<RecipeDbContext>();
-        db.Database.Migrate();
+        EnsurePersistenceMigratedAsync(services, CancellationToken.None).GetAwaiter().GetResult();
+    }
 
-        var seeder = scope.ServiceProvider.GetRequiredService<IngredientCatalogSeeder>();
-        seeder.SeedAsync().GetAwaiter().GetResult();
+    /// <summary>
+    /// Applies EF Core migrations, then idempotently seeds the curated ingredient catalog.
+    /// </summary>
+    public static async Task EnsurePersistenceMigratedAsync(
+        this IServiceProvider services,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = services.CreateScope();
+        await MigrateAndSeedAsync(scope.ServiceProvider, cancellationToken);
+    }
+
+    /// <summary>
+    /// Applies EF Core migrations using a new scope from <paramref name="scopeFactory"/>.
+    /// </summary>
+    public static async Task EnsurePersistenceMigratedAsync(
+        IServiceScopeFactory scopeFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        using var scope = scopeFactory.CreateScope();
+        await MigrateAndSeedAsync(scope.ServiceProvider, cancellationToken);
+    }
+
+    /// <summary>
+    /// Tries to migrate and seed; on success marks <see cref="IPersistenceReadiness"/> ready.
+    /// Returns false when the database is temporarily unavailable (e.g. Azure SQL auto-pause).
+    /// </summary>
+    public static bool TryEnsurePersistenceMigrated(this IServiceProvider services)
+    {
+        var readiness = services.GetRequiredService<IPersistenceReadiness>();
+        if (readiness.IsReady)
+        {
+            return true;
+        }
+
+        try
+        {
+            EnsurePersistenceMigrated(services);
+            readiness.MarkReady();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static async Task MigrateAndSeedAsync(IServiceProvider scopedServices, CancellationToken cancellationToken)
+    {
+        var db = scopedServices.GetRequiredService<RecipeDbContext>();
+        await db.Database.MigrateAsync(cancellationToken);
+
+        var seeder = scopedServices.GetRequiredService<IngredientCatalogSeeder>();
+        await seeder.SeedAsync(cancellationToken);
     }
 }
