@@ -114,7 +114,10 @@ public sealed class ImportRecipeQueryHandlerTests
 
         Assert.NotNull(result);
         Assert.Equal("nld", extractor.LastLanguage);
-        Assert.True(result.Ingredients.Count > 0 || !string.IsNullOrWhiteSpace(result.Title) || result.Steps.Count > 0);
+        Assert.Equal("Snelle pasta", result.Title);
+        Assert.True(result.Ingredients.Count >= 2);
+        Assert.Contains(result.Ingredients, i => i.Name.Contains("pasta", StringComparison.OrdinalIgnoreCase));
+        Assert.True(result.Steps.Count >= 2);
     }
 
     [Fact]

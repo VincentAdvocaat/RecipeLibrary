@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Text.Json;
 using RecipeLibrary.Testing;
 using Xunit;
 
@@ -23,11 +24,19 @@ public sealed class ImageUploadApiTests(SqlContainerFixture fixture)
         var upload = await _client.PostAsync("/api/upload-recipe-image", content);
         upload.EnsureSuccessStatusCode();
 
-        var json = await upload.Content.ReadAsStringAsync();
-        Assert.Contains("url", json, StringComparison.OrdinalIgnoreCase);
+        await using var uploadStream = await upload.Content.ReadAsStreamAsync();
+        using var document = await JsonDocument.ParseAsync(uploadStream);
+        Assert.True(document.RootElement.TryGetProperty("url", out var urlElement));
+        var url = urlElement.GetString();
+        Assert.False(string.IsNullOrWhiteSpace(url));
 
-        var fileName = json.Split('/').Last().Trim().TrimEnd('"', '}');
+        var fileName = url!.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+        Assert.False(string.IsNullOrWhiteSpace(fileName));
+
         var get = await _client.GetAsync($"/api/recipe-images/{fileName}");
         get.EnsureSuccessStatusCode();
+        Assert.Equal("image/png", get.Content.Headers.ContentType?.MediaType);
+        var bytes = await get.Content.ReadAsByteArrayAsync();
+        Assert.Equal(png.Length, bytes.Length);
     }
 }

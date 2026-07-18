@@ -24,8 +24,10 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim();
+            // Double-cast forces the provider (string) type so Contains translates to SQL LIKE
+            // against the converted Title column (EF Core value-converter limitation).
             query = query.Where(r =>
-                EF.Property<string>(r, "Title").Contains(term) ||
+                ((string)(object)r.Title).Contains(term) ||
                 (r.Description != null && r.Description.Contains(term)));
         }
 

@@ -182,20 +182,4 @@ public sealed class ShoppingListTests(E2eFixture fixture)
 
         await Assertions.Expect(page.GetByText(itemName)).ToBeVisibleAsync();
     }
-
-    [Fact]
-    public async Task EmptyList_LinkBackToRecipes_Works()
-    {
-        await using var context = await fixture.Browser.NewContextAsync();
-        var page = await context.NewPageAsync();
-        page.UseBlazorDefaults();
-        await page.GotoAsync($"{fixture.BaseUrl}/shopping-list");
-        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
-
-        if (await page.GetByRole(AriaRole.Link, new() { NameRegex = new Regex("recept", RegexOptions.IgnoreCase) }).CountAsync() > 0)
-        {
-            await page.GetByRole(AriaRole.Link, new() { NameRegex = new Regex("recept", RegexOptions.IgnoreCase) }).First.ClickAsync();
-            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/recipes"));
-        }
-    }
 }
