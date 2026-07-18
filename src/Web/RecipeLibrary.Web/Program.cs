@@ -164,6 +164,7 @@ var app = builder.Build();
 
 // Prefer a synchronous migrate on startup. When Azure SQL is paused (error 40613), continue so the
 // app can serve a "starting" page while PersistenceWarmupHostedService retries in the background.
+var persistenceStartupStartedAt = TimeProvider.System.GetUtcNow();
 if (app.Environment.IsEnvironment("Testing"))
 {
     app.Services.EnsurePersistenceMigrated();
@@ -174,16 +175,26 @@ else if (!app.Services.TryEnsurePersistenceMigrated(out var persistenceError))
     var readiness = app.Services.GetRequiredService<IPersistenceReadiness>();
     if (readiness.HasPermanentlyFailed)
     {
+        var durationSeconds = (TimeProvider.System.GetUtcNow() - persistenceStartupStartedAt).TotalSeconds;
         app.Logger.LogError(
             persistenceError,
-            "Database migration failed with a non-transient error. Serving the failed starting page.");
+            "Application failed. StartupDurationSeconds={StartupDurationSeconds:0.###}",
+            durationSeconds);
     }
     else
     {
+        app.Logger.LogInformation("Application starting (persistence warmup)");
         app.Logger.LogWarning(
             persistenceError,
             "Database is not ready yet (e.g. Azure SQL auto-pause). Serving the starting page until migrations succeed.");
     }
+}
+else
+{
+    var durationSeconds = (TimeProvider.System.GetUtcNow() - persistenceStartupStartedAt).TotalSeconds;
+    app.Logger.LogInformation(
+        "Application ready. StartupDurationSeconds={StartupDurationSeconds:0.###}",
+        durationSeconds);
 }
 
 // Configure the HTTP request pipeline.
@@ -226,34 +237,28 @@ if (authEnabled)
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Liveness/startup: always 200 so Container Apps keeps the revision alive during SQL resume.
-app.MapGet("/health", (IPersistenceReadiness readiness) =>
-{
-    var database = readiness.IsReady
-        ? "Ready"
-        : readiness.HasPermanentlyFailed
-            ? "Failed"
-            : "Starting";
+// Liveness: process is up (no database dependency). /health is a backward-compatible alias.
+static IResult LiveHealth() => Results.Ok(new { status = "Healthy" });
+app.MapGet("/health/live", LiveHealth).AllowAnonymous();
+app.MapGet("/health", LiveHealth).AllowAnonymous();
 
+// Soft readiness: process can accept HTTP (including /starting) regardless of database state.
+app.MapGet("/health/ready", () => Results.Ok(new { status = "Healthy" })).AllowAnonymous();
+
+// Database warmup state for operators/debug (not used by ACA probes).
+app.MapGet("/health/database", (IPersistenceReadiness readiness) =>
+    Results.Ok(new { state = readiness.State.ToString() })).AllowAnonymous();
+
+// UI poll endpoint while persistence warms up.
+app.MapGet("/api/system/readiness", (HttpContext httpContext, IPersistenceReadiness readiness) =>
+{
+    const int retryAfterSeconds = 5;
     return Results.Ok(new
     {
-        status = "Healthy",
-        database
+        state = readiness.State.ToString(),
+        retryAfterSeconds = readiness.State == PersistenceWarmupState.Starting ? retryAfterSeconds : (int?)null,
+        traceId = httpContext.TraceIdentifier
     });
-}).AllowAnonymous();
-
-// Readiness: only Ready gets traffic; Starting/Failed return 503 so probes stop routing.
-app.MapGet("/health/ready", (IPersistenceReadiness readiness) =>
-{
-    if (readiness.IsReady)
-    {
-        return Results.Ok(new { status = "Healthy", database = "Ready" });
-    }
-
-    var database = readiness.HasPermanentlyFailed ? "Failed" : "Starting";
-    return Results.Json(
-        new { status = "Unavailable", database },
-        statusCode: StatusCodes.Status503ServiceUnavailable);
 }).AllowAnonymous();
 
 app.MapPost("/api/upload-recipe-image", async (IFormFile file, ICommandBus commandBus, CancellationToken ct) =>

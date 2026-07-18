@@ -458,7 +458,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               type: 'Startup'
               httpGet: {
-                path: '/health'
+                path: '/health/live'
                 port: 8080
                 scheme: 'HTTP'
               }
@@ -468,7 +468,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               type: 'Liveness'
               httpGet: {
-                path: '/health'
+                path: '/health/live'
                 port: 8080
                 scheme: 'HTTP'
               }
@@ -477,6 +477,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               type: 'Readiness'
               httpGet: {
+                // Soft readiness: process can serve HTTP (/starting) while SQL warms up.
                 path: '/health/ready'
                 port: 8080
                 scheme: 'HTTP'

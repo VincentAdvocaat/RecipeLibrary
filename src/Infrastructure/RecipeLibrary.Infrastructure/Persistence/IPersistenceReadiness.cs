@@ -6,6 +6,8 @@ namespace RecipeLibrary.Infrastructure.Persistence;
 /// </summary>
 public interface IPersistenceReadiness
 {
+    PersistenceWarmupState State { get; }
+
     bool IsReady { get; }
 
     /// <summary>

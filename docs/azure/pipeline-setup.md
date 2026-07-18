@@ -14,7 +14,7 @@ Deploy stage steps:
 
 1. Verify the target resource group already exists (pipeline does **not** deploy at subscription scope)
 2. Deploy Container Apps, SQL, storage (`infra/main.bicep`) with an **immutable GHCR digest**
-3. Extended HTTP smoke check (`/health` and `/`) tolerant of scale-to-zero cold starts
+3. Extended HTTP smoke check (`/health/live`, `/`, and `/api/system/readiness`) tolerant of scale-to-zero cold starts and soft readiness (`/starting` while SQL wakes up)
 
 No passwords or connection strings are stored in the repo. Entra IDs, GHCR
 credentials, and the Azure service connection are configured in Azure DevOps only.
@@ -219,7 +219,7 @@ with hibernate).
 
 1. Merge to `main` (after SQL grants).
 2. Open the **Deploy test environment** stage logs.
-3. Confirm the smoke check prints HTTP `200` for `/health` and `/`.
+3. Confirm the smoke check prints HTTP `200` for `/health/live` and eventually `/` (during SQL wake-up a `302` to `/starting` is expected until `/api/system/readiness` reports `Ready`).
 
 ## Troubleshooting
 

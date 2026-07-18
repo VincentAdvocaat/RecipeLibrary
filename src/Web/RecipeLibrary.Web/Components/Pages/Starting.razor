@@ -1,33 +1,31 @@
 @page "/starting"
 @attribute [AllowAnonymous]
-@using RecipeLibrary.Infrastructure.Persistence
-@inject IPersistenceReadiness Readiness
 @inject NavigationManager Navigation
+@inject HttpClient Http
 @implements IAsyncDisposable
+@using System.Net.Http.Json
+@using System.Text.Json.Serialization
 
-<PageTitle>@(Readiness.HasPermanentlyFailed ? L["Starting.Failed.PageTitle"] : L["Starting.PageTitle"])</PageTitle>
+<PageTitle>@L["Starting.PageTitle"]</PageTitle>
 
 <div class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
     <div class="max-w-lg w-full bg-white border border-gray-200 rounded-lg p-8 text-center shadow-sm"
-         data-testid="@(Readiness.HasPermanentlyFailed ? "starting-failed" : "starting-page")"
-         aria-busy="@(!Readiness.HasPermanentlyFailed)">
-        @if (!Readiness.HasPermanentlyFailed)
-        {
-            <div class="flex justify-center mb-5"
-                 role="status"
-                 aria-label="@L["Starting.Spinner.AriaLabel"]">
-                <span class="inline-block h-10 w-10 rounded-full border-4 border-gray-200 border-t-gray-700 animate-spin"
-                      aria-hidden="true"></span>
-            </div>
-        }
+         data-testid="starting-page"
+         aria-busy="true">
+        <div class="flex justify-center mb-5"
+             role="status"
+             aria-label="@L["Starting.Spinner.AriaLabel"]">
+            <span class="inline-block h-10 w-10 rounded-full border-4 border-gray-200 border-t-gray-700 animate-spin"
+                  aria-hidden="true"></span>
+        </div>
         <h1 class="text-2xl font-semibold text-gray-900 mb-3">
-            @(Readiness.HasPermanentlyFailed ? L["Starting.Failed.Heading"] : L["Starting.Heading"])
+            @L["Starting.Heading"]
         </h1>
         <p class="text-gray-600 mb-6">
-            @(Readiness.HasPermanentlyFailed ? L["Starting.Failed.Message"] : L["Starting.Message"])
+            @L["Starting.Message"]
         </p>
         <p class="text-sm text-gray-500 mb-6" aria-live="polite">
-            @(Readiness.HasPermanentlyFailed ? L["Starting.Failed.Status"] : L["Starting.Status"])
+            @L["Starting.Status"]
         </p>
         <button type="button"
                 class="px-4 py-2 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
@@ -42,41 +40,49 @@
 
     protected override void OnInitialized()
     {
-        if (Readiness.IsReady)
-        {
-            Navigation.NavigateTo("/", forceLoad: true);
-            return;
-        }
-
-        if (Readiness.HasPermanentlyFailed)
-        {
-            return;
-        }
-
         _cts = new CancellationTokenSource();
         _ = PollUntilReadyAsync(_cts.Token);
     }
 
     private async Task PollUntilReadyAsync(CancellationToken ct)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
         try
         {
-            while (await timer.WaitForNextTickAsync(ct))
+            while (!ct.IsCancellationRequested)
             {
-                if (Readiness.HasPermanentlyFailed)
+                try
                 {
-                    await InvokeAsync(StateHasChanged);
-                    return;
-                }
+                    var response = await Http.GetFromJsonAsync<SystemReadinessResponse>(
+                        "api/system/readiness",
+                        ct);
 
-                if (!Readiness.IsReady)
+                    if (response is null)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(5), ct);
+                        continue;
+                    }
+
+                    if (string.Equals(response.State, "Ready", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await InvokeAsync(() => Navigation.NavigateTo("/", forceLoad: true));
+                        return;
+                    }
+
+                    if (string.Equals(response.State, "Failed", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await InvokeAsync(() => Navigation.NavigateTo("/failed", forceLoad: true));
+                        return;
+                    }
+
+                    var delaySeconds = response.RetryAfterSeconds is > 0
+                        ? response.RetryAfterSeconds.Value
+                        : 5;
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds), ct);
+                }
+                catch (HttpRequestException)
                 {
-                    continue;
+                    await Task.Delay(TimeSpan.FromSeconds(5), ct);
                 }
-
-                await InvokeAsync(() => Navigation.NavigateTo("/", forceLoad: true));
-                return;
             }
         }
         catch (OperationCanceledException)
@@ -85,16 +91,7 @@
         }
     }
 
-    private void Reload()
-    {
-        if (Readiness.IsReady)
-        {
-            Navigation.NavigateTo("/", forceLoad: true);
-            return;
-        }
-
-        Navigation.NavigateTo("/starting", forceLoad: true);
-    }
+    private void Reload() => Navigation.NavigateTo("/starting", forceLoad: true);
 
     public async ValueTask DisposeAsync()
     {
@@ -106,5 +103,14 @@
         await _cts.CancelAsync();
         _cts.Dispose();
         _cts = null;
+    }
+
+    private sealed class SystemReadinessResponse
+    {
+        [JsonPropertyName("state")]
+        public string? State { get; set; }
+
+        [JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; }
     }
 }
