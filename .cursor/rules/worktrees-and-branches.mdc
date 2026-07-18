@@ -31,9 +31,19 @@ Als je een nieuwe workstream start:
 2. Maak daarna de worktree aan op `.worktrees/<branch>`.
 3. Werk en commit alleen binnen je eigen worktree/branch.
 
+### Afronden (verplicht)
+
+Zodra de gevraagde aanpassingen klaar zijn (niet tussendoor bij elke kleine edit):
+
+1. **Commit**, **push**, en maak een **PR** als die nog niet bestaat — via `scripts/new-pr.ps1` (geen handmatige `git commit` / `git push` / `gh pr create` in de UI).
+2. Geef een duidelijke `-Message` mee wanneer er uncommitted changes zijn.
+3. Deel de PR-URL in je afrondende antwoord.
+
+Vraag **niet** eerst of je mag committen/pushen/PR'en: dit is de standaard afronding van elke workstream met codewijzigingen. Sla dit alleen over als de gebruiker expliciet zegt dat er niet gecommit of gepusht mag worden.
+
 ### Verplicht scripts gebruiken
 
 - Start workstream / worktree aanmaken: gebruik `scripts/start-development.ps1` (geen handmatige `git worktree add`).
 - Stop workstream / worktree opruimen: gebruik `scripts/stop-development.ps1`.
-- Commit + Pull Request aanmaken: gebruik `scripts/new-pr.ps1` (geen handmatige PR aanmaak in de UI).
+- Commit + push + PR (of alleen push als PR al bestaat): gebruik `scripts/new-pr.ps1`.
 

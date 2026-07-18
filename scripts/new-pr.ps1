@@ -10,8 +10,9 @@
 
   Behavior:
     - Stages and commits changes if working tree is dirty
-    - Pushes the current branch (sets upstream) when needed
-    - Creates the PR with a standard body (Summary + Test plan)
+    - Always pushes the current branch (sets upstream when needed)
+    - Creates the PR with a standard body (Summary + Test plan) if none exists yet
+    - If a PR for this branch already exists, prints its URL and exits successfully
 
 .PARAMETER Base
   Base branch for the PR (default: main).
@@ -148,13 +149,26 @@ function Ensure-CommitIfNeeded([string] $msg, [switch] $skipCommit) {
   if ($LASTEXITCODE -ne 0) { throw "git commit failed." }
 }
 
-function Ensure-Upstream([string] $remoteName, [string] $branch) {
+function Ensure-Pushed([string] $remoteName, [string] $branch) {
   git rev-parse --abbrev-ref --symbolic-full-name "@{u}" *> $null
-  if ($LASTEXITCODE -eq 0) { return }
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "No upstream set. Pushing '$branch' to '$remoteName' with upstream..."
+    git push -u $remoteName HEAD
+    if ($LASTEXITCODE -ne 0) { throw "git push failed." }
+    return
+  }
 
-  Write-Host "No upstream set. Pushing '$branch' to '$remoteName' with upstream..."
-  git push -u $remoteName HEAD
+  Write-Host "Pushing '$branch' to '$remoteName'..."
+  git push $remoteName HEAD
   if ($LASTEXITCODE -ne 0) { throw "git push failed." }
+}
+
+function Get-ExistingPrUrl([string] $branch) {
+  $url = & $ghExe pr view $branch --json url --jq .url 2>$null
+  if ($LASTEXITCODE -eq 0 -and $url) {
+    return $url.Trim()
+  }
+  return $null
 }
 
 function Get-DefaultTitle([string] $branch) {
@@ -185,7 +199,14 @@ Assert-BranchNamingPolicy -name $branch
 
 Ensure-CommitIfNeeded -msg $Message -skipCommit:$NoCommit
 if ($NoCommit) { Assert-CleanWorkingTree }
-Ensure-Upstream -remoteName $Remote -branch $branch
+Ensure-Pushed -remoteName $Remote -branch $branch
+
+$existingUrl = Get-ExistingPrUrl -branch $branch
+if ($existingUrl) {
+  Write-Host "PR already exists for '$branch': $existingUrl"
+  Write-Host "Done."
+  return
+}
 
 if (-not $Title) { $Title = Get-DefaultTitle -branch $branch }
 if (-not $Body) { $Body = Get-DefaultBody }
