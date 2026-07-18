@@ -12,9 +12,8 @@ public static class MeasureSystemDefaults
     {
         ArgumentNullException.ThrowIfNull(culture);
 
-        var name = culture.Name;
-        if (name.Equals("en-US", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("en-GB", StringComparison.OrdinalIgnoreCase))
+        // US customary default; en-GB and other cultures use metric for cooking.
+        if (culture.Name.Equals("en-US", StringComparison.OrdinalIgnoreCase))
         {
             return MeasureSystem.Imperial;
         }

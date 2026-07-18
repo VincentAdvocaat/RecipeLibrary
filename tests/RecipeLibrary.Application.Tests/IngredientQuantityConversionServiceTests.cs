@@ -70,7 +70,7 @@ public sealed class IngredientQuantityConversionServiceTests
     }
 
     [Fact]
-    public async Task ConvertToMassAsync_AiAcceptsIntoManualAiAccepted_WhenMatched()
+    public async Task ConvertToMassAsync_AiStoresPendingSuggestion_WithoutCatalogAccept()
     {
         var ingredientId = Guid.NewGuid();
         var store = new FakeStore
@@ -99,10 +99,41 @@ public sealed class IngredientQuantityConversionServiceTests
 
         Assert.True(result.Succeeded);
         Assert.Equal(190m, result.Quantity);
+        Assert.Equal("AiSuggestion", result.Provenance);
         Assert.Single(store.AddedSuggestions);
-        Assert.Single(store.AddedConversions);
-        Assert.Equal(ConversionOrigin.AiAccepted, store.AddedConversions[0].Origin);
-        Assert.Equal(store.ManualSourceId, store.AddedConversions[0].ConversionSourceId);
+        Assert.Equal(ConversionSuggestionStatus.Pending, store.AddedSuggestions[0].Status);
+        Assert.Empty(store.AddedConversions);
+    }
+
+    [Fact]
+    public async Task HasEstimateSourceAsync_False_WhenNoSeedPendingOrAi()
+    {
+        var store = new FakeStore();
+        var sut = CreateSut(store, aiEnabled: false);
+        var available = await sut.HasEstimateSourceAsync(new IngredientQuantityConversionRequest
+        {
+            CanonicalIngredientId = Guid.NewGuid(),
+            IngredientDisplayName = "unknown spice",
+            FromUnit = Unit.Teaspoon,
+            Quantity = 1m,
+        });
+
+        Assert.False(available);
+    }
+
+    [Fact]
+    public async Task HasEstimateSourceAsync_True_WhenAiEnabled()
+    {
+        var store = new FakeStore();
+        var sut = CreateSut(store, aiEnabled: true);
+        var available = await sut.HasEstimateSourceAsync(new IngredientQuantityConversionRequest
+        {
+            IngredientDisplayName = "mystery spice",
+            FromUnit = Unit.Teaspoon,
+            Quantity = 1m,
+        });
+
+        Assert.True(available);
     }
 
     [Fact]

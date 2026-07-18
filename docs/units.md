@@ -40,8 +40,8 @@ Default via **culture mapping** (cookie `RecipeLibrary.MeasureSystem` when unset
 
 | Culture | Default |
 | --- | --- |
-| `nl-NL` | Metric |
 | `en-US` | Imperial |
+| `nl-NL`, `en-GB`, others | Metric |
 
 UI language and measure preference are independent.
 
@@ -105,6 +105,7 @@ IngredientUnitConversionSuggestion
 4. Manual + Origin AiAccepted  
 
 Pending suggestions are reused before calling AI again; they are not preferred catalog truth.
+Convert never auto-promotes an AI proposal to `IngredientUnitConversion` (`AiAccepted`); that origin is reserved for an explicit accept path later.
 
 ### Seed vs runtime
 
@@ -113,7 +114,8 @@ Curated rows are seeded from `data/ingredients/unit-conversions.json` (King Arth
 ### Convert tool UX
 
 - Default: show the original kitchen measure.
-- Optional “convert” → approximate mass (then apply presentation).
+- Show the convert action only when a curated/pending estimate exists or AI fallback is configured.
+- Optional “convert” → approximate mass (then apply presentation); AI results stay as `Pending` suggestions.
 - Label as an estimate; do not rewrite the recipe line.
 
 ## Related

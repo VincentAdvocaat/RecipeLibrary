@@ -73,9 +73,10 @@ public sealed class IngredientMeasurePresenterTests
     }
 
     [Fact]
-    public void MeasureSystemDefaults_EnUs_IsImperial()
+    public void MeasureSystemDefaults_EnUs_IsImperial_OthersMetric()
     {
         Assert.Equal(MeasureSystem.Imperial, MeasureSystemDefaults.ForCulture(new CultureInfo("en-US")));
+        Assert.Equal(MeasureSystem.Metric, MeasureSystemDefaults.ForCulture(new CultureInfo("en-GB")));
         Assert.Equal(MeasureSystem.Metric, MeasureSystemDefaults.ForCulture(new CultureInfo("nl-NL")));
     }
 }

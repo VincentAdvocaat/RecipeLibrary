@@ -53,9 +53,7 @@ public sealed class IngredientQuantityConversionService(
             return BuildResult(request.Quantity, pending.AmountFrom, pending.AmountTo, Unit.Gram, "AiSuggestion");
         }
 
-        var aiEnabled = importOptions.Value.Ai.Enabled
-            && !string.IsNullOrWhiteSpace(importOptions.Value.Ai.ApiKey);
-        if (!aiEnabled)
+        if (!IsAiFallbackAvailable)
         {
             return IngredientQuantityConversionResult.Unavailable();
         }
@@ -94,12 +92,8 @@ public sealed class IngredientQuantityConversionService(
                 Notes = proposal.Notes,
                 CreatedAt = DateTimeOffset.UtcNow,
             };
+            // Persist as Pending only — AI is a generator, not trusted catalog truth.
             await store.AddSuggestionAsync(suggestion, ct);
-
-            if (request.CanonicalIngredientId is Guid matchedId)
-            {
-                await AcceptAsAiConversionAsync(suggestion, matchedId, ct);
-            }
 
             return BuildResult(request.Quantity, proposal.AmountFrom, proposal.AmountTo, Unit.Gram, "AiSuggestion");
         }
@@ -113,6 +107,47 @@ public sealed class IngredientQuantityConversionService(
             return IngredientQuantityConversionResult.Failed();
         }
     }
+
+    /// <summary>
+    /// True when convert can use a curated/pending row or AI fallback (no AI call).
+    /// </summary>
+    public async Task<bool> HasEstimateSourceAsync(
+        IngredientQuantityConversionRequest request,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (!UnitClassification.IsKitchenMeasure(request.FromUnit) || request.Quantity <= 0)
+        {
+            return false;
+        }
+
+        if (request.CanonicalIngredientId is Guid ingredientId)
+        {
+            var preferred = await GetPreferredConversionAsync(ingredientId, request.FromUnit, Unit.Gram, ct);
+            if (preferred is not null)
+            {
+                return true;
+            }
+        }
+
+        var pending = await store.GetPendingSuggestionAsync(
+            request.CanonicalIngredientId,
+            request.IngredientDisplayName,
+            request.FromUnit,
+            Unit.Gram,
+            ct);
+        if (pending is not null)
+        {
+            return true;
+        }
+
+        return IsAiFallbackAvailable;
+    }
+
+    public bool IsAiFallbackAvailable =>
+        importOptions.Value.Ai.Enabled
+        && !string.IsNullOrWhiteSpace(importOptions.Value.Ai.ApiKey);
 
     public async Task<IngredientUnitConversion?> GetPreferredConversionAsync(
         Guid canonicalIngredientId,
@@ -150,47 +185,6 @@ public sealed class IngredientQuantityConversionService(
         }
 
         return best;
-    }
-
-    private async Task AcceptAsAiConversionAsync(
-        IngredientUnitConversionSuggestion suggestion,
-        Guid canonicalIngredientId,
-        CancellationToken ct)
-    {
-        var manual = await store.GetSourceByNameAsync(ConversionSourceNames.Manual, ct);
-        if (manual is null)
-        {
-            return;
-        }
-
-        var existing = await store.GetConversionsAsync(
-            canonicalIngredientId,
-            suggestion.FromUnit,
-            suggestion.ToUnit,
-            ct);
-        if (existing.Any(c => c.ConversionSourceId == manual.Id))
-        {
-            await store.MarkSuggestionAcceptedAsync(suggestion.Id, ct);
-            return;
-        }
-
-        await store.AddConversionAsync(
-            new IngredientUnitConversion
-            {
-                Id = Guid.NewGuid(),
-                CanonicalIngredientId = canonicalIngredientId,
-                FromUnit = suggestion.FromUnit,
-                ToUnit = suggestion.ToUnit,
-                AmountFrom = suggestion.AmountFrom,
-                AmountTo = suggestion.AmountTo,
-                ConversionSourceId = manual.Id,
-                Origin = ConversionOrigin.AiAccepted,
-                ExternalReference = suggestion.Model,
-                Notes = suggestion.Notes,
-                CreatedAt = DateTimeOffset.UtcNow,
-            },
-            ct);
-        await store.MarkSuggestionAcceptedAsync(suggestion.Id, ct);
     }
 
     private static IngredientQuantityConversionResult BuildResult(
