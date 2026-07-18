@@ -82,6 +82,8 @@
 
     [Parameter] public EventCallback OnSuggestionsDismissed { get; set; }
 
+    [Parameter] public EventCallback OnMatchFeedbackCleared { get; set; }
+
     [Parameter] public bool CanRemove { get; set; } = true;
 
     [Parameter] public EventCallback OnRemove { get; set; }
@@ -90,6 +92,7 @@
     {
         Item.Name = e.Value?.ToString() ?? string.Empty;
         await ItemChanged.InvokeAsync(Item);
+        await OnMatchFeedbackCleared.InvokeAsync();
         await OnNameChanged.InvokeAsync(Item.Name);
     }
 
@@ -151,6 +154,7 @@
     {
         Item.Name = name;
         await ItemChanged.InvokeAsync(Item);
+        await OnMatchFeedbackCleared.InvokeAsync();
         await OnSuggestionsDismissed.InvokeAsync();
     }
 

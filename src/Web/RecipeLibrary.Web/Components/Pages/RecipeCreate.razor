@@ -382,6 +382,7 @@
                                                      MatchMessage="@GetIngredientMatchMessage(index)"
                                                      OnNameChanged="@(name => OnIngredientNameSearch(index, name))"
                                                      OnSuggestionsDismissed="@(() => DismissIngredientSuggestions(index))"
+                                                     OnMatchFeedbackCleared="@(() => ClearIngredientMatchMessage(index))"
                                                      CanRemove="@(_vm.Ingredients.Count > 1)"
                                                      OnRemove="@(() => RemoveIngredient(index))" />
                         </div>
@@ -746,6 +747,16 @@
     private void DismissIngredientSuggestions(int index)
     {
         _ingredientSuggestions[index] = [];
+        StateHasChanged();
+    }
+
+    private void ClearIngredientMatchMessage(int index)
+    {
+        if (!_ingredientMatchMessages.Remove(index))
+        {
+            return;
+        }
+
         StateHasChanged();
     }
 

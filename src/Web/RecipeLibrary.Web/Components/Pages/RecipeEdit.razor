@@ -113,7 +113,6 @@
                                                  RowIndex="@index"
                                                  ItemChanged="@(_ => OnIngredientRowChanged())"
                                                  Suggestions="@GetIngredientSuggestions(index)"
-                                                 MatchMessage="@GetIngredientMatchMessage(index)"
                                                  OnNameChanged="@(name => OnIngredientNameSearch(index, name))"
                                                  OnSuggestionsDismissed="@(() => DismissIngredientSuggestions(index))"
                                                  CanRemove="@(_vm.Ingredients.Count > 1)"
@@ -208,7 +207,6 @@
     private bool _requiresBaking;
     private bool _requiresCooling;
     private readonly Dictionary<int, List<IngredientLookupItem>> _ingredientSuggestions = [];
-    private readonly Dictionary<int, string> _ingredientMatchMessages = [];
     private List<string> _ingredientTags = [];
     private List<(int Value, string Label)> _difficultyOptions = [];
 
@@ -293,7 +291,6 @@
         if (_vm.Ingredients.Count <= 1) return;
         _vm.Ingredients.RemoveAt(index);
         _ingredientSuggestions.Remove(index);
-        _ingredientMatchMessages.Remove(index);
         StateHasChanged();
     }
 
@@ -301,9 +298,6 @@
 
     private IReadOnlyList<IngredientLookupItem> GetIngredientSuggestions(int index) =>
         _ingredientSuggestions.TryGetValue(index, out var suggestions) ? suggestions : [];
-
-    private string? GetIngredientMatchMessage(int index) =>
-        _ingredientMatchMessages.TryGetValue(index, out var message) ? message : null;
 
     private void DismissIngredientSuggestions(int index)
     {

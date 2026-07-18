@@ -16,6 +16,14 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                 type: "bit",
                 nullable: false,
                 defaultValue: false);
+
+            // Existing FindOrCreate rows have no CatalogKey; treat them as user-generated.
+            migrationBuilder.Sql(
+                """
+                UPDATE Ingredients
+                SET UserGenerated = 1
+                WHERE CatalogKey IS NULL;
+                """);
         }
 
         /// <inheritdoc />

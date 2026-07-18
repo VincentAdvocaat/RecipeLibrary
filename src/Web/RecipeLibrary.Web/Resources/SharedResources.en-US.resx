@@ -149,7 +149,7 @@
   <data name="RecipeCreate.Ingredient.AddButton" xml:space="preserve"><value>+ Add ingredient</value></data>
   <data name="RecipeCreate.Ingredient.Match.Exact" xml:space="preserve"><value>Exact ingredient match found.</value></data>
   <data name="RecipeCreate.Ingredient.Match.Alias" xml:space="preserve"><value>Alias match found; linked to existing ingredient.</value></data>
-  <data name="RecipeCreate.Ingredient.Match.Fuzzy" xml:space="preserve"><value>Possible match: {0} ({1}). Confirm when saving.</value></data>
+  <data name="RecipeCreate.Ingredient.Match.Fuzzy" xml:space="preserve"><value>Possible match: {0} ({1}). Use a suggestion if this is wrong.</value></data>
   <data name="RecipeCreate.Ingredient.Match.None" xml:space="preserve"><value>No match found. You can continue with new input.</value></data>
   <data name="RecipeCreate.Instructions.SectionLabel" xml:space="preserve"><value>Instructions</value></data>
   <data name="RecipeCreate.Instructions.StepsHint" xml:space="preserve"><value>Steps</value></data>
