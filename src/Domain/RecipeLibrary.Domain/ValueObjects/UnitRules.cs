@@ -11,6 +11,48 @@ public static class UnitRules
             .ToArray();
 
     /// <summary>
+    /// Units offered in create/edit dropdowns for the given measure preference.
+    /// Non-preferred mass units are hidden unless they are the current selection
+    /// (so imported imperial lines remain editable under a metric preference, and vice versa).
+    /// </summary>
+    public static IReadOnlyList<string> SelectableUnitNamesFor(
+        MeasureSystem measureSystem,
+        string? currentUnitName = null)
+    {
+        Unit? currentUnit = null;
+        if (!string.IsNullOrWhiteSpace(currentUnitName)
+            && TryParse(currentUnitName, out var parsed)
+            && parsed != Unit.Unknown)
+        {
+            currentUnit = parsed;
+        }
+
+        return SelectableUnitNames
+            .Where(name =>
+            {
+                if (!TryParse(name, out var unit) || unit == Unit.Unknown)
+                {
+                    return false;
+                }
+
+                if (!UnitClassification.IsMass(unit))
+                {
+                    return true;
+                }
+
+                if (currentUnit is { } current && unit == current)
+                {
+                    return true;
+                }
+
+                return measureSystem == MeasureSystem.Metric
+                    ? unit == Unit.Gram
+                    : unit is Unit.Ounce or Unit.Pound;
+            })
+            .ToArray();
+    }
+
+    /// <summary>
     /// Count-style units, including culinary piece descriptors and cans.
     /// </summary>
     public static bool IsCountUnit(Unit unit) =>

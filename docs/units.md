@@ -36,14 +36,11 @@ Only **Mass** is reformatted for display (exact Mass → Mass). Kitchen measures
 | Metric | grams | milliliters unchanged |
 | Imperial | ounces / pounds | milliliters unchanged |
 
-Default via **culture mapping** (cookie `RecipeLibrary.MeasureSystem` when unset):
+Preference is stored in cookie `RecipeLibrary.MeasureSystem` (1 year). When unset, the default is **Metric**.
 
-| Culture | Default |
-| --- | --- |
-| `en-US` | Imperial |
-| `nl-NL`, `en-GB`, others | Metric |
+UI language and measure preference are fully independent: switching English/Dutch does not change g vs oz/lb.
 
-UI language and measure preference are independent.
+The measure switcher lives next to the ingredients list (recipe detail, create, edit/import review, shopping list). Create/edit unit dropdowns hide non-preferred mass units (oz/lb under Metric, g under Imperial), except when the current row already uses that unit.
 
 ## Ingredient unit conversions
 

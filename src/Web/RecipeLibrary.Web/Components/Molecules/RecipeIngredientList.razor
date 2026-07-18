@@ -7,7 +7,10 @@
 @inject IngredientQuantityConversionService ConversionService
 
 <div class="@CssClass">
-    <Heading Level="3" CssClass="text-sm font-medium text-gray-900 mb-2">@L["Recipe.Ingredients.SectionLabel"]</Heading>
+    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <Heading Level="3" CssClass="m-0 text-sm font-medium text-gray-900">@L["Recipe.Ingredients.SectionLabel"]</Heading>
+        <MeasureSystemSwitcher />
+    </div>
     <ul class="space-y-1 text-sm text-gray-700">
         @foreach (var item in Items)
         {

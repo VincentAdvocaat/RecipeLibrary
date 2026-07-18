@@ -1,4 +1,3 @@
-using System.Globalization;
 using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Domain.ValueObjects;
 using Xunit;
@@ -73,10 +72,36 @@ public sealed class IngredientMeasurePresenterTests
     }
 
     [Fact]
-    public void MeasureSystemDefaults_EnUs_IsImperial_OthersMetric()
+    public void MeasureSystemDefaults_IsMetricIndependentOfCulture()
     {
-        Assert.Equal(MeasureSystem.Imperial, MeasureSystemDefaults.ForCulture(new CultureInfo("en-US")));
-        Assert.Equal(MeasureSystem.Metric, MeasureSystemDefaults.ForCulture(new CultureInfo("en-GB")));
-        Assert.Equal(MeasureSystem.Metric, MeasureSystemDefaults.ForCulture(new CultureInfo("nl-NL")));
+        Assert.Equal(MeasureSystem.Metric, MeasureSystemDefaults.Default);
+    }
+}
+
+public sealed class UnitRulesSelectableTests
+{
+    [Fact]
+    public void SelectableUnitNamesFor_Metric_HidesImperialMassUnlessCurrent()
+    {
+        var names = UnitRules.SelectableUnitNamesFor(MeasureSystem.Metric);
+        Assert.Contains(nameof(Unit.Gram), names);
+        Assert.DoesNotContain(nameof(Unit.Ounce), names);
+        Assert.DoesNotContain(nameof(Unit.Pound), names);
+        Assert.Contains(nameof(Unit.Cup), names);
+
+        var withCurrent = UnitRules.SelectableUnitNamesFor(MeasureSystem.Metric, nameof(Unit.Ounce));
+        Assert.Contains(nameof(Unit.Ounce), withCurrent);
+    }
+
+    [Fact]
+    public void SelectableUnitNamesFor_Imperial_HidesGramUnlessCurrent()
+    {
+        var names = UnitRules.SelectableUnitNamesFor(MeasureSystem.Imperial);
+        Assert.Contains(nameof(Unit.Ounce), names);
+        Assert.Contains(nameof(Unit.Pound), names);
+        Assert.DoesNotContain(nameof(Unit.Gram), names);
+
+        var withCurrent = UnitRules.SelectableUnitNamesFor(MeasureSystem.Imperial, nameof(Unit.Gram));
+        Assert.Contains(nameof(Unit.Gram), withCurrent);
     }
 }

@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Domain.ValueObjects;
@@ -21,7 +20,7 @@ public sealed class MeasureSystemService(IHttpContextAccessor httpContextAccesso
             return parsed;
         }
 
-        return MeasureSystemDefaults.ForCulture(CultureInfo.CurrentUICulture);
+        return MeasureSystemDefaults.Default;
     }
 
     public static bool TryParse(string? value, out MeasureSystem measureSystem)
