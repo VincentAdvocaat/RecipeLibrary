@@ -164,11 +164,18 @@ function Ensure-Pushed([string] $remoteName, [string] $branch) {
 }
 
 function Get-ExistingPrUrl([string] $branch) {
-  $url = & $ghExe pr view $branch --json url --jq .url 2>$null
-  if ($LASTEXITCODE -eq 0 -and $url) {
-    return $url.Trim()
+  $previousErrorAction = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    $url = & $ghExe pr view $branch --json url --jq .url 2>$null
+    if ($LASTEXITCODE -eq 0 -and $url) {
+      return $url.Trim()
+    }
+    return $null
   }
-  return $null
+  finally {
+    $ErrorActionPreference = $previousErrorAction
+  }
 }
 
 function Get-DefaultTitle([string] $branch) {
