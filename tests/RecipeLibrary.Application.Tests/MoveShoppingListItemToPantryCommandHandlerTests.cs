@@ -197,9 +197,4 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         public Task<bool> RemoveAsync(Guid itemId, string ownerKey, CancellationToken ct = default) =>
             Task.FromResult(false);
     }
-
-    private sealed class FixedShoppingListUserContext(string ownerUserId) : IShoppingListUserContext
-    {
-        public string? OwnerUserId => ownerUserId;
-    }
 }

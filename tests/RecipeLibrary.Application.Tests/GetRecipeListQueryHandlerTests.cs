@@ -10,68 +10,62 @@ namespace RecipeLibrary.Application.Tests;
 public sealed class GetRecipeListQueryHandlerTests
 {
     [Fact]
-    public async Task HandleAsync_FiltersBySearchAndCategory()
+    public async Task HandleAsync_ForwardsSearchAndMappedCategory_ToRepository()
     {
-        var meatRecipe = new Recipe
-        {
-            Id = Guid.NewGuid(),
-            Title = new RecipeTitle("Meat Lasagna"),
-            Category = RecipeCategory.Meat,
-            Ingredients = [new Ingredient { Name = "Gehakt", Quantity = new Quantity(1), Unit = Unit.Piece }],
-        };
-        var vegRecipe = new Recipe
-        {
-            Id = Guid.NewGuid(),
-            Title = new RecipeTitle("Veggie Soup"),
-            Category = RecipeCategory.Vegetarian,
-            Ingredients = [],
-        };
-
-        var repo = new FakeRecipeRepository([meatRecipe, vegRecipe]);
+        var repo = new FakeRecipeRepository();
         var sut = new GetRecipeListQueryHandler(repo);
 
-        var filtered = await sut.HandleAsync(new GetRecipeListQuery
+        await sut.HandleAsync(new GetRecipeListQuery
         {
             Search = "Lasagna",
             Category = (int)RecipeCategory.Meat,
         });
 
-        Assert.Single(filtered.Items);
-        Assert.Equal("Meat Lasagna", filtered.Items[0].Title);
-        Assert.Contains("Gehakt", filtered.Items[0].IngredientNames);
+        Assert.Equal("Lasagna", repo.LastSearch);
+        Assert.Equal(RecipeCategory.Meat, repo.LastCategory);
     }
 
-    private sealed class FakeRecipeRepository(IReadOnlyList<Recipe> recipes) : IRecipeRepository
+    [Fact]
+    public async Task HandleAsync_ForwardsNullCategory_WhenUndefined()
     {
+        var repo = new FakeRecipeRepository();
+        var sut = new GetRecipeListQueryHandler(repo);
+
+        await sut.HandleAsync(new GetRecipeListQuery
+        {
+            Search = null,
+            Category = 999,
+        });
+
+        Assert.Null(repo.LastSearch);
+        Assert.Null(repo.LastCategory);
+    }
+
+    private sealed class FakeRecipeRepository : IRecipeRepository
+    {
+        public string? LastSearch { get; private set; }
+        public RecipeCategory? LastCategory { get; private set; }
+
         public Task AddAsync(Recipe recipe, CancellationToken ct = default) => Task.CompletedTask;
 
         public Task DeleteAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
 
         public Task<Recipe?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
-            Task.FromResult(recipes.FirstOrDefault(r => r.Id == id));
+            Task.FromResult<Recipe?>(null);
 
         public Task<Recipe?> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default) => GetByIdAsync(id, ct);
 
         public Task<IReadOnlyList<Recipe>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Recipe>>(recipes.Where(r => ids.Contains(r.Id)).ToList());
+            Task.FromResult<IReadOnlyList<Recipe>>([]);
 
         public Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(Guid recipeId, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<string>>([]);
 
         public Task<IReadOnlyList<Recipe>> GetListAsync(string? search, RecipeCategory? category, CancellationToken ct = default)
         {
-            IEnumerable<Recipe> query = recipes;
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                query = query.Where(r => r.Title.Value.Contains(search, StringComparison.OrdinalIgnoreCase));
-            }
-
-            if (category is not null)
-            {
-                query = query.Where(r => r.Category == category);
-            }
-
-            return Task.FromResult<IReadOnlyList<Recipe>>(query.ToList());
+            LastSearch = search;
+            LastCategory = category;
+            return Task.FromResult<IReadOnlyList<Recipe>>([]);
         }
 
         public Task UpdateAsync(Recipe recipe, CancellationToken ct = default) => Task.CompletedTask;

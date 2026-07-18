@@ -47,4 +47,66 @@ public sealed class RecipePersistenceTests(SqlContainerFixture fixture)
         Assert.Single(loaded.Ingredients);
         Assert.Equal("ruim", loaded.Ingredients[0].Preparation);
     }
+
+    [Fact]
+    public async Task GetRecipeList_FiltersBySearchAndCategory()
+    {
+        using var scope = fixture.Factory.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<ICommandBus>();
+        var queryBus = scope.ServiceProvider.GetRequiredService<IQueryBus>();
+
+        await bus.SendAsync<CreateRecipeCommand, CreateRecipeResult>(
+            new CreateRecipeCommand
+            {
+                Title = "Filter Meat Lasagna Unique",
+                Category = (int)RecipeCategory.Meat,
+                PreparationTimeMinutes = 5,
+                CookingTimeMinutes = 10,
+                Ingredients =
+                [
+                    new CreateRecipeIngredientDto
+                    {
+                        Name = "Gehakt",
+                        Quantity = 100,
+                        Unit = Unit.Gram.ToString(),
+                    },
+                ],
+                InstructionSteps =
+                [
+                    new CreateRecipeInstructionStepDto { StepNumber = 1, Text = "Cook." },
+                ],
+            });
+
+        await bus.SendAsync<CreateRecipeCommand, CreateRecipeResult>(
+            new CreateRecipeCommand
+            {
+                Title = "Filter Veggie Soup Unique",
+                Category = (int)RecipeCategory.Vegetarian,
+                PreparationTimeMinutes = 5,
+                CookingTimeMinutes = 10,
+                Ingredients =
+                [
+                    new CreateRecipeIngredientDto
+                    {
+                        Name = "Wortel",
+                        Quantity = 2,
+                        Unit = Unit.Piece.ToString(),
+                    },
+                ],
+                InstructionSteps =
+                [
+                    new CreateRecipeInstructionStepDto { StepNumber = 1, Text = "Boil." },
+                ],
+            });
+
+        var filtered = await queryBus.QueryAsync<GetRecipeListQuery, GetRecipeListResult>(
+            new GetRecipeListQuery
+            {
+                Search = "Filter Meat Lasagna",
+                Category = (int)RecipeCategory.Meat,
+            });
+
+        Assert.Contains(filtered.Items, r => r.Title == "Filter Meat Lasagna Unique");
+        Assert.DoesNotContain(filtered.Items, r => r.Title == "Filter Veggie Soup Unique");
+    }
 }
