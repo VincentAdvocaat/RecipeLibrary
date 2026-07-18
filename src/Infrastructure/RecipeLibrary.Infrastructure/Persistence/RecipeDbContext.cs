@@ -124,6 +124,10 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
                 .IsUnique()
                 .HasFilter("[CatalogKey] IS NOT NULL");
 
+            b.Property(x => x.UserGenerated)
+                .IsRequired()
+                .HasDefaultValue(false);
+
             b.Property(x => x.CreatedAt)
                 .IsRequired();
         });

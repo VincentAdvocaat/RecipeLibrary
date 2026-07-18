@@ -41,8 +41,6 @@ public sealed class CreateRecipeIngredientDto
     /// Parsed to the Domain <c>Unit</c> enum in the application layer.
     /// </summary>
     public string? Unit { get; init; }
-
-    public bool CreateAsNewIngredient { get; init; }
 }
 
 public sealed class CreateRecipeInstructionStepDto

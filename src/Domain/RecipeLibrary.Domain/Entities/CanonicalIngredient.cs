@@ -13,6 +13,11 @@ public sealed class CanonicalIngredient
     /// </summary>
     public string? CatalogKey { get; set; }
 
+    /// <summary>
+    /// True when this ingredient was created from user input rather than curated catalog seed data.
+    /// </summary>
+    public bool UserGenerated { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public ICollection<IngredientTranslation> Translations { get; set; } = new List<IngredientTranslation>();

@@ -89,6 +89,7 @@ public sealed class IngredientCatalogSeeder(
                 {
                     Id = ingredientId,
                     CatalogKey = catalogKey,
+                    UserGenerated = false,
                     CreatedAt = now,
                 });
                 keyToId[catalogKey] = ingredientId;

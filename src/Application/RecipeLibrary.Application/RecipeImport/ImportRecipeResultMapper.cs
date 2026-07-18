@@ -22,7 +22,6 @@ public static class ImportRecipeResultMapper
                     Preparation = i.Preparation,
                     Quantity = i.Quantity,
                     Unit = i.Unit,
-                    CreateAsNewIngredient = false,
                 })
                 .ToList(),
             InstructionSteps = result.Steps

@@ -167,6 +167,7 @@ public sealed class EfIngredientRepository(RecipeDbContext dbContext) : IIngredi
                 var ingredient = new CanonicalIngredient
                 {
                     Id = Guid.NewGuid(),
+                    UserGenerated = true,
                     CreatedAt = DateTimeOffset.UtcNow,
                 };
 
