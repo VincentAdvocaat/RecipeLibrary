@@ -44,7 +44,7 @@ public sealed class RecipeIngredientBuilderTests
     }
 
     [Fact]
-    public async Task BuildAsync_CreateAsNewIngredient_SkipsFuzzyMatch()
+    public async Task BuildAsync_FuzzyMatch_LinksExistingIngredient()
     {
         var recipeId = Guid.NewGuid();
         var existingId = Guid.NewGuid();
@@ -60,7 +60,6 @@ public sealed class RecipeIngredientBuilderTests
                     Name = "gembre",
                     Quantity = 1,
                     Unit = nameof(Unit.Gram),
-                    CreateAsNewIngredient = true,
                 },
             ],
             repo,
@@ -70,12 +69,12 @@ public sealed class RecipeIngredientBuilderTests
             CancellationToken.None);
 
         Assert.Single(ingredients);
-        Assert.NotEqual(existingId, ingredients[0].IngredientId);
-        Assert.Equal(1, repo.CreateCallCount);
+        Assert.Equal(existingId, ingredients[0].IngredientId);
+        Assert.Equal(0, repo.CreateCallCount);
     }
 
     [Fact]
-    public async Task BuildAsync_CreateAsNewIngredient_UsesStorageLanguageCode()
+    public async Task BuildAsync_UnmatchedIngredient_UsesStorageLanguageCode()
     {
         var previousUi = CultureInfo.CurrentUICulture;
         var previousCulture = CultureInfo.CurrentCulture;
@@ -93,10 +92,9 @@ public sealed class RecipeIngredientBuilderTests
                 [
                     new CreateRecipeIngredientDto
                     {
-                        Name = "tomaat",
+                        Name = "xyzunmatchedingredient99",
                         Quantity = 1,
                         Unit = nameof(Unit.Gram),
-                        CreateAsNewIngredient = true,
                     },
                 ],
                 repo,

@@ -131,9 +131,6 @@ public sealed class ChickpeaButterMasalaGoldenImportTests
             Assert.Equal(expected.Ingredients[i].Preparation, actual.Ingredients[i].Preparation);
             Assert.Equal(expected.Ingredients[i].Quantity, actual.Ingredients[i].Quantity);
             Assert.Equal(expected.Ingredients[i].Unit, actual.Ingredients[i].Unit);
-            Assert.Equal(
-                expected.Ingredients[i].CreateAsNewIngredient,
-                actual.Ingredients[i].CreateAsNewIngredient);
         }
 
         Assert.Equal(expected.InstructionSteps.Count, actual.InstructionSteps.Count);

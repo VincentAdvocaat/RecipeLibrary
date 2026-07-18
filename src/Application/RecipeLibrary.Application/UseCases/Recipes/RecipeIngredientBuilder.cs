@@ -26,31 +26,16 @@ internal static class RecipeIngredientBuilder
         {
             var rawName = (ingredientDto.Name ?? string.Empty).Trim();
             var resolved = lineResolver.Resolve(ingredientDto.Name, ingredientDto.Preparation);
-            CanonicalIngredient canonicalIngredient;
 
-            if (ingredientDto.CreateAsNewIngredient)
-            {
-                var normalized = normalizer.Normalize(resolved.DisplayName);
-                canonicalIngredient = await ingredientRepository.FindOrCreateAsync(
+            var match = await matcher.MatchAsync(resolved.DisplayName, cultureName, ct);
+            var canonicalIngredient = match.Ingredient
+                ?? await FindOrCreateNewIngredientAsync(
+                    ingredientRepository,
+                    normalizer,
                     languageCode,
                     resolved.DisplayName,
-                    normalized,
                     rawName,
-                    normalizer.Normalize(rawName),
                     ct);
-            }
-            else
-            {
-                var match = await matcher.MatchAsync(resolved.DisplayName, cultureName, ct);
-                canonicalIngredient = match.Ingredient
-                    ?? await FindOrCreateNewIngredientAsync(
-                        ingredientRepository,
-                        normalizer,
-                        languageCode,
-                        resolved.DisplayName,
-                        rawName,
-                        ct);
-            }
 
             Quantity? quantity = null;
             Unit? unit = null;

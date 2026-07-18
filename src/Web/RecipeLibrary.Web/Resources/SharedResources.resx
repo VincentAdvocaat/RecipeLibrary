@@ -149,18 +149,8 @@
   <data name="RecipeCreate.Ingredient.AddButton" xml:space="preserve"><value>+ Add ingredient</value></data>
   <data name="RecipeCreate.Ingredient.Match.Exact" xml:space="preserve"><value>Exact ingredient match found.</value></data>
   <data name="RecipeCreate.Ingredient.Match.Alias" xml:space="preserve"><value>Alias match found; linked to existing ingredient.</value></data>
-  <data name="RecipeCreate.Ingredient.Match.Fuzzy" xml:space="preserve"><value>Possible match: {0} ({1}). Confirm when saving.</value></data>
+  <data name="RecipeCreate.Ingredient.Match.Fuzzy" xml:space="preserve"><value>Possible match: {0} ({1}). Use a suggestion if this is wrong.</value></data>
   <data name="RecipeCreate.Ingredient.Match.None" xml:space="preserve"><value>No match found. You can continue with new input.</value></data>
-  <data name="RecipeCreate.Ingredient.Match.DidYouMean" xml:space="preserve"><value>Did you mean:</value></data>
-  <data name="RecipeCreate.Ingredient.Match.ConfirmOnSave" xml:space="preserve"><value>No exact match. Choose a suggestion or confirm when saving.</value></data>
-  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.Title" xml:space="preserve"><value>Review ingredients</value></data>
-  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.Message" xml:space="preserve"><value>These ingredients do not exist yet. Did you mean one of the suggestions?</value></data>
-  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.UseSuggestion" xml:space="preserve"><value>Use {0}</value></data>
-  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.ConfirmNew" xml:space="preserve"><value>Save as new ingredient '{0}'</value></data>
-  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.Proceed" xml:space="preserve"><value>Continue saving</value></data>
-  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.Cancel" xml:space="preserve"><value>Cancel</value></data>
-  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.ResolvedSuggestion" xml:space="preserve"><value>Will use: {0}</value></data>
-  <data name="RecipeCreate.Ingredient.Match.ConfirmDialog.ResolvedNew" xml:space="preserve"><value>Will save as new ingredient: {0}</value></data>
   <data name="RecipeCreate.Instructions.SectionLabel" xml:space="preserve"><value>Instructions</value></data>
   <data name="RecipeCreate.Instructions.StepsHint" xml:space="preserve"><value>Steps</value></data>
   <data name="RecipeCreate.Step.Placeholder" xml:space="preserve"><value>e.g. Dice the onion. Heat oil in a pan...</value></data>
