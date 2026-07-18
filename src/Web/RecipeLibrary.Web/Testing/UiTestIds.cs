@@ -45,6 +45,13 @@ public static class UiTestIds
     public const string LanguageEn = "language-en";
     public const string LanguageNl = "language-nl";
 
+    public const string MeasureSystemSwitcher = "measure-system-switcher";
+    public const string MeasureSystemMetric = "measure-system-metric";
+    public const string MeasureSystemImperial = "measure-system-imperial";
+
+    public const string IngredientConvert = "ingredient-convert";
+    public const string IngredientConvertEstimate = "ingredient-convert-estimate";
+
     public const string OverviewReady = "overview-ready";
     public const string ShoppingListReady = "shopping-list-ready";
 

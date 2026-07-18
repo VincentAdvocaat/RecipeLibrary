@@ -35,6 +35,7 @@ public sealed class GetRecipeByIdQueryHandler(IRecipeRepository recipeRepository
                 .OrderBy(i => i.Name)
                 .Select(i => new RecipeDetailIngredientItem
                 {
+                    CanonicalIngredientId = i.IngredientId,
                     Name = i.Name,
                     Preparation = i.Preparation,
                     Quantity = i.Quantity?.Value,

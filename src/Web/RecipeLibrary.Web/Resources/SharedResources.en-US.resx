@@ -176,6 +176,13 @@
   <data name="Common.Remove.AriaLabel" xml:space="preserve"><value>Remove</value></data>
   <data name="Common.Menu.AriaLabel" xml:space="preserve"><value>Menu</value></data>
   <data name="Language.Selector.AriaLabel" xml:space="preserve"><value>Select language</value></data>
+  <data name="Settings.MeasureSystem.AriaLabel" xml:space="preserve"><value>Select measure system</value></data>
+  <data name="Settings.MeasureSystem.Metric" xml:space="preserve"><value>Metric</value></data>
+  <data name="Settings.MeasureSystem.Imperial" xml:space="preserve"><value>Imperial</value></data>
+  <data name="Recipe.Convert.Button" xml:space="preserve"><value>Convert</value></data>
+  <data name="Recipe.Convert.EstimateLabel" xml:space="preserve"><value>approx. {0}</value></data>
+  <data name="Recipe.Convert.Unavailable" xml:space="preserve"><value>No estimate available</value></data>
+  <data name="Recipe.Convert.Failed" xml:space="preserve"><value>Could not estimate this measure</value></data>
   <data name="Error.PageTitle" xml:space="preserve"><value>Error</value></data>
   <data name="Error.Heading" xml:space="preserve"><value>Error.</value></data>
   <data name="Error.Subheading" xml:space="preserve"><value>An error occurred while processing your request.</value></data>

@@ -9,7 +9,8 @@ public static class ShoppingListDisplayHelper
 {
     public static string FormatQuantityLine(
         ShoppingListItemDto item,
-        Func<string, string> localizeUnit)
+        Func<string, string> localizeUnit,
+        MeasureSystem measureSystem = MeasureSystem.Metric)
     {
         if (item.Quantity is null || string.IsNullOrWhiteSpace(item.Unit))
         {
@@ -17,11 +18,19 @@ public static class ShoppingListDisplayHelper
         }
 
         var unit = UnitRules.TryParse(item.Unit, out var parsed) ? parsed : Unit.Unknown;
-        var quantityText = unit == Unit.Unknown
-            ? ((long)decimal.Round(item.Quantity.Value, 0, MidpointRounding.AwayFromZero))
-                .ToString(CultureInfo.InvariantCulture)
-            : IngredientQuantityFormatter.Format(item.Quantity.Value, unit);
-        var unitLabel = localizeUnit(item.Unit);
+        if (unit == Unit.Unknown)
+        {
+            var fallback = ((long)decimal.Round(item.Quantity.Value, 0, MidpointRounding.AwayFromZero))
+                .ToString(CultureInfo.CurrentCulture);
+            return $"{fallback} {localizeUnit(item.Unit)}";
+        }
+
+        var (displayQty, displayUnit) = IngredientMeasurePresenter.ApplyMassPresentation(
+            item.Quantity.Value,
+            unit,
+            measureSystem);
+        var quantityText = IngredientQuantityFormatter.Format(displayQty, displayUnit);
+        var unitLabel = localizeUnit(displayUnit.ToString());
         return $"{quantityText} {unitLabel}";
     }
 

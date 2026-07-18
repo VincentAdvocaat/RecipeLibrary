@@ -125,6 +125,7 @@ public sealed class GetRecipeByIdResult
 
 public sealed class RecipeDetailIngredientItem
 {
+    public Guid? CanonicalIngredientId { get; init; }
     public string Name { get; init; } = string.Empty;
     public string? Preparation { get; init; }
     public decimal? Quantity { get; init; }

@@ -84,7 +84,7 @@ else
         else if (_allowsDecimalQuantity && parsedUnit is Unit decimalUnit)
         {
             var normalized = q <= 0 ? 1m : IngredientQuantityFormatter.Normalize(q, decimalUnit);
-            _decimalDisplay = normalized.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            _decimalDisplay = normalized.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
         }
         else
         {
@@ -126,7 +126,7 @@ else
         }
 
         var normalized = IngredientQuantityFormatter.Normalize(parsed, unit);
-        _decimalDisplay = normalized.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        _decimalDisplay = normalized.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
         await SetQuantityAsync(normalized);
     }
 

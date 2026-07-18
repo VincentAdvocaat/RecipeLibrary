@@ -136,6 +136,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ShoppingListSessionService>();
 builder.Services.AddScoped<PantrySessionService>();
+builder.Services.AddScoped<MeasureSystemService>();
 
 ConfigureDataProtection(builder);
 
@@ -454,6 +455,23 @@ app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext htt
             SameSite = SameSiteMode.Lax,
             HttpOnly = true
         });
+
+    return Results.Redirect(returnPath);
+}).AllowAnonymous();
+
+app.MapGet("/measure-system/set", (string system, string? redirectUri, HttpContext httpContext) =>
+{
+    if (!MeasureSystemService.TryParse(system, out var measureSystem))
+        return Results.BadRequest();
+
+    var returnPath = string.IsNullOrWhiteSpace(redirectUri) || !redirectUri.StartsWith('/')
+        ? "/"
+        : redirectUri;
+
+    httpContext.Response.Cookies.Append(
+        MeasureSystemService.CookieName,
+        measureSystem.ToString(),
+        MeasureSystemService.CreateCookieOptions());
 
     return Results.Redirect(returnPath);
 }).AllowAnonymous();

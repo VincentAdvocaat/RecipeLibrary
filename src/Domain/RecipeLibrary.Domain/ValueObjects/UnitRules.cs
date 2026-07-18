@@ -27,27 +27,27 @@ public static class UnitRules
     /// <summary>
     /// Units that allow discrete culinary fractions (¼, ⅓, ½, ⅔, ¾).
     /// Prefer these over converting cup/piece measures into ml/gram.
+    /// Ounce is mass (decimals), not a culinary-fraction unit.
     /// </summary>
     public static bool AllowsCulinaryFractions(Unit unit) =>
         unit is Unit.Teaspoon
             or Unit.Tablespoon
             or Unit.Cup
             or Unit.Piece
-            or Unit.Clove
-            or Unit.Ounce;
+            or Unit.Clove;
 
     /// <summary>
     /// Continuous decimal quantities (not snapped to whole numbers or culinary fractions).
-    /// Pound keeps values like 1.3 lbs; gram/ml stay whole numbers.
+    /// Ounce/Pound allow values like 1.5 oz; gram/ml stay whole numbers for input.
     /// </summary>
     public static bool AllowsDecimalQuantity(Unit unit) =>
-        unit is Unit.Pound;
+        unit is Unit.Pound or Unit.Ounce;
 
     /// <summary>
     /// Smallest culinary fractional step (¼). Thirds are also allowed via the fraction select.
     /// </summary>
     public static decimal InputStep(Unit unit) =>
-        AllowsCulinaryFractions(unit) ? 0.25m : unit is Unit.Pound ? 0.01m : 1m;
+        AllowsCulinaryFractions(unit) ? 0.25m : AllowsDecimalQuantity(unit) ? 0.01m : 1m;
 
     public static bool TryParse(string? value, out Unit unit)
     {

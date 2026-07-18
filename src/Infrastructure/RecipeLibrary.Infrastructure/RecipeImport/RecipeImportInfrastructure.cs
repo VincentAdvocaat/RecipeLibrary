@@ -391,3 +391,102 @@ public sealed class NullRecipeAiParser : IRecipeAiParser
     public Task<ImportRecipeResult> ParseAsync(string plainText, CancellationToken ct = default) =>
         throw new InvalidOperationException("Full-recipe AI parsing is not configured.");
 }
+
+/// <summary>
+/// Proposes kitchen→mass conversions via the same OpenAI config as recipe import.
+/// </summary>
+public sealed class OpenAiIngredientUnitConversionAiProposer(
+    IHttpClientFactory httpClientFactory,
+    IOptions<RecipeImportOptions> options) : IIngredientUnitConversionAiProposer
+{
+    private const string SystemPrompt = """
+        Estimate culinary volume to mass conversions for cooking ingredients (Dutch or English names).
+        Return JSON: {"amountFrom":1,"fromUnit":"Cup","amountTo":120,"toUnit":"Gram","suggestedCatalogKey":null,"notes":null}.
+        Rules:
+        - fromUnit must match the requested kitchen unit (Cup, Tablespoon, or Teaspoon)
+        - toUnit must be Gram
+        - amountFrom and amountTo must be positive decimals describing  amountFrom fromUnit = amountTo Gram
+        - one-way culinary to mass only; never invent Mass→Cup
+        - prefer realistic densities; note packed/sifted/cooked in notes when relevant
+        - suggestedCatalogKey is optional lowercase kebab-case when obvious
+        """;
+
+    private static readonly JsonSerializerOptions JsonOptions = OpenAiRecipeJson.Options;
+
+    public async Task<IngredientUnitConversionAiProposal?> ProposeAsync(
+        IngredientUnitConversionAiRequest request,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var aiOptions = options.Value.Ai;
+        if (!aiOptions.Enabled || string.IsNullOrWhiteSpace(aiOptions.ApiKey))
+        {
+            return null;
+        }
+
+        var userContent = JsonSerializer.Serialize(
+            new
+            {
+                ingredientName = request.IngredientName,
+                fromUnit = request.FromUnit.ToString(),
+                quantity = request.Quantity,
+                suggestedCatalogKey = request.SuggestedCatalogKey,
+            },
+            JsonOptions);
+
+        var content = await OpenAiRecipeJson.RequestJsonAsync(
+            httpClientFactory,
+            aiOptions,
+            SystemPrompt,
+            userContent,
+            ct);
+
+        var parsed = JsonSerializer.Deserialize<AiConversionResponse>(content, JsonOptions);
+        if (parsed is null || parsed.AmountFrom <= 0 || parsed.AmountTo <= 0)
+        {
+            return null;
+        }
+
+        if (!UnitRules.TryParse(parsed.FromUnit, out var fromUnit)
+            || !UnitRules.TryParse(parsed.ToUnit, out var toUnit))
+        {
+            return null;
+        }
+
+        return new IngredientUnitConversionAiProposal
+        {
+            AmountFrom = parsed.AmountFrom,
+            FromUnit = fromUnit,
+            AmountTo = parsed.AmountTo,
+            ToUnit = toUnit,
+            SuggestedCatalogKey = string.IsNullOrWhiteSpace(parsed.SuggestedCatalogKey)
+                ? null
+                : parsed.SuggestedCatalogKey.Trim(),
+            Notes = string.IsNullOrWhiteSpace(parsed.Notes) ? null : parsed.Notes.Trim(),
+        };
+    }
+
+    private sealed class AiConversionResponse
+    {
+        public decimal AmountFrom { get; set; }
+
+        public string? FromUnit { get; set; }
+
+        public decimal AmountTo { get; set; }
+
+        public string? ToUnit { get; set; }
+
+        public string? SuggestedCatalogKey { get; set; }
+
+        public string? Notes { get; set; }
+    }
+}
+
+public sealed class NullIngredientUnitConversionAiProposer : IIngredientUnitConversionAiProposer
+{
+    public Task<IngredientUnitConversionAiProposal?> ProposeAsync(
+        IngredientUnitConversionAiRequest request,
+        CancellationToken ct = default) =>
+        Task.FromResult<IngredientUnitConversionAiProposal?>(null);
+}

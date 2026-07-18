@@ -47,11 +47,13 @@ public static class RecipeImportServiceRegistration
         {
             services.AddScoped<IIngredientLineAiParser, OpenAiIngredientLineAiParser>();
             services.AddScoped<IRecipeAiParser, OpenAiRecipeAiParser>();
+            services.AddScoped<IIngredientUnitConversionAiProposer, OpenAiIngredientUnitConversionAiProposer>();
         }
         else
         {
             services.AddScoped<IIngredientLineAiParser, NullIngredientLineAiParser>();
             services.AddScoped<IRecipeAiParser, NullRecipeAiParser>();
+            services.AddScoped<IIngredientUnitConversionAiProposer, NullIngredientUnitConversionAiProposer>();
         }
 
         return services;

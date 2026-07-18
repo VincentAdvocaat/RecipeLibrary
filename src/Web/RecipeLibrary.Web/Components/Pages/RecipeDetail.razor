@@ -1,4 +1,5 @@
 @page "/recipes/{RecipeId:guid}"
+@rendermode InteractiveServer
 
 @inject IQueryBus QueryBus
 @inject ICommandBus CommandBus
@@ -20,7 +21,10 @@ else if (_recipe is not null)
                     <AppNavLink Href="/recipes">@L["RecipeDetail.BackToOverview"]</AppNavLink>
                     <Heading Level="1" CssClass="m-0">@_recipe.Title</Heading>
                 </div>
-                <LanguageSwitcher />
+                <div class="flex items-center gap-3">
+                    <MeasureSystemSwitcher />
+                    <LanguageSwitcher />
+                </div>
             </header>
 
             <div class="bg-white rounded-lg shadow overflow-hidden">

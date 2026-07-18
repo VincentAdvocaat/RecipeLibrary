@@ -9,6 +9,7 @@
 
 @inject ICommandBus CommandBus
 @inject ShoppingListSessionService ShoppingSession
+@inject MeasureSystemService MeasureSystemService
 @inject NavigationManager Navigation
 @inject HttpClient Http
 
@@ -697,7 +698,10 @@
     }
 
     private string FormatLine(ShoppingListItemDto item) =>
-        ShoppingListDisplayHelper.FormatQuantityLine(item, GetUnitLabel);
+        ShoppingListDisplayHelper.FormatQuantityLine(
+            item,
+            GetUnitLabel,
+            MeasureSystemService.GetMeasureSystem());
 
     private string GetUnitLabel(string? unit)
     {

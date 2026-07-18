@@ -39,6 +39,9 @@
     <EmbeddedResource Include="..\..\..\data\ingredients\curated-ingredients.json"
                       Link="SeedData\curated-ingredients.json"
                       LogicalName="RecipeLibrary.Infrastructure.SeedData.curated-ingredients.json" />
+    <EmbeddedResource Include="..\..\..\data\ingredients\unit-conversions.json"
+                      Link="SeedData\unit-conversions.json"
+                      LogicalName="RecipeLibrary.Infrastructure.SeedData.unit-conversions.json" />
   </ItemGroup>
 
 </Project>

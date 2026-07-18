@@ -29,7 +29,9 @@ public static class PersistenceServiceRegistration
         services.AddScoped<IShoppingListRepository, EfShoppingListRepository>();
         services.AddScoped<IPantryRepository, EfPantryRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+        services.AddScoped<IIngredientUnitConversionStore, EfIngredientUnitConversionStore>();
         services.AddScoped<IngredientCatalogSeeder>();
+        services.AddScoped<IngredientUnitConversionSeeder>();
         return services;
     }
 
@@ -111,5 +113,8 @@ public static class PersistenceServiceRegistration
 
         var seeder = scopedServices.GetRequiredService<IngredientCatalogSeeder>();
         await seeder.SeedAsync(cancellationToken);
+
+        var conversionSeeder = scopedServices.GetRequiredService<IngredientUnitConversionSeeder>();
+        await conversionSeeder.SeedAsync(cancellationToken);
     }
 }

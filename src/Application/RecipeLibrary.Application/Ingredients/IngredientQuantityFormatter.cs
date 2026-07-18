@@ -25,8 +25,13 @@ public static class IngredientQuantityFormatter
         return decimal.Round(quantity, 0, MidpointRounding.AwayFromZero);
     }
 
-    public static string Format(decimal quantity, Unit unit)
+    public static string Format(decimal quantity, Unit unit) =>
+        Format(quantity, unit, CultureInfo.CurrentCulture);
+
+    public static string Format(decimal quantity, Unit unit, CultureInfo culture)
     {
+        ArgumentNullException.ThrowIfNull(culture);
+
         var normalized = Normalize(quantity, unit);
         if (UnitRules.AllowsCulinaryFractions(unit))
         {
@@ -35,10 +40,10 @@ public static class IngredientQuantityFormatter
 
         if (UnitRules.AllowsDecimalQuantity(unit))
         {
-            return normalized.ToString("0.##", CultureInfo.InvariantCulture);
+            return normalized.ToString("0.##", culture);
         }
 
-        return ((long)normalized).ToString(CultureInfo.InvariantCulture);
+        return ((long)normalized).ToString(culture);
     }
 
     public static void ValidateQuantity(decimal quantity, Unit unit)

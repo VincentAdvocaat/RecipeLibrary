@@ -1,0 +1,31 @@
+{
+  "sources": [
+    { "name": "King Arthur" },
+    { "name": "USDA" },
+    { "name": "Manual" }
+  ],
+  "conversions": [
+    { "catalogKey": "flour", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 120, "source": "King Arthur", "externalReference": "Ingredient Weight Chart" },
+    { "catalogKey": "flour", "fromUnit": "Tablespoon", "toUnit": "Gram", "amountFrom": 1, "amountTo": 8, "source": "King Arthur", "externalReference": "Ingredient Weight Chart" },
+    { "catalogKey": "oat-flour", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 92, "source": "King Arthur", "externalReference": "Ingredient Weight Chart" },
+    { "catalogKey": "chickpea-flour", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 85, "source": "USDA", "externalReference": "FDC chickpea flour cup" },
+    { "catalogKey": "butter", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 227, "source": "King Arthur", "externalReference": "Ingredient Weight Chart" },
+    { "catalogKey": "butter", "fromUnit": "Tablespoon", "toUnit": "Gram", "amountFrom": 1, "amountTo": 14, "source": "King Arthur", "externalReference": "Ingredient Weight Chart" },
+    { "catalogKey": "brown-sugar", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 213, "source": "King Arthur", "externalReference": "Ingredient Weight Chart; packed" },
+    { "catalogKey": "cane-sugar", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 198, "source": "King Arthur", "externalReference": "Ingredient Weight Chart; granulated" },
+    { "catalogKey": "icing-sugar", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 113, "source": "King Arthur", "externalReference": "Ingredient Weight Chart; unsifted" },
+    { "catalogKey": "cocoa", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 85, "source": "King Arthur", "externalReference": "Ingredient Weight Chart" },
+    { "catalogKey": "cocoa", "fromUnit": "Tablespoon", "toUnit": "Gram", "amountFrom": 1, "amountTo": 5, "source": "King Arthur", "externalReference": "Ingredient Weight Chart" },
+    { "catalogKey": "milk", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 227, "source": "King Arthur", "externalReference": "Ingredient Weight Chart" },
+    { "catalogKey": "rice", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 185, "source": "USDA", "externalReference": "uncooked white rice cup" },
+    { "catalogKey": "basmati-rice", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 185, "source": "USDA", "externalReference": "uncooked rice cup" },
+    { "catalogKey": "cooked-rice", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 158, "source": "USDA", "externalReference": "cooked white rice cup" },
+    { "catalogKey": "olive-oil", "fromUnit": "Tablespoon", "toUnit": "Gram", "amountFrom": 1, "amountTo": 14, "source": "USDA", "externalReference": "olive oil tablespoon" },
+    { "catalogKey": "olive-oil", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 216, "source": "USDA", "externalReference": "olive oil cup" },
+    { "catalogKey": "salt", "fromUnit": "Teaspoon", "toUnit": "Gram", "amountFrom": 1, "amountTo": 6, "source": "King Arthur", "externalReference": "Ingredient Weight Chart; table salt" },
+    { "catalogKey": "salt", "fromUnit": "Tablespoon", "toUnit": "Gram", "amountFrom": 1, "amountTo": 18, "source": "King Arthur", "externalReference": "Ingredient Weight Chart; table salt" },
+    { "catalogKey": "water", "fromUnit": "Cup", "toUnit": "Gram", "amountFrom": 1, "amountTo": 236, "source": "Manual", "externalReference": "approx density water at room temp" },
+    { "catalogKey": "water", "fromUnit": "Tablespoon", "toUnit": "Gram", "amountFrom": 1, "amountTo": 15, "source": "Manual", "externalReference": "approx density water" },
+    { "catalogKey": "water", "fromUnit": "Teaspoon", "toUnit": "Gram", "amountFrom": 1, "amountTo": 5, "source": "Manual", "externalReference": "approx density water" }
+  ]
+}
