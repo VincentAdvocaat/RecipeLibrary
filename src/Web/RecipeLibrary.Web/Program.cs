@@ -3,7 +3,6 @@ using Azure.Extensions.AspNetCore.DataProtection.Blobs;
 using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -91,12 +90,6 @@ else
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped(sp =>
-{
-    var navigation = sp.GetRequiredService<NavigationManager>();
-    return new HttpClient { BaseAddress = new Uri(navigation.BaseUri) };
-});
 
 // Browser file uploads travel over SignalR; raise the limit for multi-screenshot OCR import.
 builder.Services.Configure<Microsoft.AspNetCore.SignalR.HubOptions>(options =>

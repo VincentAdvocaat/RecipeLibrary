@@ -184,9 +184,12 @@ stages:
                   fi
 
                   if [ "$home_code" = "302" ] && echo "$location" | grep -Eqi '/(starting|failed)(/|$|\?)'; then
-                    echo "App is serving starting/failed page; waiting for persistence Ready..."
                     readiness_body="$(curl --silent --show-error --max-time 60 "$readiness_url" || echo "")"
                     echo "GET /api/system/readiness -> ${readiness_body}"
+                    if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Failed"'; then
+                      echo "Smoke check failed: persistence permanently failed (see /failed and app logs)."
+                      exit 1
+                    fi
                     if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Ready"'; then
                       home_code="$(curl --silent --show-error --max-time 60 -o /dev/null -w "%{http_code}" "$home_url" || echo "000")"
                       echo "GET / (after Ready) -> HTTP ${home_code}"
@@ -194,6 +197,8 @@ stages:
                         echo "Smoke check passed."
                         exit 0
                       fi
+                    else
+                      echo "App is serving starting page; waiting for persistence Ready..."
                     fi
                   fi
 
@@ -316,9 +321,12 @@ stages:
                   fi
 
                   if [ "$home_code" = "302" ] && echo "$location" | grep -Eqi '/(starting|failed)(/|$|\?)'; then
-                    echo "App is serving starting/failed page; waiting for persistence Ready..."
                     readiness_body="$(curl --silent --show-error --max-time 60 "$readiness_url" || echo "")"
                     echo "GET /api/system/readiness -> ${readiness_body}"
+                    if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Failed"'; then
+                      echo "Smoke check failed: persistence permanently failed (see /failed and app logs)."
+                      exit 1
+                    fi
                     if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Ready"'; then
                       home_code="$(curl --silent --show-error --max-time 60 -o /dev/null -w "%{http_code}" "$home_url" || echo "000")"
                       echo "GET / (after Ready) -> HTTP ${home_code}"
@@ -326,6 +334,8 @@ stages:
                         echo "Smoke check passed."
                         exit 0
                       fi
+                    else
+                      echo "App is serving starting page; waiting for persistence Ready..."
                     fi
                   fi
 
