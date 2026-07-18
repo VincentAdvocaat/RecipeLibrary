@@ -91,6 +91,11 @@ When using `azure-pipelines.yml`:
 Cold starts (scale-from-zero + serverless SQL resume) can take several minutes.
 The pipeline smoke check retries for up to ~10 minutes.
 
+Soft readiness: ACA probes use `/health/live` (startup/liveness) and `/health/ready`
+(process can accept HTTP — not database-ready). While SQL wakes up, browsers are
+redirected to `/starting` until `/api/system/readiness` reports `Ready`. Database
+state for operators is available at `/health/database`.
+
 ### 5) Deploy via pipeline (preferred)
 
 After one-time setup in `docs/azure/pipeline-setup.md`, merges to `main` run the

@@ -155,24 +155,48 @@ stages:
                   fqdn="$(az containerapp show --resource-group "$(resourceGroupName)" --name "$(containerAppName)" --query properties.configuration.ingress.fqdn -o tsv)"
                 fi
 
-                health_url="https://${fqdn}/health"
+                health_url="https://${fqdn}/health/live"
                 home_url="https://${fqdn}/"
+                readiness_url="https://${fqdn}/api/system/readiness"
                 echo "Health URL: $health_url"
                 echo "Home URL: $home_url"
+                echo "Readiness URL: $readiness_url"
 
                 max_attempts=30
                 sleep_seconds=20
                 for attempt in $(seq 1 "$max_attempts"); do
                   health_code="$(curl --silent --show-error --max-time 60 -o /dev/null -w "%{http_code}" "$health_url" || echo "000")"
-                  echo "Attempt ${attempt}/${max_attempts}: GET /health -> HTTP ${health_code}"
-                  if [ "$health_code" = "200" ]; then
-                    home_code="$(curl --fail --silent --show-error --max-time 60 -o /dev/null -w "%{http_code}" "$home_url")"
-                    echo "GET / -> HTTP ${home_code}"
-                    if [ "$home_code" = "200" ]; then
-                      echo "Smoke check passed."
-                      exit 0
+                  echo "Attempt ${attempt}/${max_attempts}: GET /health/live -> HTTP ${health_code}"
+                  if [ "$health_code" != "200" ]; then
+                    sleep "$sleep_seconds"
+                    continue
+                  fi
+
+                  home_headers="$(mktemp)"
+                  home_code="$(curl --silent --show-error --max-time 60 -D "$home_headers" -o /dev/null -w "%{http_code}" "$home_url" || echo "000")"
+                  location="$(awk 'tolower($1)=="location:" {print $2}' "$home_headers" | tr -d '\r')"
+                  rm -f "$home_headers"
+                  echo "GET / -> HTTP ${home_code} Location=${location:-none}"
+
+                  if [ "$home_code" = "200" ]; then
+                    echo "Smoke check passed (app ready)."
+                    exit 0
+                  fi
+
+                  if [ "$home_code" = "302" ] && echo "$location" | grep -Eqi '/(starting|failed)(/|$|\?)'; then
+                    echo "App is serving starting/failed page; waiting for persistence Ready..."
+                    readiness_body="$(curl --silent --show-error --max-time 60 "$readiness_url" || echo "")"
+                    echo "GET /api/system/readiness -> ${readiness_body}"
+                    if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Ready"'; then
+                      home_code="$(curl --silent --show-error --max-time 60 -o /dev/null -w "%{http_code}" "$home_url" || echo "000")"
+                      echo "GET / (after Ready) -> HTTP ${home_code}"
+                      if [ "$home_code" = "200" ]; then
+                        echo "Smoke check passed."
+                        exit 0
+                      fi
                     fi
                   fi
+
                   sleep "$sleep_seconds"
                 done
 
@@ -263,24 +287,48 @@ stages:
                   fqdn="$(az containerapp show --resource-group "$(resourceGroupName)" --name "$(containerAppName)" --query properties.configuration.ingress.fqdn -o tsv)"
                 fi
 
-                health_url="https://${fqdn}/health"
+                health_url="https://${fqdn}/health/live"
                 home_url="https://${fqdn}/"
+                readiness_url="https://${fqdn}/api/system/readiness"
                 echo "Health URL: $health_url"
                 echo "Home URL: $home_url"
+                echo "Readiness URL: $readiness_url"
 
                 max_attempts=30
                 sleep_seconds=20
                 for attempt in $(seq 1 "$max_attempts"); do
                   health_code="$(curl --silent --show-error --max-time 60 -o /dev/null -w "%{http_code}" "$health_url" || echo "000")"
-                  echo "Attempt ${attempt}/${max_attempts}: GET /health -> HTTP ${health_code}"
-                  if [ "$health_code" = "200" ]; then
-                    home_code="$(curl --fail --silent --show-error --max-time 60 -o /dev/null -w "%{http_code}" "$home_url")"
-                    echo "GET / -> HTTP ${home_code}"
-                    if [ "$home_code" = "200" ]; then
-                      echo "Smoke check passed."
-                      exit 0
+                  echo "Attempt ${attempt}/${max_attempts}: GET /health/live -> HTTP ${health_code}"
+                  if [ "$health_code" != "200" ]; then
+                    sleep "$sleep_seconds"
+                    continue
+                  fi
+
+                  home_headers="$(mktemp)"
+                  home_code="$(curl --silent --show-error --max-time 60 -D "$home_headers" -o /dev/null -w "%{http_code}" "$home_url" || echo "000")"
+                  location="$(awk 'tolower($1)=="location:" {print $2}' "$home_headers" | tr -d '\r')"
+                  rm -f "$home_headers"
+                  echo "GET / -> HTTP ${home_code} Location=${location:-none}"
+
+                  if [ "$home_code" = "200" ]; then
+                    echo "Smoke check passed (app ready)."
+                    exit 0
+                  fi
+
+                  if [ "$home_code" = "302" ] && echo "$location" | grep -Eqi '/(starting|failed)(/|$|\?)'; then
+                    echo "App is serving starting/failed page; waiting for persistence Ready..."
+                    readiness_body="$(curl --silent --show-error --max-time 60 "$readiness_url" || echo "")"
+                    echo "GET /api/system/readiness -> ${readiness_body}"
+                    if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Ready"'; then
+                      home_code="$(curl --silent --show-error --max-time 60 -o /dev/null -w "%{http_code}" "$home_url" || echo "000")"
+                      echo "GET / (after Ready) -> HTTP ${home_code}"
+                      if [ "$home_code" = "200" ]; then
+                        echo "Smoke check passed."
+                        exit 0
+                      fi
                     fi
                   fi
+
                   sleep "$sleep_seconds"
                 done
 

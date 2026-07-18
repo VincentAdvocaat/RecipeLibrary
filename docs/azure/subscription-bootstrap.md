@@ -212,7 +212,7 @@ service principal client secret.
 2. Confirm the Azure service connection logs into the expected subscription.
 3. Confirm the Bicep deployment succeeds (Container App, SQL, storage).
 4. Apply database-internal grants for the user-assigned managed identity (`docs/azure/sql-grants.sql`).
-5. Re-run the pipeline and confirm the smoke check returns HTTP `200` for `/health` and `/`.
+5. Re-run the pipeline and confirm the smoke check returns HTTP `200` for `/health/live` and eventually `/` (a temporary `302` to `/starting` during SQL wake-up is OK).
 6. Verify the managed identity received Storage Blob Data Contributor on the storage account.
 7. Deploy `infra/cost-guard.bicep` separately with an Owner account (optional but recommended).
 

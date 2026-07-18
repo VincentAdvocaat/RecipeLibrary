@@ -1,0 +1,87 @@
+@page "/failed"
+@attribute [AllowAnonymous]
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject IHttpContextAccessor HttpContextAccessor
+@using System.Net.Http.Json
+@using System.Text.Json.Serialization
+
+<PageTitle>@L["Failed.PageTitle"]</PageTitle>
+
+<div class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+    <div class="max-w-lg w-full bg-white border border-gray-200 rounded-lg p-8 text-center shadow-sm"
+         data-testid="starting-failed">
+        <h1 class="text-2xl font-semibold text-gray-900 mb-3">
+            @L["Failed.Heading"]
+        </h1>
+        <p class="text-gray-600 mb-6">
+            @L["Failed.Message"]
+        </p>
+        <p class="text-sm text-gray-500 mb-2" aria-live="polite">
+            @L["Failed.Status"]
+        </p>
+        @if (!string.IsNullOrWhiteSpace(_traceId))
+        {
+            <p class="text-xs text-gray-400 mb-6 font-mono break-all">
+                @L["Failed.CorrelationId.Label"]: @_traceId
+            </p>
+        }
+        else
+        {
+            <div class="mb-6"></div>
+        }
+        <button type="button"
+                class="px-4 py-2 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
+                @onclick="Retry">
+            @L["Failed.RetryButton"]
+        </button>
+    </div>
+</div>
+
+@code {
+    private string? _traceId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _traceId = HttpContextAccessor.HttpContext?.TraceIdentifier;
+
+        try
+        {
+            var response = await Http.GetFromJsonAsync<SystemReadinessResponse>("api/system/readiness");
+            if (response is not null)
+            {
+                if (string.Equals(response.State, "Ready", StringComparison.OrdinalIgnoreCase))
+                {
+                    Navigation.NavigateTo("/", forceLoad: true);
+                    return;
+                }
+
+                if (string.Equals(response.State, "Starting", StringComparison.OrdinalIgnoreCase))
+                {
+                    Navigation.NavigateTo("/starting", forceLoad: true);
+                    return;
+                }
+
+                if (!string.IsNullOrWhiteSpace(response.TraceId))
+                {
+                    _traceId = response.TraceId;
+                }
+            }
+        }
+        catch (HttpRequestException)
+        {
+            // Keep TraceIdentifier from the current request when the API is unavailable.
+        }
+    }
+
+    private void Retry() => Navigation.NavigateTo("/", forceLoad: true);
+
+    private sealed class SystemReadinessResponse
+    {
+        [JsonPropertyName("state")]
+        public string? State { get; set; }
+
+        [JsonPropertyName("traceId")]
+        public string? TraceId { get; set; }
+    }
+}

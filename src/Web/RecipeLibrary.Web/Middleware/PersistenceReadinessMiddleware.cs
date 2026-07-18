@@ -3,12 +3,14 @@ using RecipeLibrary.Infrastructure.Persistence;
 namespace RecipeLibrary.Web.Middleware;
 
 /// <summary>
-/// Redirects browser requests to the starting page while the database is still warming up.
+/// Redirects browser requests to the starting or failed page while persistence is not ready.
 /// </summary>
 public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
 {
     private static readonly PathString StartingPath = new("/starting");
+    private static readonly PathString FailedPath = new("/failed");
     private static readonly PathString HealthPath = new("/health");
+    private static readonly PathString SystemReadinessPath = new("/api/system/readiness");
     private static readonly PathString CulturePath = new("/culture");
     private static readonly PathString MeasureSystemPath = new("/measure-system");
     private static readonly PathString BlazorPath = new("/_blazor");
@@ -29,7 +31,7 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
             context.Response.Headers.CacheControl = "no-store";
             await context.Response.WriteAsJsonAsync(new
             {
-                status = readiness.HasPermanentlyFailed ? "Failed" : "Starting",
+                status = readiness.State.ToString(),
                 message = readiness.HasPermanentlyFailed
                     ? "The database failed to start. Check application logs."
                     : "The database is starting. Please retry shortly."
@@ -37,12 +39,15 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
             return;
         }
 
-        context.Response.Redirect(StartingPath.Value!);
+        var redirectPath = readiness.HasPermanentlyFailed ? FailedPath.Value! : StartingPath.Value!;
+        context.Response.Redirect(redirectPath);
     }
 
     private static bool IsExempt(PathString path) =>
         path.StartsWithSegments(StartingPath)
+        || path.StartsWithSegments(FailedPath)
         || path.StartsWithSegments(HealthPath)
+        || path.StartsWithSegments(SystemReadinessPath)
         || path.StartsWithSegments(CulturePath)
         || path.StartsWithSegments(MeasureSystemPath)
         || path.StartsWithSegments(BlazorPath)

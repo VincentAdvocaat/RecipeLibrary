@@ -23,6 +23,8 @@ public sealed class PersistenceWarmupHostedService(
         }
 
         var startedAt = TimeProvider.System.GetUtcNow();
+        logger.LogInformation("Application starting (persistence warmup)");
+
         var delay = InitialDelay;
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -30,7 +32,10 @@ public sealed class PersistenceWarmupHostedService(
             {
                 await PersistenceServiceRegistration.EnsurePersistenceMigratedAsync(scopeFactory, stoppingToken);
                 readiness.MarkReady();
-                logger.LogInformation("Database migrations and seed completed; persistence is ready.");
+                var durationSeconds = (TimeProvider.System.GetUtcNow() - startedAt).TotalSeconds;
+                logger.LogInformation(
+                    "Application ready. StartupDurationSeconds={StartupDurationSeconds:0.###}",
+                    durationSeconds);
                 return;
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -40,9 +45,11 @@ public sealed class PersistenceWarmupHostedService(
             catch (Exception ex) when (!SqlTransientExceptionDetector.IsTransient(ex))
             {
                 readiness.MarkPermanentlyFailed();
+                var durationSeconds = (TimeProvider.System.GetUtcNow() - startedAt).TotalSeconds;
                 logger.LogError(
                     ex,
-                    "Database migration failed with a non-transient error. Stopping warmup retries.");
+                    "Application failed. StartupDurationSeconds={StartupDurationSeconds:0.###}",
+                    durationSeconds);
                 return;
             }
             catch (Exception ex)
@@ -53,8 +60,8 @@ public sealed class PersistenceWarmupHostedService(
                     readiness.MarkPermanentlyFailed();
                     logger.LogError(
                         ex,
-                        "Database did not become ready within {MaxWarmupMinutes} minutes. Stopping warmup retries.",
-                        MaxWarmupDuration.TotalMinutes);
+                        "Application failed. StartupDurationSeconds={StartupDurationSeconds:0.###}",
+                        elapsed.TotalSeconds);
                     return;
                 }
 
