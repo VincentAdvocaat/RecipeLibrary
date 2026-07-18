@@ -1,12 +1,21 @@
 @* Molecule: ingredients with quantity and unit for recipe detail. *@
 @namespace RecipeLibrary.Components.Molecules
+@using RecipeLibrary.Application.Ingredients
+@using RecipeLibrary.Domain.ValueObjects
+@using RecipeLibrary.Web.Services
+@inject MeasureSystemService MeasureSystemService
+@inject IngredientQuantityConversionService ConversionService
 
 <div class="@CssClass">
-    <Heading Level="3" CssClass="text-sm font-medium text-gray-900 mb-2">@L["Recipe.Ingredients.SectionLabel"]</Heading>
+    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <Heading Level="3" CssClass="m-0 text-sm font-medium text-gray-900">@L["Recipe.Ingredients.SectionLabel"]</Heading>
+        <MeasureSystemSwitcher />
+    </div>
     <ul class="space-y-1 text-sm text-gray-700">
         @foreach (var item in Items)
         {
-            <li class="flex flex-wrap gap-x-2">
+            var key = ItemKey(item);
+            <li class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 @if (!string.IsNullOrWhiteSpace(FormatMeasure(item)))
                 {
                     <span class="font-medium tabular-nums">@FormatMeasure(item)</span>
@@ -17,14 +26,51 @@
                         <span class="text-gray-500"> (@item.Preparation)</span>
                     }
                 </span>
+                @if (_convertibleKeys.Contains(key))
+                {
+                    <button type="button"
+                            data-testid="@UiTestIds.IngredientConvert"
+                            class="text-xs text-gray-500 underline hover:text-gray-800"
+                            @onclick="() => ConvertAsync(item)">
+                        @L["Recipe.Convert.Button"]
+                    </button>
+                }
+                @if (_estimates.TryGetValue(key, out var estimate))
+                {
+                    <span data-testid="@UiTestIds.IngredientConvertEstimate" class="text-xs text-gray-500 italic">
+                        @estimate
+                    </span>
+                }
             </li>
         }
     </ul>
 </div>
 
 @code {
+    private readonly Dictionary<string, string> _estimates = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _convertibleKeys = new(StringComparer.Ordinal);
+
     [Parameter] public IReadOnlyList<RecipeDetailIngredientItem> Items { get; set; } = [];
     [Parameter] public string? CssClass { get; set; }
+
+    private MeasureSystem MeasureSystem => MeasureSystemService.GetMeasureSystem();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _convertibleKeys.Clear();
+        foreach (var item in Items)
+        {
+            if (!TryCreateConversionRequest(item, out var request))
+            {
+                continue;
+            }
+
+            if (await ConversionService.HasEstimateSourceAsync(request))
+            {
+                _convertibleKeys.Add(ItemKey(item));
+            }
+        }
+    }
 
     private string FormatMeasure(RecipeDetailIngredientItem item)
     {
@@ -33,12 +79,71 @@
             return string.Empty;
         }
 
-        var unit = UnitRules.TryParse(item.Unit, out var parsed) ? parsed : Unit.Unknown;
-        var quantityText = unit == Unit.Unknown
-            ? ((long)decimal.Round(item.Quantity.Value, 0, MidpointRounding.AwayFromZero))
-                .ToString(System.Globalization.CultureInfo.InvariantCulture)
-            : IngredientQuantityFormatter.Format(item.Quantity.Value, unit);
-        return $"{quantityText} {GetUnitLabel(item.Unit)}";
+        if (!UnitRules.TryParse(item.Unit, out var unit) || unit == Unit.Unknown)
+        {
+            var fallback = ((long)decimal.Round(item.Quantity.Value, 0, MidpointRounding.AwayFromZero))
+                .ToString(System.Globalization.CultureInfo.CurrentCulture);
+            return $"{fallback} {GetUnitLabel(item.Unit)}";
+        }
+
+        var (displayQty, displayUnit) = IngredientMeasurePresenter.ApplyMassPresentation(
+            item.Quantity.Value,
+            unit,
+            MeasureSystem);
+        var quantityText = IngredientQuantityFormatter.Format(displayQty, displayUnit);
+        return $"{quantityText} {GetUnitLabel(displayUnit.ToString())}";
+    }
+
+    private async Task ConvertAsync(RecipeDetailIngredientItem item)
+    {
+        var key = ItemKey(item);
+        if (!_convertibleKeys.Contains(key) || !TryCreateConversionRequest(item, out var request))
+        {
+            return;
+        }
+
+        var result = await ConversionService.ConvertToMassAsync(request);
+
+        if (!result.Succeeded)
+        {
+            _estimates[key] = result.IsUnavailable
+                ? L["Recipe.Convert.Unavailable"]
+                : L["Recipe.Convert.Failed"];
+            return;
+        }
+
+        var (displayQty, displayUnit) = IngredientMeasurePresenter.ApplyMassPresentation(
+            result.Quantity,
+            result.Unit,
+            MeasureSystem);
+        var quantityText = IngredientQuantityFormatter.Format(displayQty, displayUnit);
+        var measure = $"{quantityText} {GetUnitLabel(displayUnit.ToString())}";
+        _estimates[key] = string.Format(
+            System.Globalization.CultureInfo.CurrentCulture,
+            L["Recipe.Convert.EstimateLabel"],
+            measure);
+    }
+
+    private static bool TryCreateConversionRequest(
+        RecipeDetailIngredientItem item,
+        out IngredientQuantityConversionRequest request)
+    {
+        request = null!;
+        if (item.Quantity is not > 0
+            || !UnitRules.TryParse(item.Unit, out var unit)
+            || !UnitClassification.IsKitchenMeasure(unit))
+        {
+            return false;
+        }
+
+        request = new IngredientQuantityConversionRequest
+        {
+            CanonicalIngredientId = item.CanonicalIngredientId,
+            IngredientDisplayName = item.Name,
+            FromUnit = unit,
+            Quantity = item.Quantity.Value,
+        };
+        return true;
     }
 
     private string GetUnitLabel(string unit)
@@ -47,4 +152,7 @@
         var localized = L[key];
         return localized.ResourceNotFound ? unit : localized.Value;
     }
+
+    private static string ItemKey(RecipeDetailIngredientItem item) =>
+        $"{item.CanonicalIngredientId:D}|{item.Name}|{item.Quantity}|{item.Unit}|{item.Preparation}";
 }

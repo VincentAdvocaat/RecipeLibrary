@@ -1,0 +1,91 @@
+@* Molecule: metric / imperial measure preference (cookie), independent of UI language. *@
+@namespace RecipeLibrary.Components.Molecules
+@using RecipeLibrary.Domain.ValueObjects
+@using RecipeLibrary.Web.Services
+@inject MeasureSystemService MeasureSystemService
+@inject NavigationManager Navigation
+
+<div class="relative @CssClass">
+    @if (_isOpen)
+    {
+        <button type="button"
+                class="fixed inset-0 z-10 cursor-default"
+                tabindex="-1"
+                aria-hidden="true"
+                @onclick="Close"></button>
+    }
+    <button type="button"
+            id="measure-system-select"
+            data-testid="@UiTestIds.MeasureSystemSwitcher"
+            class="relative z-20 inline-flex items-center gap-2 rounded border border-gray-300 bg-white py-1.5 pl-2.5 pr-8 text-sm text-gray-700 hover:bg-gray-50 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+            aria-haspopup="listbox"
+            aria-expanded="@_isOpen"
+            aria-label="@L["Settings.MeasureSystem.AriaLabel"]"
+            @onclick="Toggle">
+        <span>@CurrentLabel</span>
+        <span class="pointer-events-none absolute right-2 text-gray-400" aria-hidden="true">
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.24 4.5a.75.75 0 01-1.08 0l-4.24-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+            </svg>
+        </span>
+    </button>
+    @if (_isOpen)
+    {
+        <ul class="absolute right-0 z-20 mt-1 min-w-full list-none rounded border border-gray-300 bg-white py-1 shadow-lg"
+            role="listbox"
+            aria-labelledby="measure-system-select">
+            @foreach (var option in Options)
+            {
+                <li role="presentation">
+                    <button type="button"
+                            data-testid="@(option.System == MeasureSystem.Metric ? UiTestIds.MeasureSystemMetric : UiTestIds.MeasureSystemImperial)"
+                            class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm @(option.System == Current ? "bg-gray-100 font-medium text-gray-900" : "text-gray-700 hover:bg-gray-50")"
+                            role="option"
+                            aria-selected="@(option.System == Current)"
+                            @onclick="() => Select(option.System)">
+                        <span>@option.Label</span>
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    private bool _isOpen;
+
+    [Parameter] public string? CssClass { get; set; }
+
+    private MeasureSystem Current => MeasureSystemService.GetMeasureSystem();
+
+    private string CurrentLabel =>
+        Current == MeasureSystem.Imperial
+            ? L["Settings.MeasureSystem.Imperial"]
+            : L["Settings.MeasureSystem.Metric"];
+
+    private MeasureOption[] Options =>
+    [
+        new(MeasureSystem.Metric, L["Settings.MeasureSystem.Metric"]),
+        new(MeasureSystem.Imperial, L["Settings.MeasureSystem.Imperial"]),
+    ];
+
+    private void Toggle() => _isOpen = !_isOpen;
+    private void Close() => _isOpen = false;
+
+    private void Select(MeasureSystem system)
+    {
+        Close();
+        if (system == Current)
+        {
+            return;
+        }
+
+        var returnPath = new Uri(Navigation.Uri).PathAndQuery;
+        var redirectUri = Uri.EscapeDataString(returnPath);
+        Navigation.NavigateTo(
+            $"/measure-system/set?system={system}&redirectUri={redirectUri}",
+            forceLoad: true);
+    }
+
+    private sealed record MeasureOption(MeasureSystem System, string Label);
+}

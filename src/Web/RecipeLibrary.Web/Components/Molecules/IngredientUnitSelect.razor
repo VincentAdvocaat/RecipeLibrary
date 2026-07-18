@@ -1,10 +1,13 @@
-@* Molecule: localized unit dropdown (value = enum name); empty = unmeasured. *@
+@* Molecule: localized unit dropdown (value = enum name); empty = unmeasured.
+   Mass options follow the user's MeasureSystem preference (cookie). *@
 @using RecipeLibrary.Domain.ValueObjects
+@using RecipeLibrary.Web.Services
 @namespace RecipeLibrary.Components.Molecules
+@inject MeasureSystemService MeasureSystemService
 
 <InputSelect class="@CssClass" @bind-Value="UnitName" @bind-Value:after="OnAfterChangeAsync">
     <option value="">@L["RecipeCreate.Ingredient.Unit.Unmeasured"]</option>
-    @foreach (var unit in UnitRules.SelectableUnitNames)
+    @foreach (var unit in UnitOptions)
     {
         <option value="@unit">@L[$"Recipe.Unit.{unit}"]</option>
     }
@@ -15,6 +18,9 @@
     [Parameter] public EventCallback<string?> UnitNameChanged { get; set; }
     [Parameter] public EventCallback UnitNameChangedAfter { get; set; }
     [Parameter] public string? CssClass { get; set; }
+
+    private IReadOnlyList<string> UnitOptions =>
+        UnitRules.SelectableUnitNamesFor(MeasureSystemService.GetMeasureSystem(), UnitName);
 
     private async Task OnAfterChangeAsync()
     {

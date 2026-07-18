@@ -21,6 +21,10 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
     public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
     public DbSet<ShoppingListItemSource> ShoppingListItemSources => Set<ShoppingListItemSource>();
     public DbSet<PantryItem> PantryItems => Set<PantryItem>();
+    public DbSet<ConversionSource> ConversionSources => Set<ConversionSource>();
+    public DbSet<IngredientUnitConversion> IngredientUnitConversions => Set<IngredientUnitConversion>();
+    public DbSet<IngredientUnitConversionSuggestion> IngredientUnitConversionSuggestions =>
+        Set<IngredientUnitConversionSuggestion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,6 +39,10 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
         var nullableUnitConverter = new ValueConverter<Unit?, string?>(
             v => v.HasValue ? v.Value.ToString() : null,
             v => string.IsNullOrWhiteSpace(v) ? null : Enum.Parse<Unit>(v));
+
+        var unitConverter = new ValueConverter<Unit, string>(
+            v => v.ToString(),
+            v => Enum.Parse<Unit>(v));
 
         modelBuilder.Entity<Recipe>(b =>
         {
@@ -242,6 +250,122 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
             b.HasOne(x => x.MatchedIngredient)
                 .WithMany()
                 .HasForeignKey(x => x.MatchedIngredientId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ConversionSource>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.ToTable("ConversionSources");
+
+            b.Property(x => x.Name)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            b.HasIndex(x => x.Name)
+                .IsUnique();
+        });
+
+        modelBuilder.Entity<IngredientUnitConversion>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.ToTable("IngredientUnitConversions");
+
+            b.Property(x => x.FromUnit)
+                .HasConversion(unitConverter)
+                .HasMaxLength(32)
+                .IsRequired();
+
+            b.Property(x => x.ToUnit)
+                .HasConversion(unitConverter)
+                .HasMaxLength(32)
+                .IsRequired();
+
+            b.Property(x => x.AmountFrom)
+                .HasPrecision(18, 6)
+                .IsRequired();
+
+            b.Property(x => x.AmountTo)
+                .HasPrecision(18, 6)
+                .IsRequired();
+
+            b.Property(x => x.Origin)
+                .HasConversion<string>()
+                .HasMaxLength(32)
+                .IsRequired();
+
+            b.Property(x => x.ExternalReference)
+                .HasMaxLength(500);
+
+            b.Property(x => x.Notes)
+                .HasMaxLength(1000);
+
+            b.Property(x => x.CreatedAt)
+                .IsRequired();
+
+            b.HasIndex(x => new { x.CanonicalIngredientId, x.FromUnit, x.ToUnit, x.ConversionSourceId })
+                .IsUnique();
+
+            b.HasOne(x => x.CanonicalIngredient)
+                .WithMany()
+                .HasForeignKey(x => x.CanonicalIngredientId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne(x => x.ConversionSource)
+                .WithMany()
+                .HasForeignKey(x => x.ConversionSourceId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<IngredientUnitConversionSuggestion>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.ToTable("IngredientUnitConversionSuggestions");
+
+            b.Property(x => x.IngredientDisplayName)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            b.Property(x => x.FromUnit)
+                .HasConversion(unitConverter)
+                .HasMaxLength(32)
+                .IsRequired();
+
+            b.Property(x => x.ToUnit)
+                .HasConversion(unitConverter)
+                .HasMaxLength(32)
+                .IsRequired();
+
+            b.Property(x => x.AmountFrom)
+                .HasPrecision(18, 6)
+                .IsRequired();
+
+            b.Property(x => x.AmountTo)
+                .HasPrecision(18, 6)
+                .IsRequired();
+
+            b.Property(x => x.Status)
+                .HasConversion<string>()
+                .HasMaxLength(32)
+                .IsRequired();
+
+            b.Property(x => x.Model)
+                .HasMaxLength(100);
+
+            b.Property(x => x.ExternalReference)
+                .HasMaxLength(500);
+
+            b.Property(x => x.Notes)
+                .HasMaxLength(1000);
+
+            b.Property(x => x.CreatedAt)
+                .IsRequired();
+
+            b.HasIndex(x => new { x.CanonicalIngredientId, x.FromUnit, x.ToUnit, x.Status });
+
+            b.HasOne(x => x.CanonicalIngredient)
+                .WithMany()
+                .HasForeignKey(x => x.CanonicalIngredientId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 

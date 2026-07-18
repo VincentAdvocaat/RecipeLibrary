@@ -1,3 +1,4 @@
+using System.Globalization;
 using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Domain.ValueObjects;
 using Xunit;
@@ -93,21 +94,43 @@ public sealed class IngredientQuantityFormatterTests
     [Theory]
     [InlineData(0.5, Unit.Cup, "½")]
     [InlineData(0.25, Unit.Piece, "¼")]
-    [InlineData(1.5, Unit.Ounce, "1½")]
-    public void Format_UsesCulinaryFractions_ForCupPieceAndOunce(decimal quantity, Unit unit, string expected)
+    public void Format_UsesCulinaryFractions_ForCupAndPiece(decimal quantity, Unit unit, string expected)
     {
         Assert.Equal(expected, IngredientQuantityFormatter.Format(quantity, unit));
     }
 
     [Fact]
+    public void Format_KeepsDecimal_ForOunce()
+    {
+        Assert.Equal(
+            "1.5",
+            IngredientQuantityFormatter.Format(1.5m, Unit.Ounce, CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
     public void Format_KeepsDecimal_ForPound()
     {
-        Assert.Equal("1.3", IngredientQuantityFormatter.Format(1.3m, Unit.Pound));
+        Assert.Equal(
+            "1.3",
+            IngredientQuantityFormatter.Format(1.3m, Unit.Pound, CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public void Format_UsesCurrentCulture_ForDecimals()
+    {
+        var nl = new CultureInfo("nl-NL");
+        Assert.Equal("1,3", IngredientQuantityFormatter.Format(1.3m, Unit.Pound, nl));
     }
 
     [Fact]
     public void ValidateQuantity_AllowsDecimal_ForPound()
     {
         IngredientQuantityFormatter.ValidateQuantity(1.3m, Unit.Pound);
+    }
+
+    [Fact]
+    public void ValidateQuantity_AllowsDecimal_ForOunce()
+    {
+        IngredientQuantityFormatter.ValidateQuantity(1.5m, Unit.Ounce);
     }
 }

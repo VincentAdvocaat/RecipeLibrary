@@ -176,6 +176,13 @@
   <data name="Common.Remove.AriaLabel" xml:space="preserve"><value>Verwijderen</value></data>
   <data name="Common.Menu.AriaLabel" xml:space="preserve"><value>Menu</value></data>
   <data name="Language.Selector.AriaLabel" xml:space="preserve"><value>Taal kiezen</value></data>
+  <data name="Settings.MeasureSystem.AriaLabel" xml:space="preserve"><value>Meetsysteem kiezen</value></data>
+  <data name="Settings.MeasureSystem.Metric" xml:space="preserve"><value>Metriek</value></data>
+  <data name="Settings.MeasureSystem.Imperial" xml:space="preserve"><value>Imperial</value></data>
+  <data name="Recipe.Convert.Button" xml:space="preserve"><value>Reken om</value></data>
+  <data name="Recipe.Convert.EstimateLabel" xml:space="preserve"><value>ongeveer {0}</value></data>
+  <data name="Recipe.Convert.Unavailable" xml:space="preserve"><value>Geen schatting beschikbaar</value></data>
+  <data name="Recipe.Convert.Failed" xml:space="preserve"><value>Kon deze maat niet schatten</value></data>
   <data name="Error.PageTitle" xml:space="preserve"><value>Fout</value></data>
   <data name="Error.Heading" xml:space="preserve"><value>Fout.</value></data>
   <data name="Error.Subheading" xml:space="preserve"><value>Er is een fout opgetreden bij het verwerken van uw verzoek.</value></data>

@@ -155,7 +155,7 @@ The JSON is linked into Infrastructure as an **embedded resource** (`RecipeLibra
 | `names.en[0]` | `IngredientTranslation` (`LanguageCode = en`, `DisplayName`) |
 | `names.en[1…]` | `IngredientTranslationAlias` under the EN translation |
 
-Quantity and unit stay on **recipe lines** (`RecipeIngredients`), not on the catalog entity.
+Quantity and unit stay on **recipe lines** (`RecipeIngredients`), not on the catalog entity. Ingredient-specific kitchen→mass conversion factors belong conceptually to `CanonicalIngredient` (see [units.md](units.md)); they do not rewrite stored recipe measures.
 
 ## Runtime seeding (after Migrate)
 

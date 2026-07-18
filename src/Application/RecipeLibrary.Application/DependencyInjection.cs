@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<HtmlRecipeTextExtractor>();
         services.AddScoped<RecipeTextParser>();
         services.AddScoped<RecipeImportService>();
+        services.AddScoped<IngredientQuantityConversionService>();
         services.AddScoped<IQueryHandler<ImportRecipeContentQuery, ImportRecipeResult>, ImportRecipeContentQueryHandler>();
         services.AddScoped<IQueryHandler<ImportRecipeFromUrlQuery, ImportRecipeResult>, ImportRecipeFromUrlQueryHandler>();
         services.AddScoped<IQueryHandler<ImportRecipeFromImageQuery, ImportRecipeResult>, ImportRecipeFromImageQueryHandler>();

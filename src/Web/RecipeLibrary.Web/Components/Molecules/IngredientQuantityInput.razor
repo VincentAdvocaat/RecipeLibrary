@@ -84,6 +84,7 @@ else
         else if (_allowsDecimalQuantity && parsedUnit is Unit decimalUnit)
         {
             var normalized = q <= 0 ? 1m : IngredientQuantityFormatter.Normalize(q, decimalUnit);
+            // HTML type=number expects invariant decimals (dot), not locale commas.
             _decimalDisplay = normalized.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
         }
         else

@@ -10,6 +10,7 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
     private static readonly PathString StartingPath = new("/starting");
     private static readonly PathString HealthPath = new("/health");
     private static readonly PathString CulturePath = new("/culture");
+    private static readonly PathString MeasureSystemPath = new("/measure-system");
     private static readonly PathString BlazorPath = new("/_blazor");
     private static readonly PathString FrameworkPath = new("/_framework");
     private static readonly PathString ContentPath = new("/_content");
@@ -43,6 +44,7 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
         path.StartsWithSegments(StartingPath)
         || path.StartsWithSegments(HealthPath)
         || path.StartsWithSegments(CulturePath)
+        || path.StartsWithSegments(MeasureSystemPath)
         || path.StartsWithSegments(BlazorPath)
         || path.StartsWithSegments(FrameworkPath)
         || path.StartsWithSegments(ContentPath)

@@ -9,6 +9,7 @@
 
 @inject ICommandBus CommandBus
 @inject ShoppingListSessionService ShoppingSession
+@inject MeasureSystemService MeasureSystemService
 @inject NavigationManager Navigation
 @inject HttpClient Http
 
@@ -63,14 +64,17 @@
                         }
                         else
                         {
-                            <Heading Level="2" CssClass="m-0 text-lg">@_activeList.Name</Heading>
-                            <button type="button"
-                                    data-testid="@UiTestIds.ListRename"
-                                    class="text-sm text-gray-600 hover:text-gray-900"
-                                    @onclick="StartEditName">
-                                @L["ShoppingList.EditName.Button"]
-                            </button>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <Heading Level="2" CssClass="m-0 text-lg">@_activeList.Name</Heading>
+                                <button type="button"
+                                        data-testid="@UiTestIds.ListRename"
+                                        class="text-sm text-gray-600 hover:text-gray-900"
+                                        @onclick="StartEditName">
+                                    @L["ShoppingList.EditName.Button"]
+                                </button>
+                            </div>
                         }
+                        <MeasureSystemSwitcher />
                     </div>
 
                     @if (_splitMode && _group.Lists.Count == 1)
@@ -697,7 +701,10 @@
     }
 
     private string FormatLine(ShoppingListItemDto item) =>
-        ShoppingListDisplayHelper.FormatQuantityLine(item, GetUnitLabel);
+        ShoppingListDisplayHelper.FormatQuantityLine(
+            item,
+            GetUnitLabel,
+            MeasureSystemService.GetMeasureSystem());
 
     private string GetUnitLabel(string? unit)
     {
