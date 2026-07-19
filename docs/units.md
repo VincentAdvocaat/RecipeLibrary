@@ -115,6 +115,7 @@ Curated rows are seeded from `data/ingredients/unit-conversions.json` (King Arth
 - Optional “convert” → approximate mass (then apply presentation); AI results stay as `Pending` suggestions.
 - Label as an estimate; do not rewrite the recipe line.
 - Pending suggestions are unique per ingredient + direction; display names are normalized (trim + lowercase).
+- The uniqueness migration normalizes existing display names and keeps the newest Pending row when duplicates exist, then creates the filtered unique indexes.
 
 ### Import → editor
 

@@ -102,7 +102,54 @@ public sealed class IngredientQuantityConversionServiceTests
         Assert.Equal("AiSuggestion", result.Provenance);
         Assert.Single(store.AddedSuggestions);
         Assert.Equal(ConversionSuggestionStatus.Pending, store.AddedSuggestions[0].Status);
+        Assert.Equal("rice", store.AddedSuggestions[0].IngredientDisplayName);
         Assert.Empty(store.AddedConversions);
+    }
+
+    [Fact]
+    public async Task ConvertToMassAsync_AiAddOrGet_ReturnsExistingAmounts_OnDuplicatePending()
+    {
+        var existingId = Guid.NewGuid();
+        var store = new FakeStore();
+        // Simulate a raced insert that already won uniqueness before this AI proposal is stored.
+        store.SeedPending(new IngredientUnitConversionSuggestion
+        {
+            Id = existingId,
+            IngredientDisplayName = "mystery spice",
+            FromUnit = Unit.Teaspoon,
+            ToUnit = Unit.Gram,
+            AmountFrom = 1,
+            AmountTo = 3,
+            Status = ConversionSuggestionStatus.Pending,
+            CreatedAt = DateTimeOffset.UtcNow,
+        });
+        // Clear the pre-AI pending lookup so Convert falls through to AI, then AddOrGet.
+        store.ClearPendingLookup();
+
+        var ai = new FakeAi
+        {
+            Proposal = new IngredientUnitConversionAiProposal
+            {
+                AmountFrom = 1,
+                FromUnit = Unit.Teaspoon,
+                AmountTo = 99,
+                ToUnit = Unit.Gram,
+            },
+        };
+
+        var sut = CreateSut(store, aiEnabled: true, ai);
+        var result = await sut.ConvertToMassAsync(new IngredientQuantityConversionRequest
+        {
+            IngredientDisplayName = "Mystery Spice",
+            FromUnit = Unit.Teaspoon,
+            Quantity = 2m,
+        });
+
+        Assert.True(result.Succeeded);
+        Assert.True(ai.Called);
+        Assert.Equal(6m, result.Quantity); // 2 * (3/1) from existing pending, not 99
+        Assert.Empty(store.AddedSuggestions);
+        Assert.Equal(existingId, store.LastAddOrGetReturned!.Id);
     }
 
     [Fact]
@@ -280,9 +327,22 @@ public sealed class IngredientQuantityConversionServiceTests
 
     private sealed class FakeStore : IIngredientUnitConversionStore
     {
+        private readonly List<IngredientUnitConversionSuggestion> _pendingRows = [];
+        private bool _includePendingInLookup = true;
+
         public List<IngredientUnitConversion> Conversions { get; init; } = [];
 
-        public IngredientUnitConversionSuggestion? Pending { get; init; }
+        public IngredientUnitConversionSuggestion? Pending
+        {
+            get => _pendingRows.FirstOrDefault();
+            init
+            {
+                if (value is not null)
+                {
+                    _pendingRows.Add(CloneNormalized(value));
+                }
+            }
+        }
 
         public Guid ManualSourceId { get; init; } = Guid.NewGuid();
 
@@ -290,9 +350,16 @@ public sealed class IngredientQuantityConversionServiceTests
 
         public List<IngredientUnitConversion> AddedConversions { get; } = [];
 
+        public IngredientUnitConversionSuggestion? LastAddOrGetReturned { get; private set; }
+
         public int ConversionBatchCalls { get; private set; }
 
         public int PendingBatchCalls { get; private set; }
+
+        public void SeedPending(IngredientUnitConversionSuggestion suggestion) =>
+            _pendingRows.Add(CloneNormalized(suggestion));
+
+        public void ClearPendingLookup() => _includePendingInLookup = false;
 
         public Task<IReadOnlyList<IngredientUnitConversion>> GetConversionsAsync(
             Guid canonicalIngredientId,
@@ -326,27 +393,12 @@ public sealed class IngredientQuantityConversionServiceTests
             Unit toUnit,
             CancellationToken ct = default)
         {
-            if (Pending is null
-                || Pending.FromUnit != fromUnit
-                || Pending.ToUnit != toUnit)
+            if (!_includePendingInLookup)
             {
                 return Task.FromResult<IngredientUnitConversionSuggestion?>(null);
             }
 
-            if (canonicalIngredientId is Guid id)
-            {
-                return Task.FromResult(
-                    Pending.CanonicalIngredientId == id ? Pending : null);
-            }
-
-            return Task.FromResult(
-                Pending.CanonicalIngredientId is null
-                && string.Equals(
-                    Pending.IngredientDisplayName,
-                    displayName.Trim(),
-                    StringComparison.OrdinalIgnoreCase)
-                    ? Pending
-                    : null);
+            return Task.FromResult(FindPending(canonicalIngredientId, displayName, fromUnit, toUnit));
         }
 
         public Task<IReadOnlyList<IngredientUnitConversionSuggestion>> GetPendingSuggestionsBatchAsync(
@@ -357,21 +409,49 @@ public sealed class IngredientQuantityConversionServiceTests
             CancellationToken ct = default)
         {
             PendingBatchCalls++;
-            if (Pending is null
-                || !fromUnits.Contains(Pending.FromUnit)
-                || Pending.ToUnit != toUnit)
+            if (!_includePendingInLookup)
             {
                 return Task.FromResult<IReadOnlyList<IngredientUnitConversionSuggestion>>([]);
             }
 
-            return Task.FromResult<IReadOnlyList<IngredientUnitConversionSuggestion>>([Pending]);
+            var normalizedNames = displayNamesWithoutCanonical
+                .Select(NormalizeDisplayName)
+                .Where(static n => n.Length > 0)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var matches = _pendingRows.Where(p =>
+                p.Status == ConversionSuggestionStatus.Pending
+                && fromUnits.Contains(p.FromUnit)
+                && p.ToUnit == toUnit
+                && (
+                    (p.CanonicalIngredientId is Guid id && canonicalIngredientIds.Contains(id))
+                    || (p.CanonicalIngredientId is null && normalizedNames.Contains(p.IngredientDisplayName))
+                )).ToList();
+
+            return Task.FromResult<IReadOnlyList<IngredientUnitConversionSuggestion>>(matches);
         }
 
         public Task<IngredientUnitConversionSuggestion> AddOrGetPendingSuggestionAsync(
             IngredientUnitConversionSuggestion suggestion,
             CancellationToken ct = default)
         {
+            suggestion.IngredientDisplayName = NormalizeDisplayName(suggestion.IngredientDisplayName);
+
+            // Always consult stored rows (race/uniqueness), even when Convert skipped pre-AI lookup.
+            var existing = FindPending(
+                suggestion.CanonicalIngredientId,
+                suggestion.IngredientDisplayName,
+                suggestion.FromUnit,
+                suggestion.ToUnit);
+            if (existing is not null)
+            {
+                LastAddOrGetReturned = existing;
+                return Task.FromResult(existing);
+            }
+
+            _pendingRows.Add(suggestion);
             AddedSuggestions.Add(suggestion);
+            LastAddOrGetReturned = suggestion;
             return Task.FromResult(suggestion);
         }
 
@@ -392,5 +472,44 @@ public sealed class IngredientQuantityConversionServiceTests
 
         public Task<Guid?> FindCanonicalIngredientIdByCatalogKeyAsync(string catalogKey, CancellationToken ct = default) =>
             Task.FromResult<Guid?>(null);
+
+        private IngredientUnitConversionSuggestion? FindPending(
+            Guid? canonicalIngredientId,
+            string displayName,
+            Unit fromUnit,
+            Unit toUnit)
+        {
+            var normalizedName = NormalizeDisplayName(displayName);
+            return _pendingRows.FirstOrDefault(p =>
+                p.Status == ConversionSuggestionStatus.Pending
+                && p.FromUnit == fromUnit
+                && p.ToUnit == toUnit
+                && (
+                    canonicalIngredientId is Guid id
+                        ? p.CanonicalIngredientId == id
+                        : p.CanonicalIngredientId is null
+                          && string.Equals(p.IngredientDisplayName, normalizedName, StringComparison.Ordinal)
+                ));
+        }
+
+        private static IngredientUnitConversionSuggestion CloneNormalized(IngredientUnitConversionSuggestion value) =>
+            new()
+            {
+                Id = value.Id,
+                CanonicalIngredientId = value.CanonicalIngredientId,
+                IngredientDisplayName = NormalizeDisplayName(value.IngredientDisplayName),
+                FromUnit = value.FromUnit,
+                ToUnit = value.ToUnit,
+                AmountFrom = value.AmountFrom,
+                AmountTo = value.AmountTo,
+                Status = value.Status,
+                Model = value.Model,
+                Notes = value.Notes,
+                ExternalReference = value.ExternalReference,
+                CreatedAt = value.CreatedAt,
+            };
+
+        private static string NormalizeDisplayName(string? displayName) =>
+            (displayName ?? string.Empty).Trim().ToLowerInvariant();
     }
 }
