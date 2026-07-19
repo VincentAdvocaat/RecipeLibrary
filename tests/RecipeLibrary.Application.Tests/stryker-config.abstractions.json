@@ -1,0 +1,20 @@
+{
+  "stryker-config": {
+    "project": "RecipeLibrary.Application.Abstractions.csproj",
+    "mutate": [
+      "**/RecipeImportUrlSafety.cs"
+    ],
+    "reporters": [
+      "html",
+      "json",
+      "cleartext",
+      "progress"
+    ],
+    "thresholds": {
+      "high": 80,
+      "low": 60,
+      "break": 0
+    },
+    "verbosity": "info"
+  }
+}

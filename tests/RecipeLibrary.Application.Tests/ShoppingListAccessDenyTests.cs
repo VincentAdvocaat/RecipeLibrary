@@ -164,4 +164,70 @@ public sealed class ShoppingListAccessDenyTests
         Assert.True(result.Cleared);
         Assert.Equal(listId, repo.LastClearedListId);
     }
+
+    [Fact]
+    public async Task AnonymousUser_SkipsGroupAccessCheck_AndReturnsSummary()
+    {
+        var groupId = Guid.NewGuid();
+        var repo = new RecordingShoppingListRepository
+        {
+            AccessibleByDefault = false,
+            UncheckedItemCount = 3,
+        };
+        var sut = new GetShoppingListSummaryQueryHandler(repo, new AnonymousShoppingListUserContext());
+
+        var result = await sut.HandleAsync(new GetShoppingListSummaryQuery { GroupId = groupId });
+
+        Assert.Equal(3, result.UncheckedItemCount);
+    }
+
+    [Fact]
+    public async Task AnonymousUser_SkipsItemAccessCheck_AndToggles()
+    {
+        var itemId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        var repo = new RecordingShoppingListRepository
+        {
+            AccessibleByDefault = false,
+            Item = new ShoppingListItem
+            {
+                Id = itemId,
+                ShoppingListId = listId,
+                DisplayName = "Melk",
+                Quantity = new Quantity(1),
+                Unit = Unit.Piece,
+            },
+        };
+        var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousShoppingListUserContext());
+
+        var result = await sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true });
+
+        Assert.True(result.IsChecked);
+        Assert.Equal(itemId, repo.LastToggledItemId);
+    }
+
+    [Fact]
+    public async Task AnonymousUser_SkipsItemLookup_WhenItemMissing()
+    {
+        // Anonymous mode must short-circuit before GetItemById; otherwise a missing item throws.
+        var itemId = Guid.NewGuid();
+        var repo = new RecordingShoppingListRepository { AccessibleByDefault = false };
+        var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousShoppingListUserContext());
+
+        var exception = await Record.ExceptionAsync(() =>
+            sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true }));
+
+        Assert.Null(exception);
+        Assert.Equal(itemId, repo.LastToggledItemId);
+    }
+
+    [Fact]
+    public async Task ToggleItem_Throws_WhenItemMissing_ForAuthenticatedUser()
+    {
+        var repo = new RecordingShoppingListRepository { AccessibleByDefault = false };
+        var sut = new ToggleShoppingListItemCommandHandler(repo, new FixedShoppingListUserContext(UserB));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = Guid.NewGuid(), IsChecked = true }));
+    }
 }

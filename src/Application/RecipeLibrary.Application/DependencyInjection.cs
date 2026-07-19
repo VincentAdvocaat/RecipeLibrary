@@ -38,7 +38,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<AddIngredientTagsCommand, AddIngredientTagsResult>, AddIngredientTagsCommandHandler>();
         services.AddScoped<IQueryHandler<SearchTagsQuery, IReadOnlyList<TagLookupItem>>, SearchTagsQueryHandler>();
         services.AddScoped<IngredientMatcher>();
-        services.AddSingleton<IngredientSimilarityScorer>();
+        services.AddSingleton<IIngredientSimilarityScorer, IngredientSimilarityScorer>();
         services.AddScoped<IngredientNameParser>();
         services.AddScoped<IngredientLineResolver>();
         services.AddScoped<ShoppingListIngredientMerger>();

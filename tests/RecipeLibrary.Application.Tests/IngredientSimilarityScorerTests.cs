@@ -24,17 +24,46 @@ public sealed class IngredientSimilarityScorerTests
     }
 
     [Fact]
-    public void Score_ReturnsSharedTokenBoost_WhenInputMatchesCandidateToken()
+    public void Score_ReturnsZero_WhenEitherSideIsEmpty()
+    {
+        Assert.Equal(0m, _sut.Score("", "gember"));
+        Assert.Equal(0m, _sut.Score("gember", ""));
+        Assert.Equal(0m, _sut.Score("", ""));
+    }
+
+    [Fact]
+    public void Score_ReturnsOne_ForExactMatch()
+    {
+        Assert.Equal(1m, _sut.Score("tomaat", "tomaat"));
+    }
+
+    [Fact]
+    public void Score_IsAtLeastSharedTokenBoost_WhenInputMatchesCandidateToken()
     {
         var score = _sut.Score("gehakt", "runder gehakt");
         Assert.True(score >= IngredientSimilarityScorer.SharedExactTokenBoost);
     }
 
     [Fact]
-    public void Score_ReturnsSubsetBoost_WhenCandidateTokensAreContainedInInput()
+    public void Score_IsAtLeastSubsetBoost_WhenCandidateTokensAreContainedInInput()
     {
         var score = _sut.Score("runder gehakt", "gehakt");
         Assert.True(score >= IngredientSimilarityScorer.CandidateSubsetBoost);
+    }
+
+    [Fact]
+    public void Score_ReturnsOne_WhenSharedExactTokenExists()
+    {
+        // Exact token overlap yields 1 via per-token similarity (boost constants are dominated by Max).
+        Assert.Equal(1m, _sut.Score("gehakt", "runder gehakt"));
+        Assert.Equal(1m, _sut.Score("runder gehakt", "gehakt"));
+    }
+
+    [Fact]
+    public void BoostConstants_MatchDocumentedValues()
+    {
+        Assert.Equal(0.72m, IngredientSimilarityScorer.SharedExactTokenBoost);
+        Assert.Equal(0.78m, IngredientSimilarityScorer.CandidateSubsetBoost);
     }
 
     [Fact]
@@ -42,5 +71,18 @@ public sealed class IngredientSimilarityScorerTests
     {
         var score = _sut.Score("xyzabc123", "gember");
         Assert.True(score < IngredientMatcher.SuggestionMinScore);
+    }
+
+    [Fact]
+    public void StringSimilarity_ReturnsOne_ForIdenticalStrings()
+    {
+        Assert.Equal(1m, IngredientSimilarityScorer.StringSimilarity("gember", "gember"));
+    }
+
+    [Fact]
+    public void StringSimilarity_ReturnsZero_WhenEitherSideIsEmpty()
+    {
+        Assert.Equal(0m, IngredientSimilarityScorer.StringSimilarity("", "gember"));
+        Assert.Equal(0m, IngredientSimilarityScorer.StringSimilarity("gember", ""));
     }
 }

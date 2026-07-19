@@ -12,6 +12,10 @@ parameters:
   displayName: Deploy NEU (North Europe) - optional manual deploy
   type: boolean
   default: false
+- name: runStryker
+  displayName: Run Stryker mutation pilot (opt-in, report-only)
+  type: boolean
+  default: false
 
 variables:
   buildConfiguration: Release
@@ -72,6 +76,41 @@ stages:
       name: PublishImage
       displayName: Publish container image to GHCR
       condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
+
+# Opt-in Stryker is a separate stage so failures never block Build → Deploy.
+- stage: Stryker
+  displayName: Stryker mutation pilot (opt-in)
+  dependsOn: []
+  condition: eq(${{ parameters.runStryker }}, true)
+  jobs:
+  - job: StrykerPilot
+    displayName: Stryker mutation pilot
+    steps:
+    - task: UseDotNet@2
+      displayName: Use .NET 10 SDK
+      inputs:
+        packageType: sdk
+        version: 10.x
+
+    - script: |
+        set -euo pipefail
+        dotnet tool restore
+        pwsh -File ./scripts/run-stryker.ps1
+      displayName: Run Stryker pilot
+
+    - script: |
+        set -euo pipefail
+        mkdir -p tests/RecipeLibrary.Application.Tests/StrykerOutput
+      displayName: Ensure Stryker output directory
+      condition: succeededOrFailed()
+
+    - task: PublishPipelineArtifact@1
+      displayName: Publish Stryker reports
+      condition: succeededOrFailed()
+      continueOnError: true
+      inputs:
+        targetPath: tests/RecipeLibrary.Application.Tests/StrykerOutput
+        artifact: stryker-reports
 
 # SEC deploys automatically after Build on main (uses existing environment test-sec).
 - stage: DeployTestSEC

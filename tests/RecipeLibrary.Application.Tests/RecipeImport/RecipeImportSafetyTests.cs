@@ -12,6 +12,11 @@ public sealed class RecipeImportUrlSafetyTests
     [Theory]
     [InlineData("http://127.0.0.1/recipe")]
     [InlineData("https://localhost/recipe")]
+    [InlineData("http://metadata/")]
+    [InlineData("http://metadata.google.internal/latest/meta-data")]
+    [InlineData("http://app.local/recipe")]
+    [InlineData("http://foo.localhost/recipe")]
+    [InlineData("http://svc.internal/recipe")]
     [InlineData("http://192.168.1.10/recipe")]
     [InlineData("http://10.0.0.5/recipe")]
     [InlineData("http://169.254.169.254/latest/meta-data")]
@@ -36,12 +41,28 @@ public sealed class RecipeImportUrlSafetyTests
     public void IsBlockedAddress_FlagsPrivateRanges()
     {
         Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("127.0.0.1")));
+        Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("0.0.0.1")));
         Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("10.1.2.3")));
+        Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("100.64.0.1")));
+        Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("100.127.0.1")));
         Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("172.16.0.1")));
+        Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("172.31.255.255")));
         Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("192.168.0.1")));
         Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("169.254.169.254")));
+        Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.IPv6Loopback));
+        Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("::ffff:10.1.2.3")));
+        Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("fe80::1")));
+        Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("fc00::1")));
         Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("8.8.8.8")));
         Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("1.1.1.1")));
+        Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("100.63.0.1")));
+        Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("100.128.0.1")));
+        Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("169.253.0.1")));
+        Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("172.15.0.1")));
+        Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("172.32.0.1")));
+        Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("192.167.0.1")));
+        Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("192.169.0.1")));
+        Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("::ffff:8.8.8.8")));
     }
 
     [Fact]

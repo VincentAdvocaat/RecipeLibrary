@@ -1,6 +1,6 @@
 namespace RecipeLibrary.Application.Ingredients;
 
-public sealed class IngredientSimilarityScorer
+public sealed class IngredientSimilarityScorer : IIngredientSimilarityScorer
 {
     public const decimal SharedExactTokenBoost = 0.72m;
     public const decimal CandidateSubsetBoost = 0.78m;
