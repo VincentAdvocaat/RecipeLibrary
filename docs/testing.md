@@ -58,3 +58,50 @@ Stable `data-testid` values are defined in `src/Web/RecipeLibrary.Web/Testing/Ui
 ## CI
 
 Azure Pipelines runs unit tests with Cobertura coverage (visible on the **Code Coverage** tab), plus component and integration tests. Integration tests require Docker (`ubuntu-latest`).
+
+## Mutation testing (Stryker.NET pilot)
+
+Stryker is used as a **quality lamp** on a small set of critical Application modules (E17.F2), not as a full-solution PR gate.
+
+### Why not full-solution / every PR?
+
+- Mutating the whole solution (Infrastructure, Blazor, OCR extractors) is slow and noisy.
+- Coverlet line coverage already runs on every main build; Stryker answers a different question (“would a bug survive our asserts?”).
+- Until the pilot baseline is stable, a hard PR break would block merges without enough signal.
+
+### Pilot scope (mutated)
+
+| Project | Types |
+|---------|--------|
+| `RecipeLibrary.Application` | `ShoppingListAccessGuard`, `ShoppingListIngredientMerger`, `IngredientMatcher`, `IngredientSimilarityScorer`, `IngredientLineParser` |
+| `RecipeLibrary.Application.Abstractions` | `RecipeImportUrlSafety` |
+
+Out of scope initially: Infrastructure, Blazor, E2E, and large import extractors (e.g. `RecipeTextDocumentExtractor`).
+
+### Run locally
+
+```powershell
+./scripts/run-stryker.ps1
+# or one target:
+./scripts/run-stryker.ps1 -Target Application
+./scripts/run-stryker.ps1 -Target Abstractions
+```
+
+Requires the local tool manifest (`.config/dotnet-tools.json`). Reports land in `tests/RecipeLibrary.Application.Tests/StrykerOutput/` (gitignored).
+
+Configs:
+
+- `tests/RecipeLibrary.Application.Tests/stryker-config.json`
+- `tests/RecipeLibrary.Application.Tests/stryker-config.abstractions.json`
+
+`thresholds.break` is **0** (report-only). Do not raise a PR gate without updating this doc and agreeing a score.
+
+### CI policy (decision)
+
+| Mode | Status |
+|------|--------|
+| Every PR | **No** — not required |
+| Opt-in on Azure Pipelines | **Yes** — parameter `runStryker` on `azure-pipelines.yml` |
+| Scheduled / hard gate | **Deferred** — revisit after baseline triage |
+
+See `docs/mutation-baseline.md` for the recorded pilot scores and survivor triage notes.

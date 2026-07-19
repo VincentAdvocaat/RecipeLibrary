@@ -87,3 +87,8 @@ RecipeLibraryUploads/
 
 # Node (Tailwind CSS build in Web project)
 node_modules/
+
+# Stryker.NET mutation reports (local / CI artifacts)
+**/StrykerOutput/
+**/mutation-report.html
+**/mutation-report.json
