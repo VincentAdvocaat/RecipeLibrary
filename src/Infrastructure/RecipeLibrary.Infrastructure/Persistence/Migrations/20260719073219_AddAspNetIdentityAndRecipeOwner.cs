@@ -30,16 +30,6 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                 nullable: false,
                 defaultValue: "");
 
-            // Cutover to private libraries: pre-Identity recipes have no real owner (default ""),
-            // so remove them (and dangling shopping-list recipe sources) instead of leaving orphans.
-            migrationBuilder.Sql(
-                """
-                DELETE FROM ShoppingListItemSources;
-                DELETE FROM InstructionSteps;
-                DELETE FROM RecipeIngredients;
-                DELETE FROM Recipes WHERE OwnerUserId = N'';
-                """);
-
             migrationBuilder.AlterColumn<string>(
                 name: "OwnerUserId",
                 table: "PantryItems",

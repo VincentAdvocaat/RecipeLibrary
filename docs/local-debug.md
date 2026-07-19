@@ -110,5 +110,3 @@ Identity__SeedUser__Password=ChangeMe!123
 ```
 
 On startup in Development, the user is created if missing; if the password in config differs, it is updated via `UserManager` (no email confirmation).
-
-The Identity migration clears existing recipes that have no owner (`OwnerUserId` empty) so private libraries stay fail-closed. Re-seed or recreate recipes after migrating a database that had pre-Identity data.
