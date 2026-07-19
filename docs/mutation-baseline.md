@@ -36,7 +36,7 @@ Recorded from branch `feature/stryker-mutation` with Stryker.NET **4.16.0**.
 | Mode | Decision |
 |------|----------|
 | Every PR | **No** |
-| Opt-in pipeline (`runStryker`) | **Yes** — report only (`thresholds.break = 0`) |
+| Opt-in pipeline (`runStryker`) | **Yes** — separate `Stryker` stage, report only (`thresholds.break = 0`); does not gate Deploy |
 | Hard gate | **Deferred** — UrlSafety already >80%; Application pilot still climbing |
 
 ## Refresh

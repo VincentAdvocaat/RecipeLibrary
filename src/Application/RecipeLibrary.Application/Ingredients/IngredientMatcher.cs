@@ -7,7 +7,7 @@ namespace RecipeLibrary.Application.Ingredients;
 public sealed class IngredientMatcher(
     IIngredientRepository ingredientRepository,
     IIngredientTextNormalizer normalizer,
-    IngredientSimilarityScorer similarityScorer)
+    IIngredientSimilarityScorer similarityScorer)
 {
     public const decimal SuggestionMinScore = 0.45m;
     public const decimal FuzzyMatchScore = 0.70m;

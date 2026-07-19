@@ -231,9 +231,9 @@ public sealed class IngredientMatcherTests
     private static IngredientMatcher CreateMatcher(IIngredientRepository repo) =>
         new(repo, new IngredientTextNormalizer(), new IngredientSimilarityScorer());
 
-    private sealed class FixedScorer(decimal score) : IngredientSimilarityScorer
+    private sealed class FixedScorer(decimal score) : IIngredientSimilarityScorer
     {
-        public override decimal Score(string normalizedInput, string normalizedCandidate) => score;
+        public decimal Score(string normalizedInput, string normalizedCandidate) => score;
     }
 
     private sealed class FakeIngredientRepository(

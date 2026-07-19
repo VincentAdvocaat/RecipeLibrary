@@ -101,7 +101,9 @@ Configs:
 | Mode | Status |
 |------|--------|
 | Every PR | **No** — not required |
-| Opt-in on Azure Pipelines | **Yes** — parameter `runStryker` on `azure-pipelines.yml` |
+| Opt-in on Azure Pipelines | **Yes** — parameter `runStryker` runs a **separate** `Stryker` stage (`dependsOn: []`) so it never blocks Build → Deploy |
 | Scheduled / hard gate | **Deferred** — revisit after baseline triage |
+
+The Stryker stage ensures the report directory exists and publishes with `continueOnError` so a missing output folder does not fail artifact publish.
 
 See `docs/mutation-baseline.md` for the recorded pilot scores and survivor triage notes.
