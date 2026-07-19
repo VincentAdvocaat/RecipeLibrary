@@ -217,35 +217,30 @@ stages:
                   rm -f "$home_headers"
                   echo "GET / -> HTTP ${home_code} Location=${location:-none}"
 
-                  if [ "$home_code" = "200" ]; then
-                    echo "Smoke check passed (app ready)."
-                    exit 0
+                  readiness_body="$(curl --silent --show-error --max-time 60 "$readiness_url" || echo "")"
+                  echo "GET /api/system/readiness -> ${readiness_body}"
+
+                  if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Failed"'; then
+                    echo "Smoke check failed: persistence permanently failed (see /failed and app logs)."
+                    exit 1
                   fi
 
-                  if [ "$home_code" = "302" ] && echo "$location" | grep -Eqi '/(starting|failed)(/|$|\?)'; then
-                    readiness_body="$(curl --silent --show-error --max-time 60 "$readiness_url" || echo "")"
-                    echo "GET /api/system/readiness -> ${readiness_body}"
-                    if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Failed"'; then
-                      echo "Smoke check failed: persistence permanently failed (see /failed and app logs)."
-                      exit 1
+                  if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Ready"'; then
+                    # Anonymous / is 200 only without auth; with Identity it redirects to login.
+                    if [ "$home_code" = "200" ] || { [ "$home_code" = "302" ] && echo "$location" | grep -Eqi '/Account/Login'; }; then
+                      echo "Smoke check passed (app ready)."
+                      exit 0
                     fi
-                    if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Ready"'; then
-                      home_code="$(curl --silent --show-error --max-time 60 -o /dev/null -w "%{http_code}" "$home_url" || echo "000")"
-                      echo "GET / (after Ready) -> HTTP ${home_code}"
-                      if [ "$home_code" = "200" ]; then
-                        echo "Smoke check passed."
-                        exit 0
-                      fi
-                    else
-                      echo "App is serving starting page; waiting for persistence Ready..."
-                    fi
+                    echo "Readiness Ready but unexpected GET / response; retrying..."
+                  else
+                    echo "Waiting for persistence Ready..."
                   fi
 
                   sleep "$sleep_seconds"
                 done
 
                 echo "Smoke check failed after ${max_attempts} attempts."
-                echo "If this is the first deploy, run docs/azure/sql-grants.sql for the managed identity and redeploy."
+                echo "Check /api/system/readiness and container logs. If SQL auth fails for the app identity, run docs/azure/sql-grants.sql and redeploy."
                 exit 1
 
 # NEU does not run on automatic CI. Start it manually via Run pipeline and enable "Deploy NEU".
@@ -354,33 +349,28 @@ stages:
                   rm -f "$home_headers"
                   echo "GET / -> HTTP ${home_code} Location=${location:-none}"
 
-                  if [ "$home_code" = "200" ]; then
-                    echo "Smoke check passed (app ready)."
-                    exit 0
+                  readiness_body="$(curl --silent --show-error --max-time 60 "$readiness_url" || echo "")"
+                  echo "GET /api/system/readiness -> ${readiness_body}"
+
+                  if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Failed"'; then
+                    echo "Smoke check failed: persistence permanently failed (see /failed and app logs)."
+                    exit 1
                   fi
 
-                  if [ "$home_code" = "302" ] && echo "$location" | grep -Eqi '/(starting|failed)(/|$|\?)'; then
-                    readiness_body="$(curl --silent --show-error --max-time 60 "$readiness_url" || echo "")"
-                    echo "GET /api/system/readiness -> ${readiness_body}"
-                    if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Failed"'; then
-                      echo "Smoke check failed: persistence permanently failed (see /failed and app logs)."
-                      exit 1
+                  if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Ready"'; then
+                    # Anonymous / is 200 only without auth; with Identity it redirects to login.
+                    if [ "$home_code" = "200" ] || { [ "$home_code" = "302" ] && echo "$location" | grep -Eqi '/Account/Login'; }; then
+                      echo "Smoke check passed (app ready)."
+                      exit 0
                     fi
-                    if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Ready"'; then
-                      home_code="$(curl --silent --show-error --max-time 60 -o /dev/null -w "%{http_code}" "$home_url" || echo "000")"
-                      echo "GET / (after Ready) -> HTTP ${home_code}"
-                      if [ "$home_code" = "200" ]; then
-                        echo "Smoke check passed."
-                        exit 0
-                      fi
-                    else
-                      echo "App is serving starting page; waiting for persistence Ready..."
-                    fi
+                    echo "Readiness Ready but unexpected GET / response; retrying..."
+                  else
+                    echo "Waiting for persistence Ready..."
                   fi
 
                   sleep "$sleep_seconds"
                 done
 
                 echo "Smoke check failed after ${max_attempts} attempts."
-                echo "If this is the first deploy, run docs/azure/sql-grants.sql for the managed identity and redeploy."
+                echo "Check /api/system/readiness and container logs. If SQL auth fails for the app identity, run docs/azure/sql-grants.sql and redeploy."
                 exit 1
