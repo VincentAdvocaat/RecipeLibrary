@@ -1,19 +1,18 @@
 using System.Globalization;
 using Azure.Extensions.AspNetCore.DataProtection.Blobs;
 using Azure.Identity;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
-using Microsoft.Identity.Web;
-using Microsoft.Identity.Web.UI;
 using RecipeLibrary.Application;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Components;
 using RecipeLibrary.Infrastructure.FileStorage;
+using RecipeLibrary.Infrastructure.Identity;
 using RecipeLibrary.Infrastructure.Persistence;
 using RecipeLibrary.Infrastructure.RecipeImport;
 using RecipeLibrary.Application.Abstractions;
@@ -63,31 +62,6 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     ];
 });
 
-var azureAdSection = builder.Configuration.GetSection("AzureAd");
-var authEnabled = !string.IsNullOrWhiteSpace(azureAdSection["ClientId"]);
-
-builder.Services.AddSingleton(new AuthFeatureOptions { IsEnabled = authEnabled });
-
-if (authEnabled)
-{
-    builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-        .AddMicrosoftIdentityWebApp(azureAdSection);
-    builder.Services.AddControllersWithViews()
-        .AddMicrosoftIdentityUI();
-    builder.Services.AddCascadingAuthenticationState();
-    builder.Services.AddAuthorization(options =>
-    {
-        options.FallbackPolicy = new AuthorizationPolicyBuilder()
-            .RequireAuthenticatedUser()
-            .Build();
-    });
-    builder.Services.AddScoped<IShoppingListUserContext, HttpShoppingListUserContext>();
-}
-else
-{
-    builder.Services.AddScoped<IShoppingListUserContext, AnonymousShoppingListUserContext>();
-}
-
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -115,6 +89,41 @@ if (string.IsNullOrWhiteSpace(recipeDbConnectionString))
 }
 
 builder.Services.AddPersistence(recipeDbConnectionString);
+
+builder.Services
+    .AddIdentity<ApplicationUser, IdentityRole>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = false;
+        options.User.RequireUniqueEmail = true;
+        options.Password.RequiredLength = 8;
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = false;
+    })
+    .AddEntityFrameworkStores<RecipeDbContext>()
+    .AddDefaultTokenProviders();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.LogoutPath = "/Account/Logout";
+    options.AccessDeniedPath = "/Account/Login";
+    options.SlidingExpiration = true;
+});
+
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+builder.Services.Configure<IdentitySeedUserOptions>(
+    builder.Configuration.GetSection(IdentitySeedUserOptions.SectionName));
+builder.Services.AddHostedService<IdentitySeedUserHostedService>();
+
 builder.Services.AddHostedService<PersistenceWarmupHostedService>();
 builder.Services.AddRecipeImport(builder.Configuration);
 builder.Services.AddApplication();
@@ -219,20 +228,12 @@ app.UseRequestLocalization(localizationOptions);
 // Before auth: otherwise FallbackPolicy challenges to login while SQL is still waking up.
 app.UseMiddleware<PersistenceReadinessMiddleware>();
 
-if (authEnabled)
-{
-    app.UseAuthentication();
-    app.UseAuthorization();
-}
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 
 app.MapStaticAssets();
-
-if (authEnabled)
-{
-    app.MapControllers();
-}
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
@@ -275,12 +276,24 @@ app.MapPost("/api/upload-recipe-image", async (IFormFile file, ICommandBus comma
     };
     var result = await commandBus.SendAsync<UploadRecipeImageCommand, UploadRecipeImageResult>(command, ct);
     return Results.Ok(new { url = result.Url });
-}).DisableAntiforgery().ApplyAuth(authEnabled);
+}).DisableAntiforgery().RequireAuthorization();
 
-app.MapGet("/api/recipe-images/{fileName}", async (string fileName, IQueryBus queryBus, CancellationToken ct) =>
+app.MapGet("/api/recipe-images/{fileName}", async (
+    string fileName,
+    IQueryBus queryBus,
+    IRecipeRepository recipeRepository,
+    ICurrentUser currentUser,
+    CancellationToken ct) =>
 {
     if (string.IsNullOrEmpty(fileName) || fileName.Contains("..", StringComparison.Ordinal) || fileName.IndexOfAny(['/', '\\']) >= 0)
         return Results.NotFound();
+
+    var ownerUserId = currentUser.UserId;
+    if (string.IsNullOrWhiteSpace(ownerUserId)
+        || !await recipeRepository.IsRecipeImageAccessibleAsync(ownerUserId, fileName, ct))
+    {
+        return Results.NotFound();
+    }
 
     var query = new GetRecipeImageQuery { StorageKey = fileName };
     var result = await queryBus.QueryAsync<GetRecipeImageQuery, GetRecipeImageResult?>(query, ct);
@@ -288,13 +301,13 @@ app.MapGet("/api/recipe-images/{fileName}", async (string fileName, IQueryBus qu
         return Results.NotFound();
 
     return Results.File(result.Stream, result.ContentType);
-}).DisableAntiforgery().ApplyAuth(authEnabled);
+}).DisableAntiforgery().RequireAuthorization();
 
 app.MapPost("/ingredients/match", async (MatchIngredientCommand command, ICommandBus commandBus, CancellationToken ct) =>
 {
     var result = await commandBus.SendAsync<MatchIngredientCommand, MatchIngredientResult>(command, ct);
     return Results.Ok(result);
-}).DisableAntiforgery().ApplyAuth(authEnabled);
+}).DisableAntiforgery().RequireAuthorization();
 
 app.MapPost("/ingredients/parse-line", (ParseIngredientLineRequest request, IngredientNameParser parser) =>
 {
@@ -304,7 +317,7 @@ app.MapPost("/ingredients/parse-line", (ParseIngredientLineRequest request, Ingr
         Name = parsed.Name,
         Preparation = parsed.Preparation,
     });
-}).DisableAntiforgery().ApplyAuth(authEnabled);
+}).DisableAntiforgery().RequireAuthorization();
 
 app.MapPost("/recipes/import", async (ImportRecipeContentQuery query, IQueryBus queryBus, CancellationToken ct) =>
 {
@@ -321,7 +334,7 @@ app.MapPost("/recipes/import", async (ImportRecipeContentQuery query, IQueryBus 
     {
         return Results.BadRequest(ex.Message);
     }
-}).DisableAntiforgery().ApplyAuth(authEnabled);
+}).DisableAntiforgery().RequireAuthorization();
 
 app.MapPost("/recipes/import-url", async (ImportRecipeFromUrlQuery query, IQueryBus queryBus, CancellationToken ct) =>
 {
@@ -338,7 +351,7 @@ app.MapPost("/recipes/import-url", async (ImportRecipeFromUrlQuery query, IQuery
     {
         return Results.BadRequest(ex.Message);
     }
-}).DisableAntiforgery().ApplyAuth(authEnabled);
+}).DisableAntiforgery().RequireAuthorization();
 
 app.MapPost("/recipes/import-image", async (
     HttpRequest request,
@@ -423,7 +436,7 @@ app.MapPost("/recipes/import-image", async (
     {
         return Results.BadRequest(ex.Message);
     }
-}).DisableAntiforgery().ApplyAuth(authEnabled);
+}).DisableAntiforgery().RequireAuthorization();
 
 app.MapGet("/ingredients/search", async (string q, string? culture, IQueryBus queryBus, CancellationToken ct) =>
 {
@@ -431,7 +444,7 @@ app.MapGet("/ingredients/search", async (string q, string? culture, IQueryBus qu
         new SearchIngredientsQuery { Query = q, CultureName = culture },
         ct);
     return Results.Ok(result);
-}).DisableAntiforgery().ApplyAuth(authEnabled);
+}).DisableAntiforgery().RequireAuthorization();
 
 app.MapGet("/tags/search", async (string q, IQueryBus queryBus, CancellationToken ct) =>
 {
@@ -439,7 +452,7 @@ app.MapGet("/tags/search", async (string q, IQueryBus queryBus, CancellationToke
         new SearchTagsQuery { Query = q },
         ct);
     return Results.Ok(result);
-}).DisableAntiforgery().ApplyAuth(authEnabled);
+}).DisableAntiforgery().RequireAuthorization();
 
 app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext httpContext) =>
 {
@@ -486,7 +499,7 @@ app.MapGet("/shopping-list/session/set", async (
     string? redirectUri,
     HttpContext httpContext,
     IShoppingListRepository shoppingListRepository,
-    IShoppingListUserContext userContext,
+    ICurrentUser userContext,
     CancellationToken ct) =>
 {
     if (groupId == Guid.Empty)
@@ -494,8 +507,8 @@ app.MapGet("/shopping-list/session/set", async (
         return Results.BadRequest();
     }
 
-    if (userContext.OwnerUserId is not null
-        && !await shoppingListRepository.IsGroupAccessibleAsync(groupId, userContext.OwnerUserId, ct))
+    if (userContext.UserId is not null
+        && !await shoppingListRepository.IsGroupAccessibleAsync(groupId, userContext.UserId, ct))
     {
         return Results.Forbid();
     }
@@ -506,7 +519,7 @@ app.MapGet("/shopping-list/session/set", async (
         ShoppingListSessionService.CreateGroupCookieOptions());
 
     return Results.Redirect(ShoppingListSessionService.NormalizeRedirect(redirectUri));
-}).ApplyAuth(authEnabled);
+}).RequireAuthorization();
 
 app.MapGet("/shopping-list/session/clear", (string? redirectUri, HttpContext httpContext) =>
 {
@@ -520,7 +533,13 @@ app.MapGet("/shopping-list/session/clear", (string? redirectUri, HttpContext htt
         });
 
     return Results.Redirect(ShoppingListSessionService.NormalizeRedirect(redirectUri));
-}).ApplyAuth(authEnabled);
+}).RequireAuthorization();
+
+app.MapPost("/Account/Logout", async (SignInManager<ApplicationUser> signInManager) =>
+{
+    await signInManager.SignOutAsync();
+    return Results.LocalRedirect("/Account/Login");
+}).AllowAnonymous().DisableAntiforgery();
 
 app.MapPost("/ingredients/{id:guid}/tags", async (Guid id, AddIngredientTagsRequest request, ICommandBus commandBus, CancellationToken ct) =>
 {
@@ -532,7 +551,7 @@ app.MapPost("/ingredients/{id:guid}/tags", async (Guid id, AddIngredientTagsRequ
         },
         ct);
     return Results.Ok(result);
-}).DisableAntiforgery().ApplyAuth(authEnabled);
+}).DisableAntiforgery().RequireAuthorization();
 
 app.Run();
 
@@ -553,11 +572,6 @@ static void ConfigureDataProtection(WebApplicationBuilder builder)
 
 public partial class Program { }
 
-file static class AuthEndpointExtensions
-{
-    public static RouteHandlerBuilder ApplyAuth(this RouteHandlerBuilder builder, bool authEnabled) =>
-        authEnabled ? builder.RequireAuthorization() : builder;
-}
 
 public sealed class AddIngredientTagsRequest
 {

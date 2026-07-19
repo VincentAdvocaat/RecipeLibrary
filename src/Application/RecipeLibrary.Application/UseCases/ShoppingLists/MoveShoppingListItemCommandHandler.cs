@@ -6,7 +6,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class MoveShoppingListItemCommandHandler(
     IShoppingListRepository repository,
-    IShoppingListUserContext userContext,
+    ICurrentUser userContext,
     ShoppingListIngredientMerger merger)
     : ICommandHandler<MoveShoppingListItemCommand, MoveShoppingListItemResult>
 {
@@ -17,7 +17,7 @@ public sealed class MoveShoppingListItemCommandHandler(
         await ShoppingListAccessGuard.EnsureItemAccessAsync(
             repository,
             command.ItemId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
         var item = await repository.GetItemByIdAsync(command.ItemId, ct)

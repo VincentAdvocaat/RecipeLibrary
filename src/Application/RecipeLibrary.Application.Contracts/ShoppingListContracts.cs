@@ -4,7 +4,7 @@ public sealed class GetOrCreateShoppingListGroupQuery : IQuery<GetOrCreateShoppi
 {
     public Guid? GroupId { get; init; }
 
-    /// <summary>Entra object ID when shopping lists are user-scoped; otherwise null.</summary>
+    /// <summary>Identity user id when shopping lists are user-scoped; otherwise null.</summary>
     public string? OwnerUserId { get; init; }
 
     /// <summary>Localized format with {0} for the number, e.g. "Boodschappenlijst {0}".</summary>

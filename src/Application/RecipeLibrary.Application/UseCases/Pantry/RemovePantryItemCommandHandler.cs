@@ -8,7 +8,7 @@ namespace RecipeLibrary.Application.UseCases.Pantry;
 public sealed class RemovePantryItemCommandHandler(
     IPantryRepository repository,
     IShoppingListRepository shoppingListRepository,
-    IShoppingListUserContext userContext)
+    ICurrentUser userContext)
     : ICommandHandler<RemovePantryItemCommand, RemovePantryItemResult>
 {
     public async Task<RemovePantryItemResult> HandleAsync(
@@ -18,10 +18,10 @@ public sealed class RemovePantryItemCommandHandler(
         await ShoppingListAccessGuard.EnsureGroupAccessAsync(
             shoppingListRepository,
             command.ShoppingListGroupId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
-        var ownerKey = PantryOwnerKey.Resolve(userContext.OwnerUserId, command.ShoppingListGroupId);
+        var ownerKey = PantryOwnerKey.Resolve(userContext.UserId, command.ShoppingListGroupId);
         var removed = await repository.RemoveAsync(command.ItemId, ownerKey, ct);
         return new RemovePantryItemResult(removed);
     }

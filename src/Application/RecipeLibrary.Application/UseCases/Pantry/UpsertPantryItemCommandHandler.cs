@@ -8,7 +8,7 @@ namespace RecipeLibrary.Application.UseCases.Pantry;
 public sealed class UpsertPantryItemCommandHandler(
     IPantryRepository repository,
     IShoppingListRepository shoppingListRepository,
-    IShoppingListUserContext userContext,
+    ICurrentUser userContext,
     PantryIngredientMerger merger)
     : ICommandHandler<UpsertPantryItemCommand, UpsertPantryItemResult>
 {
@@ -19,7 +19,7 @@ public sealed class UpsertPantryItemCommandHandler(
         await ShoppingListAccessGuard.EnsureGroupAccessAsync(
             shoppingListRepository,
             command.ShoppingListGroupId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
         var displayName = (command.DisplayName ?? string.Empty).Trim();
@@ -28,7 +28,7 @@ public sealed class UpsertPantryItemCommandHandler(
             throw new ArgumentException("Display name is required.");
         }
 
-        var ownerKey = PantryOwnerKey.Resolve(userContext.OwnerUserId, command.ShoppingListGroupId);
+        var ownerKey = PantryOwnerKey.Resolve(userContext.UserId, command.ShoppingListGroupId);
         var existingItems = await repository.GetByOwnerKeyAsync(ownerKey, ct);
 
         var item = merger.EnsurePresent(

@@ -1,29 +1,14 @@
+@* Always require authentication; anonymous users are redirected to login. *@
+@namespace RecipeLibrary.Components
+@using RecipeLibrary.Components.Molecules
+
 <Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
-        @if (_authEnabled)
-        {
-            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
-                <NotAuthorized>
-                    <RedirectToLogin />
-                </NotAuthorized>
-            </AuthorizeRouteView>
-        }
-        else
-        {
-            <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        }
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                <RedirectToLogin />
+            </NotAuthorized>
+        </AuthorizeRouteView>
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
-
-@code {
-    [Inject]
-    private AuthFeatureOptions AuthFeature { get; set; } = null!;
-
-    private bool _authEnabled;
-
-    protected override void OnInitialized()
-    {
-        _authEnabled = AuthFeature.IsEnabled;
-    }
-}

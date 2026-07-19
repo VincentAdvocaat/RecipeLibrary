@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RecipeLibrary.Domain.Entities;
 using RecipeLibrary.Domain.ValueObjects;
+using RecipeLibrary.Infrastructure.Identity;
 
 namespace RecipeLibrary.Infrastructure.Persistence;
 
-public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) : DbContext(options)
+public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
+    : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<Recipe> Recipes => Set<Recipe>();
     public DbSet<Ingredient> RecipeIngredients => Set<Ingredient>();
@@ -28,6 +31,8 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
         var recipeTitleConverter = new ValueConverter<RecipeTitle, string>(
             v => v.Value,
             v => new RecipeTitle(v));
@@ -47,6 +52,12 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
         modelBuilder.Entity<Recipe>(b =>
         {
             b.HasKey(x => x.Id);
+
+            b.Property(x => x.OwnerUserId)
+                .HasMaxLength(IdentityOwnerIds.MaxLength)
+                .IsRequired();
+
+            b.HasIndex(x => x.OwnerUserId);
 
             b.Property(x => x.Title)
                 .HasConversion(recipeTitleConverter)
@@ -374,7 +385,7 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
             b.HasKey(x => x.Id);
 
             b.Property(x => x.OwnerUserId)
-                .HasMaxLength(256);
+                .HasMaxLength(IdentityOwnerIds.MaxLength);
 
             b.Property(x => x.CreatedAt).IsRequired();
             b.Property(x => x.UpdatedAt).IsRequired();
@@ -447,7 +458,7 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options) :
             b.HasKey(x => x.Id);
 
             b.Property(x => x.OwnerUserId)
-                .HasMaxLength(256)
+                .HasMaxLength(IdentityOwnerIds.MaxLength)
                 .IsRequired();
 
             b.Property(x => x.DisplayName)

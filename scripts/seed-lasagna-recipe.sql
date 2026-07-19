@@ -10,9 +10,10 @@ SET NOCOUNT ON;
 DECLARE @RecipeId UNIQUEIDENTIFIER = NEWID();
 DECLARE @Now DATETIMEOFFSET = SYSUTCDATETIME();
 
-INSERT INTO Recipes (Id, Title, Description, PreparationMinutes, CookingMinutes, Category, ImageUrl, Difficulty, Servings, CreatedAt, UpdatedAt)
+INSERT INTO Recipes (Id, OwnerUserId, Title, Description, PreparationMinutes, CookingMinutes, Category, ImageUrl, Difficulty, Servings, CreatedAt, UpdatedAt)
 VALUES (
     @RecipeId,
+    N'local-seed-owner', -- replace with your Identity user id after registration/seed
     N'Lasagna (ragù en bechamel)',
     N'Lasagna bestaat uit drie onderdelen: pasta, ragù en bechamel. Dit recept beschrijft de ragù en de bechamel; voor de pasta kun je kant-en-klare lasagnevellen (ei) uit de winkel gebruiken, of zelf maken.',
     60,

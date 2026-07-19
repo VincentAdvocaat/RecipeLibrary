@@ -1,0 +1,114 @@
+@page "/Account/Login"
+@attribute [AllowAnonymous]
+@layout RecipeLibrary.Components.Layout.AuthLayout
+@rendermode InteractiveServer
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using RecipeLibrary.Infrastructure.Identity
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+
+<PageTitle>@L["Auth.Login.PageTitle"]</PageTitle>
+
+<div class="mx-auto max-w-md space-y-6">
+    <h1 class="text-2xl font-semibold text-gray-900">@L["Auth.Login.Heading"]</h1>
+
+    <EditForm Model="_model" OnValidSubmit="HandleLoginAsync" FormName="login">
+        <DataAnnotationsValidator />
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <p class="text-sm text-red-600" role="alert">@_error</p>
+        }
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700" for="login-email">@L["Auth.Email.Label"]</label>
+                <InputText id="login-email" @bind-Value="_model.Email" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" autocomplete="username" />
+                <ValidationMessage For="() => _model.Email" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700" for="login-password">@L["Auth.Password.Label"]</label>
+                <InputText id="login-password" type="password" @bind-Value="_model.Password" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" autocomplete="current-password" />
+                <ValidationMessage For="() => _model.Password" />
+            </div>
+            <button type="submit" class="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800" disabled="@_busy">
+                @L["Auth.Login.Submit"]
+            </button>
+        </div>
+    </EditForm>
+
+    <p class="text-sm text-gray-600">
+        @L["Auth.Login.NoAccount"]
+        <a href="Account/Register" class="font-medium text-gray-900 hover:underline">@L["Auth.Register.Link"]</a>
+    </p>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    private string? ReturnUrl { get; set; }
+
+    private readonly LoginModel _model = new();
+    private string? _error;
+    private bool _busy;
+
+    private async Task HandleLoginAsync()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            var email = (_model.Email ?? string.Empty).Trim();
+            var user = await UserManager.FindByEmailAsync(email);
+            if (user is null)
+            {
+                _error = L["Auth.Login.InvalidCredentials"];
+                return;
+            }
+
+            var result = await SignInManager.PasswordSignInAsync(
+                user,
+                _model.Password ?? string.Empty,
+                isPersistent: true,
+                lockoutOnFailure: true);
+
+            if (!result.Succeeded)
+            {
+                _error = L["Auth.Login.InvalidCredentials"];
+                return;
+            }
+
+            Navigation.NavigateTo(GetSafeReturnUrl(), forceLoad: true);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private string GetSafeReturnUrl()
+    {
+        if (!string.IsNullOrWhiteSpace(ReturnUrl)
+            && ReturnUrl.StartsWith('/')
+            && !ReturnUrl.StartsWith("//", StringComparison.Ordinal)
+            && !ReturnUrl.Contains('\\'))
+        {
+            return ReturnUrl;
+        }
+
+        return "/recipes";
+    }
+
+    private sealed class LoginModel
+    {
+        [Required]
+        [EmailAddress]
+        public string? Email { get; set; }
+
+        [Required]
+        public string? Password { get; set; }
+    }
+}

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -243,6 +243,23 @@
   <data name="Auth.SignIn" xml:space="preserve"><value>Inloggen</value></data>
   <data name="Auth.SignOut" xml:space="preserve"><value>Uitloggen</value></data>
   <data name="Auth.SignedInAs" xml:space="preserve"><value>Ingelogd als {0}</value></data>
+  <data name="Auth.Login.PageTitle" xml:space="preserve"><value>Inloggen</value></data>
+  <data name="Auth.Login.Heading" xml:space="preserve"><value>Inloggen</value></data>
+  <data name="Auth.Login.Submit" xml:space="preserve"><value>Inloggen</value></data>
+  <data name="Auth.Login.InvalidCredentials" xml:space="preserve"><value>Ongeldig e-mailadres of wachtwoord.</value></data>
+  <data name="Auth.Login.NoAccount" xml:space="preserve"><value>Nog geen account?</value></data>
+  <data name="Auth.Login.Link" xml:space="preserve"><value>Inloggen</value></data>
+  <data name="Auth.Register.PageTitle" xml:space="preserve"><value>Account aanmaken</value></data>
+  <data name="Auth.Register.Heading" xml:space="preserve"><value>Account aanmaken</value></data>
+  <data name="Auth.Register.Submit" xml:space="preserve"><value>Account aanmaken</value></data>
+  <data name="Auth.Register.Link" xml:space="preserve"><value>Registreren</value></data>
+  <data name="Auth.Register.HasAccount" xml:space="preserve"><value>Heb je al een account?</value></data>
+  <data name="Auth.Register.Duplicate" xml:space="preserve"><value>Dit e-mailadres of deze gebruikersnaam is al in gebruik.</value></data>
+  <data name="Auth.Email.Label" xml:space="preserve"><value>E-mailadres</value></data>
+  <data name="Auth.UserName.Label" xml:space="preserve"><value>Gebruikersnaam</value></data>
+  <data name="Auth.UserName.Invalid" xml:space="preserve"><value>Gebruikersnaam moet 3-32 tekens zijn: letters, cijfers, underscore of streepje.</value></data>
+  <data name="Auth.Password.Label" xml:space="preserve"><value>Wachtwoord</value></data>
+  <data name="Auth.ConfirmPassword.Label" xml:space="preserve"><value>Bevestig wachtwoord</value></data>
   <data name="Nav.ShoppingList" xml:space="preserve"><value>Boodschappenlijst</value></data>
   <data name="Nav.Pantry" xml:space="preserve"><value>Voorraadkast</value></data>
   <data name="ShoppingList.NumberedNameFormat" xml:space="preserve"><value>Boodschappenlijst {0}</value></data>

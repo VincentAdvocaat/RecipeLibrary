@@ -1,4 +1,4 @@
-﻿using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.UseCases.ShoppingLists;
 using RecipeLibrary.Domain.Entities;
@@ -37,9 +37,11 @@ public sealed class DeleteShoppingListCommandHandlerTests
         Assert.True(repo.DeleteListCalled);
     }
 
-    private sealed class AnonymousUserContext : IShoppingListUserContext
+    private sealed class AnonymousUserContext : ICurrentUser
     {
-        public string? OwnerUserId => null;
+        public string? UserId => null;
+        public string? UserName => null;
+        public bool IsAuthenticated => false;
     }
 
     private sealed class FakeShoppingListRepository(ShoppingList? list, ShoppingListGroup? group = null) : IShoppingListRepository

@@ -35,7 +35,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         var sut = new MoveShoppingListItemToPantryCommandHandler(
             shoppingRepo,
             pantryRepo,
-            new AnonymousShoppingListUserContext(),
+            new AnonymousCurrentUser(),
             unitOfWork,
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
@@ -85,7 +85,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         var sut = new MoveShoppingListItemToPantryCommandHandler(
             shoppingRepo,
             pantryRepo,
-            new AnonymousShoppingListUserContext(),
+            new AnonymousCurrentUser(),
             new FakeUnitOfWork(),
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
@@ -118,7 +118,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         var sut = new MoveShoppingListItemToPantryCommandHandler(
             shoppingRepo,
             pantryRepo,
-            new FixedShoppingListUserContext("user-42"),
+            new FixedCurrentUser("user-42"),
             new FakeUnitOfWork(),
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 

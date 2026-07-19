@@ -26,7 +26,7 @@ public sealed class ShoppingListAccessDenyTests
             AccessibleByDefault = false,
             List = new ShoppingList { Id = listId, GroupId = Guid.NewGuid() },
         };
-        var sut = new ClearShoppingListCommandHandler(repo, new FixedShoppingListUserContext(UserB));
+        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser(UserB));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId }));
@@ -51,7 +51,7 @@ public sealed class ShoppingListAccessDenyTests
                 Unit = Unit.Piece,
             },
         };
-        var sut = new ToggleShoppingListItemCommandHandler(repo, new FixedShoppingListUserContext(UserB));
+        var sut = new ToggleShoppingListItemCommandHandler(repo, new FixedCurrentUser(UserB));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true }));
@@ -76,7 +76,7 @@ public sealed class ShoppingListAccessDenyTests
                 Unit = Unit.Piece,
             },
         };
-        var sut = new RemoveShoppingListItemCommandHandler(repo, new FixedShoppingListUserContext(UserB));
+        var sut = new RemoveShoppingListItemCommandHandler(repo, new FixedCurrentUser(UserB));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new RemoveShoppingListItemCommand { ItemId = itemId }));
@@ -89,7 +89,7 @@ public sealed class ShoppingListAccessDenyTests
     {
         var groupId = Guid.NewGuid();
         var repo = new RecordingShoppingListRepository { AccessibleByDefault = false };
-        var sut = new DeleteShoppingListGroupCommandHandler(repo, new FixedShoppingListUserContext(UserB));
+        var sut = new DeleteShoppingListGroupCommandHandler(repo, new FixedCurrentUser(UserB));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new DeleteShoppingListGroupCommand { GroupId = groupId }));
@@ -106,7 +106,7 @@ public sealed class ShoppingListAccessDenyTests
             AccessibleByDefault = false,
             UncheckedItemCount = 99,
         };
-        var sut = new GetShoppingListSummaryQueryHandler(repo, new FixedShoppingListUserContext(UserB));
+        var sut = new GetShoppingListSummaryQueryHandler(repo, new FixedCurrentUser(UserB));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new GetShoppingListSummaryQuery { GroupId = groupId }));
@@ -118,7 +118,7 @@ public sealed class ShoppingListAccessDenyTests
         var groupId = Guid.NewGuid();
         var shopping = new RecordingShoppingListRepository { AccessibleByDefault = false };
         var pantry = new RecordingPantryRepository();
-        var sut = new GetPantryItemsQueryHandler(pantry, shopping, new FixedShoppingListUserContext(UserB));
+        var sut = new GetPantryItemsQueryHandler(pantry, shopping, new FixedCurrentUser(UserB));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new GetPantryItemsQuery { ShoppingListGroupId = groupId }));
@@ -135,7 +135,7 @@ public sealed class ShoppingListAccessDenyTests
         var sut = new UpsertPantryItemCommandHandler(
             pantry,
             shopping,
-            new FixedShoppingListUserContext(UserB),
+            new FixedCurrentUser(UserB),
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
@@ -157,7 +157,7 @@ public sealed class ShoppingListAccessDenyTests
             AccessibleByDefault = false,
             List = new ShoppingList { Id = listId, GroupId = Guid.NewGuid() },
         };
-        var sut = new ClearShoppingListCommandHandler(repo, new AnonymousShoppingListUserContext());
+        var sut = new ClearShoppingListCommandHandler(repo, new AnonymousCurrentUser());
 
         var result = await sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId });
 

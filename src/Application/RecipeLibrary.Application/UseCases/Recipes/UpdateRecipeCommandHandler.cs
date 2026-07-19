@@ -12,11 +12,15 @@ public sealed class UpdateRecipeCommandHandler(
     IIngredientRepository ingredientRepository,
     IIngredientTextNormalizer normalizer,
     IngredientMatcher matcher,
-    IngredientLineResolver lineResolver)
+    IngredientLineResolver lineResolver,
+    ICurrentUser currentUser)
     : ICommandHandler<UpdateRecipeCommand, UpdateRecipeResult>
 {
     public async Task<UpdateRecipeResult> HandleAsync(UpdateRecipeCommand command, CancellationToken ct = default)
     {
+        var ownerUserId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Authentication is required.");
+
         var createShape = new CreateRecipeCommand
         {
             Title = command.Title,
@@ -32,7 +36,7 @@ public sealed class UpdateRecipeCommandHandler(
         };
         CreateRecipeCommandValidator.ValidateAndThrow(createShape);
 
-        var existing = await recipeRepository.GetByIdAsync(command.RecipeId, ct)
+        var existing = await recipeRepository.GetByIdAsync(ownerUserId, command.RecipeId, ct)
             ?? throw new InvalidOperationException($"Recipe '{command.RecipeId}' was not found.");
 
         var title = (command.Title ?? string.Empty).Trim();
@@ -59,6 +63,7 @@ public sealed class UpdateRecipeCommandHandler(
         var recipe = new Recipe
         {
             Id = existing.Id,
+            OwnerUserId = ownerUserId,
             Title = new RecipeTitle(title),
             Description = string.IsNullOrEmpty(description) ? null : description,
             ImageUrl = string.IsNullOrEmpty(imageUrl) ? null : imageUrl,
@@ -73,7 +78,7 @@ public sealed class UpdateRecipeCommandHandler(
             InstructionSteps = builtSteps.ToList(),
         };
 
-        await recipeRepository.UpdateAsync(recipe, ct);
+        await recipeRepository.UpdateAsync(ownerUserId, recipe, ct);
         return new UpdateRecipeResult(recipe.Id);
     }
 }

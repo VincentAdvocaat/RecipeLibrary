@@ -2,8 +2,12 @@ using RecipeLibrary.Application.Abstractions;
 
 namespace RecipeLibrary.Application.Tests;
 
-/// <summary>Test double for authenticated shopping-list ownership (Entra OID simulation).</summary>
-public sealed class FixedShoppingListUserContext(string? ownerUserId) : IShoppingListUserContext
+/// <summary>Test double for authenticated ownership (Identity user id).</summary>
+public sealed class FixedCurrentUser(string? userId, string? userName = null) : ICurrentUser
 {
-    public string? OwnerUserId => ownerUserId;
+    public string? UserId => userId;
+
+    public string? UserName => userName ?? userId;
+
+    public bool IsAuthenticated => !string.IsNullOrWhiteSpace(userId);
 }

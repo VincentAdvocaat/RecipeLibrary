@@ -11,7 +11,7 @@ public sealed class UpdateShoppingListNameCommandHandlerTests
     [Fact]
     public async Task HandleAsync_Throws_WhenNameEmpty()
     {
-        var sut = new UpdateShoppingListNameCommandHandler(new FakeShoppingListRepository(), new AnonymousShoppingListUserContext());
+        var sut = new UpdateShoppingListNameCommandHandler(new FakeShoppingListRepository(), new AnonymousCurrentUser());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new UpdateShoppingListNameCommand { ShoppingListId = Guid.NewGuid(), Name = "  " }));
@@ -22,7 +22,7 @@ public sealed class UpdateShoppingListNameCommandHandlerTests
     {
         var listId = Guid.NewGuid();
         var repo = new FakeShoppingListRepository { UpdateNameResult = true };
-        var sut = new UpdateShoppingListNameCommandHandler(repo, new AnonymousShoppingListUserContext());
+        var sut = new UpdateShoppingListNameCommandHandler(repo, new AnonymousCurrentUser());
 
         var result = await sut.HandleAsync(new UpdateShoppingListNameCommand { ShoppingListId = listId, Name = "Store 2" });
 

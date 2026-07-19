@@ -12,11 +12,13 @@ public sealed class CreateRecipeCommandHandler(
     IIngredientRepository ingredientRepository,
     IIngredientTextNormalizer normalizer,
     IngredientMatcher matcher,
-    IngredientLineResolver lineResolver)
+    IngredientLineResolver lineResolver,
+    ICurrentUser currentUser)
     : ICommandHandler<CreateRecipeCommand, CreateRecipeResult>
 {
     public async Task<CreateRecipeResult> HandleAsync(CreateRecipeCommand command, CancellationToken ct = default)
     {
+        var ownerUserId = RequireUserId(currentUser);
         CreateRecipeCommandValidator.ValidateAndThrow(command);
 
         var title = (command.Title ?? string.Empty).Trim();
@@ -37,6 +39,7 @@ public sealed class CreateRecipeCommandHandler(
         var recipe = new Recipe
         {
             Id = recipeId,
+            OwnerUserId = ownerUserId,
             Title = new RecipeTitle(title),
             Description = string.IsNullOrEmpty(description) ? null : description,
             ImageUrl = string.IsNullOrEmpty(imageUrl) ? null : imageUrl,
@@ -70,5 +73,8 @@ public sealed class CreateRecipeCommandHandler(
         await recipeRepository.AddAsync(recipe, ct);
         return new CreateRecipeResult(recipeId);
     }
-}
 
+    private static string RequireUserId(ICurrentUser currentUser) =>
+        currentUser.UserId
+        ?? throw new UnauthorizedAccessException("Authentication is required.");
+}

@@ -4,12 +4,17 @@ using RecipeLibrary.Domain.Entities;
 
 namespace RecipeLibrary.Application.UseCases.Recipes;
 
-public sealed class GetRecipeByIdQueryHandler(IRecipeRepository recipeRepository)
+public sealed class GetRecipeByIdQueryHandler(
+    IRecipeRepository recipeRepository,
+    ICurrentUser currentUser)
     : IQueryHandler<GetRecipeByIdQuery, GetRecipeByIdResult?>
 {
     public async Task<GetRecipeByIdResult?> HandleAsync(GetRecipeByIdQuery query, CancellationToken ct = default)
     {
-        var recipe = await recipeRepository.GetByIdAsync(query.RecipeId, ct);
+        var ownerUserId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Authentication is required.");
+
+        var recipe = await recipeRepository.GetByIdAsync(ownerUserId, query.RecipeId, ct);
         if (recipe is null)
         {
             return null;

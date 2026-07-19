@@ -10,14 +10,21 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
     public async Task AddAsync(Recipe recipe, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(recipe);
+        ArgumentException.ThrowIfNullOrWhiteSpace(recipe.OwnerUserId);
 
         await dbContext.Recipes.AddAsync(recipe, ct);
         await dbContext.SaveChangesAsync(ct);
     }
 
-    public async Task<IReadOnlyList<Recipe>> GetListAsync(string? search, RecipeCategory? category, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Recipe>> GetListAsync(
+        string ownerUserId,
+        string? search,
+        RecipeCategory? category,
+        CancellationToken ct = default)
     {
-        var query = dbContext.Recipes
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerUserId);
+
+        var query = OwnedRecipes(ownerUserId)
             .Include(r => r.Ingredients)
             .AsNoTracking();
 
@@ -39,43 +46,59 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
         return await query.OrderBy(r => r.Title).ToListAsync(ct);
     }
 
-    public Task<Recipe?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public Task<Recipe?> GetByIdAsync(string ownerUserId, Guid id, CancellationToken ct = default)
     {
-        return dbContext.Recipes
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerUserId);
+
+        return OwnedRecipes(ownerUserId)
             .AsNoTracking()
             .Include(r => r.Ingredients)
             .Include(r => r.InstructionSteps)
             .FirstOrDefaultAsync(r => r.Id == id, ct);
     }
 
-    public async Task<IReadOnlyList<Recipe>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Recipe>> GetByIdsAsync(
+        string ownerUserId,
+        IReadOnlyList<Guid> ids,
+        CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerUserId);
+
         if (ids.Count == 0)
         {
             return [];
         }
 
-        return await dbContext.Recipes
+        return await OwnedRecipes(ownerUserId)
             .AsNoTracking()
             .Include(r => r.Ingredients)
             .Where(r => ids.Contains(r.Id))
             .ToListAsync(ct);
     }
 
-    public Task<Recipe?> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default)
+    public Task<Recipe?> GetByIdForUpdateAsync(string ownerUserId, Guid id, CancellationToken ct = default)
     {
-        return dbContext.Recipes
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerUserId);
+
+        return OwnedRecipes(ownerUserId)
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == id, ct);
     }
 
-    public async Task UpdateAsync(Recipe recipe, CancellationToken ct = default)
+    public async Task UpdateAsync(string ownerUserId, Recipe recipe, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(recipe);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerUserId);
 
         // Blazor Server reuses the scoped DbContext: detach stale rows from earlier saves
         // so SaveChanges does not try to DELETE children that were already removed via ExecuteDelete.
         DetachTrackedRecipeGraph(recipe.Id);
+
+        var owned = await OwnedRecipes(ownerUserId).AnyAsync(r => r.Id == recipe.Id, ct);
+        if (!owned)
+        {
+            return;
+        }
 
         await dbContext.RecipeIngredients
             .Where(x => x.RecipeId == recipe.Id)
@@ -100,7 +123,7 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
             await dbContext.SaveChangesAsync(ct);
         }
 
-        await dbContext.Recipes
+        await OwnedRecipes(ownerUserId)
             .Where(r => r.Id == recipe.Id)
             .ExecuteUpdateAsync(
                 setters => setters
@@ -116,9 +139,17 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
                 ct);
     }
 
-    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    public async Task DeleteAsync(string ownerUserId, Guid id, CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerUserId);
+
         DetachTrackedRecipeGraph(id);
+
+        var owned = await OwnedRecipes(ownerUserId).AnyAsync(r => r.Id == id, ct);
+        if (!owned)
+        {
+            return;
+        }
 
         await dbContext.InstructionSteps
             .Where(s => s.RecipeId == id)
@@ -128,13 +159,24 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
             .Where(i => i.RecipeId == id)
             .ExecuteDeleteAsync(ct);
 
-        await dbContext.Recipes
+        await OwnedRecipes(ownerUserId)
             .Where(r => r.Id == id)
             .ExecuteDeleteAsync(ct);
     }
 
-    public async Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(Guid recipeId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(
+        string ownerUserId,
+        Guid recipeId,
+        CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerUserId);
+
+        var owned = await OwnedRecipes(ownerUserId).AnyAsync(r => r.Id == recipeId, ct);
+        if (!owned)
+        {
+            return [];
+        }
+
         return await (
             from ri in dbContext.RecipeIngredients.AsNoTracking()
             join it in dbContext.IngredientTags on ri.IngredientId equals it.IngredientId
@@ -145,6 +187,38 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
             .OrderBy(name => name)
             .ToListAsync(ct);
     }
+
+    public async Task<bool> IsRecipeImageAccessibleAsync(
+        string ownerUserId,
+        string fileName,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerUserId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+
+        var linkedOwners = await dbContext.Recipes
+            .AsNoTracking()
+            .Where(r => r.ImageUrl != null
+                        && (r.ImageUrl == fileName
+                            || r.ImageUrl.EndsWith("/" + fileName)
+                            || r.ImageUrl.EndsWith("\\" + fileName)
+                            || r.ImageUrl.Contains("/" + fileName)
+                            || r.ImageUrl.Contains(fileName)))
+            .Select(r => r.OwnerUserId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        if (linkedOwners.Count == 0)
+        {
+            // Pending upload not yet attached to a recipe — allow authenticated preview.
+            return true;
+        }
+
+        return linkedOwners.Contains(ownerUserId);
+    }
+
+    private IQueryable<Recipe> OwnedRecipes(string ownerUserId) =>
+        dbContext.Recipes.Where(r => r.OwnerUserId == ownerUserId);
 
     private void DetachTrackedRecipeGraph(Guid recipeId)
     {

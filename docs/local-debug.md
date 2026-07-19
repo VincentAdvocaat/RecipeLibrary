@@ -90,3 +90,23 @@ docker compose up -d sql --wait
 ```
 
 Then start the Web project (F5) as usual. Ensure `.env` exists with `MSSQL_SA_PASSWORD` so the app can use the local connection string fallback (or set `ConnectionStrings__RecipeDb` in user secrets / environment).
+
+## 6. Local Identity seed user
+
+Auth is always on (ASP.NET Core Identity). For a Development-only test account, set user secrets or `.env`:
+
+```powershell
+dotnet user-secrets set "Identity:SeedUser:Email" "you@example.com" --project src/Web/RecipeLibrary.Web
+dotnet user-secrets set "Identity:SeedUser:UserName" "yourname" --project src/Web/RecipeLibrary.Web
+dotnet user-secrets set "Identity:SeedUser:Password" "ChangeMe!123" --project src/Web/RecipeLibrary.Web
+```
+
+Or in `.env` (gitignored):
+
+```
+Identity__SeedUser__Email=you@example.com
+Identity__SeedUser__UserName=yourname
+Identity__SeedUser__Password=ChangeMe!123
+```
+
+On startup in Development, the user is created if missing; if the password in config differs, it is updated via `UserManager` (no email confirmation).

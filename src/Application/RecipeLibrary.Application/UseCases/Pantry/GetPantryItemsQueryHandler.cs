@@ -8,7 +8,7 @@ namespace RecipeLibrary.Application.UseCases.Pantry;
 public sealed class GetPantryItemsQueryHandler(
     IPantryRepository repository,
     IShoppingListRepository shoppingListRepository,
-    IShoppingListUserContext userContext)
+    ICurrentUser userContext)
     : IQueryHandler<GetPantryItemsQuery, GetPantryItemsResult>
 {
     public async Task<GetPantryItemsResult> HandleAsync(GetPantryItemsQuery query, CancellationToken ct = default)
@@ -16,10 +16,10 @@ public sealed class GetPantryItemsQueryHandler(
         await ShoppingListAccessGuard.EnsureGroupAccessAsync(
             shoppingListRepository,
             query.ShoppingListGroupId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
-        var ownerKey = PantryOwnerKey.Resolve(userContext.OwnerUserId, query.ShoppingListGroupId);
+        var ownerKey = PantryOwnerKey.Resolve(userContext.UserId, query.ShoppingListGroupId);
         var items = await repository.GetByOwnerKeyAsync(ownerKey, ct);
         return PantryMapping.MapItems(items);
     }

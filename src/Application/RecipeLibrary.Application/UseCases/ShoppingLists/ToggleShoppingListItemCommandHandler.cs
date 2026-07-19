@@ -6,7 +6,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class ToggleShoppingListItemCommandHandler(
     IShoppingListRepository repository,
-    IShoppingListUserContext userContext)
+    ICurrentUser userContext)
     : ICommandHandler<ToggleShoppingListItemCommand, ToggleShoppingListItemResult>
 {
     public async Task<ToggleShoppingListItemResult> HandleAsync(
@@ -16,7 +16,7 @@ public sealed class ToggleShoppingListItemCommandHandler(
         await ShoppingListAccessGuard.EnsureItemAccessAsync(
             repository,
             command.ItemId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
         var updated = await repository.ToggleItemCheckedAsync(command.ItemId, command.IsChecked, ct);

@@ -8,7 +8,7 @@ namespace RecipeLibrary.Application.UseCases.Pantry;
 public sealed class ApplyPantryToShoppingListCommandHandler(
     IShoppingListRepository shoppingListRepository,
     IPantryRepository pantryRepository,
-    IShoppingListUserContext userContext,
+    ICurrentUser userContext,
     PantryExclusionFilter exclusionFilter)
     : ICommandHandler<ApplyPantryToShoppingListCommand, ApplyPantryToShoppingListResult>
 {
@@ -19,13 +19,13 @@ public sealed class ApplyPantryToShoppingListCommandHandler(
         await ShoppingListAccessGuard.EnsureListAccessAsync(
             shoppingListRepository,
             command.ShoppingListId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
         var list = await shoppingListRepository.GetListByIdAsync(command.ShoppingListId, ct)
             ?? throw new InvalidOperationException("Shopping list not found.");
 
-        var ownerKey = PantryOwnerKey.Resolve(userContext.OwnerUserId, list.GroupId);
+        var ownerKey = PantryOwnerKey.Resolve(userContext.UserId, list.GroupId);
         var pantryItems = await pantryRepository.GetByOwnerKeyAsync(ownerKey, ct);
         if (pantryItems.Count == 0)
         {

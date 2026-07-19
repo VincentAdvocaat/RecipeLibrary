@@ -1,4 +1,4 @@
-﻿using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.ShoppingLists;
@@ -62,9 +62,11 @@ public sealed class MoveShoppingListItemCommandHandlerTests
         Assert.Null(repo.SourceItems);
     }
 
-    private sealed class AnonymousUserContext : IShoppingListUserContext
+    private sealed class AnonymousUserContext : ICurrentUser
     {
-        public string? OwnerUserId => null;
+        public string? UserId => null;
+        public string? UserName => null;
+        public bool IsAuthenticated => false;
     }
 
     private sealed class FakeShoppingListRepository(

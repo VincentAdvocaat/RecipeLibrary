@@ -8,7 +8,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 public sealed class MoveShoppingListItemToPantryCommandHandler(
     IShoppingListRepository shoppingListRepository,
     IPantryRepository pantryRepository,
-    IShoppingListUserContext userContext,
+    ICurrentUser userContext,
     IUnitOfWork unitOfWork,
     PantryIngredientMerger pantryMerger)
     : ICommandHandler<MoveShoppingListItemToPantryCommand, MoveShoppingListItemToPantryResult>
@@ -20,7 +20,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandler(
         await ShoppingListAccessGuard.EnsureItemAccessAsync(
             shoppingListRepository,
             command.ItemId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
         var item = await shoppingListRepository.GetItemByIdAsync(command.ItemId, ct)
@@ -29,7 +29,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandler(
         var list = await shoppingListRepository.GetListByIdAsync(item.ShoppingListId, ct)
             ?? throw new InvalidOperationException("Shopping list not found.");
 
-        var ownerKey = PantryOwnerKey.Resolve(userContext.OwnerUserId, list.GroupId);
+        var ownerKey = PantryOwnerKey.Resolve(userContext.UserId, list.GroupId);
         var existingItems = await pantryRepository.GetByOwnerKeyAsync(ownerKey, ct);
         var pantryItem = pantryMerger.EnsurePresent(
             existingItems,

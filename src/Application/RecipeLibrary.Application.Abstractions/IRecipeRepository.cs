@@ -7,18 +7,36 @@ public interface IRecipeRepository
 {
     Task AddAsync(Recipe recipe, CancellationToken ct = default);
 
-    Task<IReadOnlyList<Recipe>> GetListAsync(string? search, RecipeCategory? category, CancellationToken ct = default);
+    Task<IReadOnlyList<Recipe>> GetListAsync(
+        string ownerUserId,
+        string? search,
+        RecipeCategory? category,
+        CancellationToken ct = default);
 
-    Task<Recipe?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<Recipe?> GetByIdAsync(string ownerUserId, Guid id, CancellationToken ct = default);
 
-    Task<IReadOnlyList<Recipe>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default);
+    Task<IReadOnlyList<Recipe>> GetByIdsAsync(
+        string ownerUserId,
+        IReadOnlyList<Guid> ids,
+        CancellationToken ct = default);
 
-    Task<Recipe?> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default);
+    Task<Recipe?> GetByIdForUpdateAsync(string ownerUserId, Guid id, CancellationToken ct = default);
 
-    Task UpdateAsync(Recipe recipe, CancellationToken ct = default);
+    Task UpdateAsync(string ownerUserId, Recipe recipe, CancellationToken ct = default);
 
-    Task DeleteAsync(Guid id, CancellationToken ct = default);
+    Task DeleteAsync(string ownerUserId, Guid id, CancellationToken ct = default);
 
-    Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(Guid recipeId, CancellationToken ct = default);
+    Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(
+        string ownerUserId,
+        Guid recipeId,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Images inherit ownership via the Recipe relation. Pending uploads (not yet linked to any recipe)
+    /// are readable by any authenticated caller; linked images only by the owning user.
+    /// </summary>
+    Task<bool> IsRecipeImageAccessibleAsync(
+        string ownerUserId,
+        string fileName,
+        CancellationToken ct = default);
 }
-

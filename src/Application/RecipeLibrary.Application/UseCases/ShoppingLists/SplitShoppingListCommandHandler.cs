@@ -7,7 +7,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class SplitShoppingListCommandHandler(
     IShoppingListRepository repository,
-    IShoppingListUserContext userContext,
+    ICurrentUser userContext,
     ShoppingListIngredientMerger merger)
     : ICommandHandler<SplitShoppingListCommand, SplitShoppingListResult>
 {
@@ -29,7 +29,7 @@ public sealed class SplitShoppingListCommandHandler(
         await ShoppingListAccessGuard.EnsureGroupAccessAsync(
             repository,
             command.GroupId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
         if (await repository.GroupHasSecondListAsync(command.GroupId, ct))
