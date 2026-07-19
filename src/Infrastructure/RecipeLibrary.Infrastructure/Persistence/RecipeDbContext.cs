@@ -374,15 +374,28 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
 
             b.HasIndex(x => new { x.CanonicalIngredientId, x.FromUnit, x.ToUnit, x.Status });
 
+            // Filtered unique indexes: SQL Server uses N'...' unicode literals; SQLite does not
+            // (EnsureCreated in integration tests would fail with "near \"'Pending'\": syntax error").
+            var isSqlite = string.Equals(
+                Database.ProviderName,
+                "Microsoft.EntityFrameworkCore.Sqlite",
+                StringComparison.Ordinal);
+            var pendingMatchedFilter = isSqlite
+                ? "[Status] = 'Pending' AND [CanonicalIngredientId] IS NOT NULL"
+                : "[Status] = N'Pending' AND [CanonicalIngredientId] IS NOT NULL";
+            var pendingUnmatchedFilter = isSqlite
+                ? "[Status] = 'Pending' AND [CanonicalIngredientId] IS NULL"
+                : "[Status] = N'Pending' AND [CanonicalIngredientId] IS NULL";
+
             // At most one Pending suggestion per matched ingredient + direction.
             b.HasIndex(x => new { x.CanonicalIngredientId, x.FromUnit, x.ToUnit })
                 .IsUnique()
-                .HasFilter("[Status] = N'Pending' AND [CanonicalIngredientId] IS NOT NULL");
+                .HasFilter(pendingMatchedFilter);
 
             // At most one Pending suggestion per unmatched display name + direction.
             b.HasIndex(x => new { x.IngredientDisplayName, x.FromUnit, x.ToUnit })
                 .IsUnique()
-                .HasFilter("[Status] = N'Pending' AND [CanonicalIngredientId] IS NULL");
+                .HasFilter(pendingUnmatchedFilter);
 
             b.HasOne(x => x.CanonicalIngredient)
                 .WithMany()
