@@ -3,10 +3,12 @@ namespace RecipeLibrary.Web.Testing;
 /// <summary>Stable data-testid values for UI and E2E tests (language-independent).</summary>
 public static class UiTestIds
 {
+    public const string NavMenu = "nav-menu";
     public const string NavRecipes = "nav-recipes";
     public const string NavCreate = "nav-create";
     public const string NavShoppingList = "nav-shopping-list";
     public const string NavBadge = "nav-badge";
+    public const string AddRecipeFab = "add-recipe-fab";
 
     public const string SearchInput = "search-input";
     public const string CategoryAll = "category-all";

@@ -612,14 +612,6 @@ video {
   inset: 0px;
 }
 
-.-right-3 {
-  right: -0.75rem;
-}
-
-.-top-2 {
-  top: -0.5rem;
-}
-
 .bottom-0 {
   bottom: 0px;
 }
@@ -695,6 +687,10 @@ video {
 
 .mb-6 {
   margin-bottom: 1.5rem;
+}
+
+.ml-2 {
+  margin-left: 0.5rem;
 }
 
 .ml-auto {
@@ -812,6 +808,10 @@ video {
   max-height: 20rem;
 }
 
+.min-h-10 {
+  min-height: 2.5rem;
+}
+
 .min-h-\[12rem\] {
   min-height: 12rem;
 }
@@ -862,6 +862,10 @@ video {
 
 .min-w-\[12rem\] {
   min-width: 12rem;
+}
+
+.min-w-\[14rem\] {
+  min-width: 14rem;
 }
 
 .min-w-\[200px\] {

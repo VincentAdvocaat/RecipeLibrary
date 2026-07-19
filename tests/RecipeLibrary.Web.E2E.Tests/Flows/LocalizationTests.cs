@@ -25,6 +25,7 @@ public sealed class LocalizationTests(E2eFixture fixture)
         await page.GetByTestId(UiTestIds.LanguageNl).ClickAsync();
         await page.GetByTestId(UiTestIds.OverviewReady).WaitForAsync();
 
-        await Assertions.Expect(page.GetByTestId(UiTestIds.NavCreate)).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByTestId(UiTestIds.AddRecipeFab)).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByTestId(UiTestIds.NavMenu)).ToBeVisibleAsync();
     }
 }

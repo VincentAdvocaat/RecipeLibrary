@@ -73,14 +73,14 @@ public sealed class RecipeOverviewTests(E2eFixture fixture)
     }
 
     [Fact]
-    public async Task NavCreate_GoesToCreatePage()
+    public async Task AddRecipeFab_GoesToCreatePage()
     {
         await using var context = await fixture.Browser.NewContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoRecipesAsync(fixture.BaseUrl);
 
-        await page.GetByTestId(UiTestIds.NavCreate).ClickAsync();
+        await page.GetByTestId(UiTestIds.AddRecipeFab).ClickAsync();
         await Assertions.Expect(page).ToHaveURLAsync(new Regex("/recipes/create"));
         await Assertions.Expect(page.GetByTestId(UiTestIds.RecipeTitle)).ToBeVisibleAsync();
     }

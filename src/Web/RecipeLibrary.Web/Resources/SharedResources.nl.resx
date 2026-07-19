@@ -109,7 +109,7 @@
   <data name="RecipeCreate.Import.Warning.AiFallbackFailed" xml:space="preserve"><value>AI kon onzekere ingrediëntregels niet verbeteren. Check die regels handmatig.</value></data>
   <data name="RecipeCreate.Import.Warning.UrlContentTruncated" xml:space="preserve"><value>De pagina was groter dan we volledig konden downloaden; er kan inhoud ontbreken. Controleer het recept.</value></data>
   <data name="Nav.Overview" xml:space="preserve"><value>Overzicht</value></data>
-  <data name="RecipeOverview.PageTitle" xml:space="preserve"><value>Recepten Overzicht</value></data>
+  <data name="RecipeOverview.PageTitle" xml:space="preserve"><value>Mijn Recepten</value></data>
   <data name="RecipeCreate.PageTitle" xml:space="preserve"><value>Nieuw Recept Toevoegen</value></data>
   <data name="RecipeCreate.Photo.Label" xml:space="preserve"><value>Receptfoto</value></data>
   <data name="RecipeCreate.Title.Label" xml:space="preserve"><value>Titel van Recept</value></data>

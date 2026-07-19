@@ -1,50 +1,91 @@
-@* Organism: page header with title, nav links, optional view toggle in header. *@
+@* Organism: page header with hamburger nav, title, optional add button and view toggle. *@
 @namespace RecipeLibrary.Components.Organisms
 
-<header class="flex flex-wrap items-center justify-between gap-4 mb-6 @CssClass">
-    <div class="flex items-center gap-4">
-        <Heading Level="1" CssClass="m-0">@Title</Heading>
-        <nav class="flex items-center gap-4">
-            @if (IsCreatePage)
-            {
-                <AppNavLink Href="/recipes" data-testid="@UiTestIds.NavRecipes">@L["Nav.MyRecipes"]</AppNavLink>
-                <AppNavLink Href="/recipes/import">@L["Nav.ImportRecipe"]</AppNavLink>
-                <AppNavLink Href="/">@L["Nav.Overview"]</AppNavLink>
-            }
-            else
-            {
-                <AppNavLink Href="/recipes/create" data-testid="@UiTestIds.NavCreate">@L["Nav.AddRecipe"]</AppNavLink>
-                <AppNavLink Href="/recipes/import">@L["Nav.ImportRecipe"]</AppNavLink>
-                <AppNavLink Href="/recipes" data-testid="@UiTestIds.NavRecipes">@L["Nav.MyRecipes"]</AppNavLink>
-            }
-            <a href="/shopping-list" data-testid="@UiTestIds.NavShoppingList" class="relative text-gray-700 text-sm font-medium hover:text-gray-900 no-underline">
-                @L["Nav.ShoppingList"]
-                @if (ShoppingBadgeCount > 0)
+<header class="mb-6 border-b border-gray-200 pb-4 @CssClass">
+    <div class="flex min-h-10 items-center justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-3">
+            <div class="relative flex-shrink-0">
+                @if (_isOpen)
                 {
-                    <span data-testid="@UiTestIds.NavBadge" class="absolute -top-2 -right-3 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-gray-800 px-1.5 py-0.5 text-xs font-medium text-white">
-                        @ShoppingBadgeCount
-                    </span>
+                    <button type="button"
+                            class="fixed inset-0 z-10 cursor-default"
+                            tabindex="-1"
+                            aria-hidden="true"
+                            @onclick="Close"></button>
                 }
+                <button type="button"
+                        id="app-nav-menu-trigger"
+                        data-testid="@UiTestIds.NavMenu"
+                        class="relative z-20 inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1"
+                        aria-haspopup="menu"
+                        aria-expanded="@_isOpen"
+                        aria-label="@L["Common.Menu.AriaLabel"]"
+                        @onclick="Toggle">
+                    <Icon Name="Icon.IconName.Menu" CssClass="h-5 w-5" />
+                </button>
+                @if (_isOpen)
+                {
+                    <nav class="absolute left-0 z-20 mt-1 min-w-[14rem] rounded border border-gray-300 bg-white py-1 shadow-lg"
+                         role="menu"
+                         aria-labelledby="app-nav-menu-trigger">
+                        <AppNavLink Href="/recipes"
+                                    CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
+                                    data-testid="@UiTestIds.NavRecipes">@L["Nav.MyRecipes"]</AppNavLink>
+                        <AppNavLink Href="/recipes/create"
+                                    CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
+                                    data-testid="@UiTestIds.NavCreate">@L["Nav.AddRecipe"]</AppNavLink>
+                        <AppNavLink Href="/recipes/import"
+                                    CssClass="block px-3 py-2 no-underline hover:bg-gray-50">@L["Nav.ImportRecipe"]</AppNavLink>
+                        <a href="/shopping-list"
+                           data-testid="@UiTestIds.NavShoppingList"
+                           role="menuitem"
+                           class="relative block px-3 py-2 text-sm font-medium text-gray-700 no-underline hover:bg-gray-50 hover:text-gray-900">
+                            @L["Nav.ShoppingList"]
+                            @if (ShoppingBadgeCount > 0)
+                            {
+                                <span data-testid="@UiTestIds.NavBadge"
+                                      class="ml-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-gray-800 px-1.5 py-0.5 text-xs font-medium text-white">
+                                    @ShoppingBadgeCount
+                                </span>
+                            }
+                        </a>
+                        <AppNavLink Href="/pantry"
+                                    CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
+                                    data-testid="@UiTestIds.NavPantry">@L["Nav.Pantry"]</AppNavLink>
+                    </nav>
+                }
+            </div>
+            <Heading Level="1" CssClass="m-0 truncate">@Title</Heading>
+        </div>
+        <div class="flex flex-shrink-0 items-center gap-3">
+            <a href="/recipes/create"
+               data-testid="@UiTestIds.AddRecipeFab"
+               class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-800 bg-gray-800 text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1"
+               aria-label="@L["Nav.AddRecipe"]"
+               title="@L["Nav.AddRecipe"]">
+                <Icon Name="Icon.IconName.Plus" CssClass="h-5 w-5" />
             </a>
-            <AppNavLink Href="/pantry" data-testid="@UiTestIds.NavPantry">@L["Nav.Pantry"]</AppNavLink>
-        </nav>
-    </div>
-    <div class="flex items-center gap-4">
-        @if (ShowViewToggleInHeader)
-        {
-            <ViewToggle ViewMode="@ViewMode" ViewModeChanged="@ViewModeChanged" ShowCardsLabel="false" />
-        }
-        <AuthNav />
-        <LanguageSwitcher />
+            @if (ShowViewToggleInHeader)
+            {
+                <ViewToggle ViewMode="@ViewMode" ViewModeChanged="@ViewModeChanged" ShowCardsLabel="false" />
+            }
+            <AuthNav />
+            <LanguageSwitcher />
+        </div>
     </div>
 </header>
 
 @code {
+    private bool _isOpen;
+
     [Parameter, EditorRequired] public string Title { get; set; } = null!;
-    [Parameter] public bool IsCreatePage { get; set; }
     [Parameter] public bool ShowViewToggleInHeader { get; set; }
     [Parameter] public ViewToggle.ViewModeKind ViewMode { get; set; }
     [Parameter] public EventCallback<ViewToggle.ViewModeKind> ViewModeChanged { get; set; }
     [Parameter] public string? CssClass { get; set; }
     [Parameter] public int ShoppingBadgeCount { get; set; }
+
+    private void Toggle() => _isOpen = !_isOpen;
+
+    private void Close() => _isOpen = false;
 }
