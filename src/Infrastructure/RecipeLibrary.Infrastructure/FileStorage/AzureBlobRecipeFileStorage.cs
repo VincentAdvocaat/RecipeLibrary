@@ -42,7 +42,12 @@ public sealed class AzureBlobRecipeFileStorage : IRecipeFileStorage
         _containerClient = serviceClient.GetBlobContainerClient(containerName);
     }
 
-    public async Task<string> SaveAsync(Stream content, string suggestedFileName, string contentType, CancellationToken ct = default)
+    public async Task<string> SaveAsync(
+        Stream content,
+        string suggestedFileName,
+        string contentType,
+        string ownerUserId,
+        CancellationToken ct = default)
     {
         var ext = Path.GetExtension(suggestedFileName).ToLowerInvariant();
         if (string.IsNullOrEmpty(ext) || !AllowedExtensions.Contains(ext))
@@ -50,7 +55,7 @@ public sealed class AzureBlobRecipeFileStorage : IRecipeFileStorage
             throw new ArgumentException("Invalid image extension. Use jpg, png, gif or webp.", nameof(suggestedFileName));
         }
 
-        var storageKey = $"{Guid.NewGuid()}{ext}";
+        var storageKey = RecipeImageStorageKeys.Create(ownerUserId, ext);
         var blobClient = _containerClient.GetBlobClient(storageKey);
         var headers = new BlobHttpHeaders { ContentType = contentType };
         await blobClient.UploadAsync(content, new BlobUploadOptions { HttpHeaders = headers }, ct);

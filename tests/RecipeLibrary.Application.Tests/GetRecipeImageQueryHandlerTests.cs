@@ -31,7 +31,12 @@ public sealed class GetRecipeImageQueryHandlerTests
 
     private sealed class FakeRecipeFileStorage((string Key, Stream Stream, string ContentType)? file = null) : IRecipeFileStorage
     {
-        public Task<string> SaveAsync(Stream content, string suggestedFileName, string contentType, CancellationToken ct = default) =>
+        public Task<string> SaveAsync(
+            Stream content,
+            string suggestedFileName,
+            string contentType,
+            string ownerUserId,
+            CancellationToken ct = default) =>
             Task.FromResult("/api/recipe-images/x");
 
         public Task<(Stream Stream, string ContentType)?> OpenAsync(string storageKey, CancellationToken ct = default)

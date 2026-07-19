@@ -539,7 +539,7 @@ app.MapPost("/Account/Logout", async (SignInManager<ApplicationUser> signInManag
 {
     await signInManager.SignOutAsync();
     return Results.LocalRedirect("/Account/Login");
-}).AllowAnonymous().DisableAntiforgery();
+}).RequireAuthorization();
 
 app.MapPost("/ingredients/{id:guid}/tags", async (Guid id, AddIngredientTagsRequest request, ICommandBus commandBus, CancellationToken ct) =>
 {

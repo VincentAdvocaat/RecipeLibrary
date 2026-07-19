@@ -133,6 +133,44 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
         Assert.Equal("Ui", shoppingRepo.ReplacedItems![0].DisplayName);
     }
 
+    [Fact]
+    public async Task HandleAsync_Throws_WhenForeignRecipeIdIncluded()
+    {
+        var listId = Guid.NewGuid();
+        var ownRecipeId = Guid.NewGuid();
+        var foreignRecipeId = Guid.NewGuid();
+        var list = new ShoppingList { Id = listId, GroupId = Guid.NewGuid(), Items = [] };
+        var ownRecipe = new Recipe
+        {
+            Id = ownRecipeId,
+            OwnerUserId = TestUserId,
+            Title = new RecipeTitle("Own"),
+            Ingredients =
+            [
+                new Ingredient
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Ui",
+                    Quantity = new Quantity(1),
+                    Unit = Unit.Piece,
+                },
+            ],
+        };
+
+        var shoppingRepo = new FakeShoppingListRepository { List = list };
+        var recipeRepo = new FakeRecipeRepository(ownRecipe);
+        var sut = CreateSut(shoppingRepo, recipeRepo);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new AddRecipesToShoppingListCommand
+            {
+                ShoppingListId = listId,
+                RecipeIds = [ownRecipeId, foreignRecipeId],
+            }));
+
+        Assert.Null(shoppingRepo.ReplacedItems);
+    }
+
     private static AddRecipesToShoppingListCommandHandler CreateSut(
         FakeShoppingListRepository shoppingRepo,
         FakeRecipeRepository recipeRepo,
@@ -151,7 +189,8 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
             string ownerUserId,
             IReadOnlyList<Guid> ids,
             CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Recipe>>(ids.Contains(recipe.Id) ? [recipe] : []);
+            Task.FromResult<IReadOnlyList<Recipe>>(
+                recipe.OwnerUserId == ownerUserId && ids.Contains(recipe.Id) ? [recipe] : []);
 
         public Task AddAsync(Recipe recipe, CancellationToken ct = default) => Task.CompletedTask;
 

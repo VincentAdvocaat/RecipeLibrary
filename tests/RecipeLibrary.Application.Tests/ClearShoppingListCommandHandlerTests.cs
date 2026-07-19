@@ -13,7 +13,7 @@ public sealed class ClearShoppingListCommandHandlerTests
     {
         var listId = Guid.NewGuid();
         var repo = new FakeShoppingListRepository(list: null);
-        var sut = new ClearShoppingListCommandHandler(repo, new AnonymousUserContext());
+        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser("test-user"));
 
         var result = await sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId });
 
@@ -27,7 +27,7 @@ public sealed class ClearShoppingListCommandHandlerTests
         var listId = Guid.NewGuid();
         var list = new ShoppingList { Id = listId, GroupId = Guid.NewGuid(), Name = "Main" };
         var repo = new FakeShoppingListRepository(list);
-        var sut = new ClearShoppingListCommandHandler(repo, new AnonymousUserContext());
+        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser("test-user"));
 
         var result = await sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId });
 
@@ -36,12 +36,6 @@ public sealed class ClearShoppingListCommandHandlerTests
         Assert.Equal(listId, repo.LastClearedListId);
     }
 
-    private sealed class AnonymousUserContext : ICurrentUser
-    {
-        public string? UserId => null;
-        public string? UserName => null;
-        public bool IsAuthenticated => false;
-    }
 
     private sealed class FakeShoppingListRepository(ShoppingList? list) : IShoppingListRepository
     {

@@ -200,18 +200,16 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
             .AsNoTracking()
             .Where(r => r.ImageUrl != null
                         && (r.ImageUrl == fileName
-                            || r.ImageUrl.EndsWith("/" + fileName)
-                            || r.ImageUrl.EndsWith("\\" + fileName)
-                            || r.ImageUrl.Contains("/" + fileName)
-                            || r.ImageUrl.Contains(fileName)))
+                            || r.ImageUrl == "/api/recipe-images/" + fileName
+                            || r.ImageUrl.EndsWith("/" + fileName)))
             .Select(r => r.OwnerUserId)
             .Distinct()
             .ToListAsync(ct);
 
         if (linkedOwners.Count == 0)
         {
-            // Pending upload not yet attached to a recipe — allow authenticated preview.
-            return true;
+            // Pending upload: storage keys are "{ownerUserId}_{guid}{ext}".
+            return fileName.StartsWith(ownerUserId + "_", StringComparison.Ordinal);
         }
 
         return linkedOwners.Contains(ownerUserId);

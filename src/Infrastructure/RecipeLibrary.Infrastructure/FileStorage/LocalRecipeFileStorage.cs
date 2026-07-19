@@ -28,7 +28,12 @@ public sealed class LocalRecipeFileStorage : IRecipeFileStorage
         _basePath = Path.GetFullPath(path);
     }
 
-    public async Task<string> SaveAsync(Stream content, string suggestedFileName, string contentType, CancellationToken ct = default)
+    public async Task<string> SaveAsync(
+        Stream content,
+        string suggestedFileName,
+        string contentType,
+        string ownerUserId,
+        CancellationToken ct = default)
     {
         var ext = Path.GetExtension(suggestedFileName).ToLowerInvariant();
         if (string.IsNullOrEmpty(ext) || !AllowedExtensions.Contains(ext))
@@ -39,7 +44,7 @@ public sealed class LocalRecipeFileStorage : IRecipeFileStorage
         var recipeImagesDir = Path.Combine(_basePath, "recipe-images");
         Directory.CreateDirectory(recipeImagesDir);
 
-        var storageKey = $"{Guid.NewGuid()}{ext}";
+        var storageKey = RecipeImageStorageKeys.Create(ownerUserId, ext);
         var filePath = Path.Combine(recipeImagesDir, storageKey);
 
         await using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))

@@ -35,7 +35,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         var sut = new MoveShoppingListItemToPantryCommandHandler(
             shoppingRepo,
             pantryRepo,
-            new AnonymousCurrentUser(),
+            new FixedCurrentUser("test-user"),
             unitOfWork,
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
@@ -45,7 +45,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         Assert.True(unitOfWork.Executed);
         Assert.NotNull(pantryRepo.UpsertedItem);
         Assert.Equal("Zout", pantryRepo.UpsertedItem!.DisplayName);
-        Assert.Equal($"group:{groupId:D}", pantryRepo.UpsertedItem.OwnerUserId);
+        Assert.Equal("test-user", pantryRepo.UpsertedItem.OwnerUserId);
         Assert.Equal(itemId, shoppingRepo.LastRemovedItemId);
     }
 
@@ -56,7 +56,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         var listId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
         var existingPantryId = Guid.NewGuid();
-        var ownerKey = $"group:{groupId:D}";
+        const string ownerKey = "test-user";
         var shoppingRepo = new FakeShoppingListRepository
         {
             Item = new ShoppingListItem
@@ -85,7 +85,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         var sut = new MoveShoppingListItemToPantryCommandHandler(
             shoppingRepo,
             pantryRepo,
-            new AnonymousCurrentUser(),
+            new FixedCurrentUser(ownerKey),
             new FakeUnitOfWork(),
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 

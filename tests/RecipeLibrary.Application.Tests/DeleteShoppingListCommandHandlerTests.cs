@@ -12,7 +12,7 @@ public sealed class DeleteShoppingListCommandHandlerTests
     public async Task HandleAsync_ReturnsFalse_WhenListMissing()
     {
         var repo = new FakeShoppingListRepository(list: null);
-        var sut = new DeleteShoppingListCommandHandler(repo, new AnonymousUserContext());
+        var sut = new DeleteShoppingListCommandHandler(repo, new FixedCurrentUser("test-user"));
 
         var result = await sut.HandleAsync(new DeleteShoppingListCommand { ShoppingListId = Guid.NewGuid() });
 
@@ -28,7 +28,7 @@ public sealed class DeleteShoppingListCommandHandlerTests
         var list = new ShoppingList { Id = listId, GroupId = groupId, Name = "Main" };
         var group = new ShoppingListGroup { Id = groupId };
         var repo = new FakeShoppingListRepository(list, group);
-        var sut = new DeleteShoppingListCommandHandler(repo, new AnonymousUserContext());
+        var sut = new DeleteShoppingListCommandHandler(repo, new FixedCurrentUser("test-user"));
 
         var result = await sut.HandleAsync(new DeleteShoppingListCommand { ShoppingListId = listId });
 
@@ -37,12 +37,6 @@ public sealed class DeleteShoppingListCommandHandlerTests
         Assert.True(repo.DeleteListCalled);
     }
 
-    private sealed class AnonymousUserContext : ICurrentUser
-    {
-        public string? UserId => null;
-        public string? UserName => null;
-        public bool IsAuthenticated => false;
-    }
 
     private sealed class FakeShoppingListRepository(ShoppingList? list, ShoppingListGroup? group = null) : IShoppingListRepository
     {

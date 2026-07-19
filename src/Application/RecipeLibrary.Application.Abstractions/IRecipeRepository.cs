@@ -32,8 +32,8 @@ public interface IRecipeRepository
         CancellationToken ct = default);
 
     /// <summary>
-    /// Images inherit ownership via the Recipe relation. Pending uploads (not yet linked to any recipe)
-    /// are readable by any authenticated caller; linked images only by the owning user.
+    /// Images inherit ownership via the Recipe relation. Pending uploads (not yet linked) are
+    /// readable only when the storage key is prefixed with the caller's user id.
     /// </summary>
     Task<bool> IsRecipeImageAccessibleAsync(
         string ownerUserId,

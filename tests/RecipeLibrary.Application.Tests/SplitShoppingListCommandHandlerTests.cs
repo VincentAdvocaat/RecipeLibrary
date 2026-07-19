@@ -33,7 +33,7 @@ public sealed class SplitShoppingListCommandHandlerTests
         };
 
         var repo = new FakeShoppingListRepository(primary, secondaryId);
-        var sut = new SplitShoppingListCommandHandler(repo, new AnonymousUserContext(), new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+        var sut = new SplitShoppingListCommandHandler(repo, new FixedCurrentUser("test-user"), new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
 
         var result = await sut.HandleAsync(new SplitShoppingListCommand
         {
@@ -53,18 +53,12 @@ public sealed class SplitShoppingListCommandHandlerTests
     [Fact]
     public async Task HandleAsync_Throws_WhenNameEmpty()
     {
-        var sut = new SplitShoppingListCommandHandler(new FakeShoppingListRepository(null!, Guid.Empty), new AnonymousUserContext(), new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+        var sut = new SplitShoppingListCommandHandler(new FakeShoppingListRepository(null!, Guid.Empty), new FixedCurrentUser("test-user"), new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new SplitShoppingListCommand { GroupId = Guid.NewGuid(), NewListName = "", ItemIds = [Guid.NewGuid()] }));
     }
 
-    private sealed class AnonymousUserContext : ICurrentUser
-    {
-        public string? UserId => null;
-        public string? UserName => null;
-        public bool IsAuthenticated => false;
-    }
 
     private sealed class FakeShoppingListRepository(ShoppingList primary, Guid secondaryId) : IShoppingListRepository
     {

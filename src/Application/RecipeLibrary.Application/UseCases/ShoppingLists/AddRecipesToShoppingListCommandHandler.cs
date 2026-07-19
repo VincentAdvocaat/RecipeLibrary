@@ -32,10 +32,15 @@ public sealed class AddRecipesToShoppingListCommandHandler(
         var list = await shoppingListRepository.GetListByIdAsync(command.ShoppingListId, ct)
             ?? throw new InvalidOperationException("Shopping list not found.");
 
-        var recipes = await recipeRepository.GetByIdsAsync(
-            userContext.UserId ?? throw new UnauthorizedAccessException("Authentication is required."),
-            command.RecipeIds,
-            ct);
+        var ownerUserId = userContext.UserId
+            ?? throw new UnauthorizedAccessException("Authentication is required.");
+        var distinctIds = command.RecipeIds.Distinct().ToList();
+        var recipes = await recipeRepository.GetByIdsAsync(ownerUserId, distinctIds, ct);
+        if (recipes.Count != distinctIds.Count)
+        {
+            throw new UnauthorizedAccessException("One or more recipes are not accessible.");
+        }
+
         var lines = new List<ShoppingListIngredientLine>();
 
         foreach (var recipe in recipes)

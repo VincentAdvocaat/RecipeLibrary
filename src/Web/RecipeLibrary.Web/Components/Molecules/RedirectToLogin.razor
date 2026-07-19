@@ -8,10 +8,10 @@
         var returnUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
         if (string.IsNullOrWhiteSpace(returnUrl) || returnUrl.StartsWith("Account/", StringComparison.OrdinalIgnoreCase))
         {
-            Navigation.NavigateTo("Account/Login", forceLoad: true);
+            Navigation.NavigateTo("/Account/Login", forceLoad: true);
             return;
         }
 
-        Navigation.NavigateTo($"Account/Login?returnUrl={Uri.EscapeDataString("/" + returnUrl.TrimStart('/'))}", forceLoad: true);
+        Navigation.NavigateTo($"/Account/Login?returnUrl={Uri.EscapeDataString("/" + returnUrl.TrimStart('/'))}", forceLoad: true);
     }
 }
