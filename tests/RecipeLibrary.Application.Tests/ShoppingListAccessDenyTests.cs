@@ -174,7 +174,7 @@ public sealed class ShoppingListAccessDenyTests
             AccessibleByDefault = false,
             UncheckedItemCount = 3,
         };
-        var sut = new GetShoppingListSummaryQueryHandler(repo, new AnonymousShoppingListUserContext());
+        var sut = new GetShoppingListSummaryQueryHandler(repo, new AnonymousCurrentUser());
 
         var result = await sut.HandleAsync(new GetShoppingListSummaryQuery { GroupId = groupId });
 
@@ -198,7 +198,7 @@ public sealed class ShoppingListAccessDenyTests
                 Unit = Unit.Piece,
             },
         };
-        var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousShoppingListUserContext());
+        var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousCurrentUser());
 
         var result = await sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true });
 
@@ -212,7 +212,7 @@ public sealed class ShoppingListAccessDenyTests
         // Anonymous mode must short-circuit before GetItemById; otherwise a missing item throws.
         var itemId = Guid.NewGuid();
         var repo = new RecordingShoppingListRepository { AccessibleByDefault = false };
-        var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousShoppingListUserContext());
+        var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousCurrentUser());
 
         var exception = await Record.ExceptionAsync(() =>
             sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true }));
@@ -225,7 +225,7 @@ public sealed class ShoppingListAccessDenyTests
     public async Task ToggleItem_Throws_WhenItemMissing_ForAuthenticatedUser()
     {
         var repo = new RecordingShoppingListRepository { AccessibleByDefault = false };
-        var sut = new ToggleShoppingListItemCommandHandler(repo, new FixedShoppingListUserContext(UserB));
+        var sut = new ToggleShoppingListItemCommandHandler(repo, new FixedCurrentUser(UserB));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = Guid.NewGuid(), IsChecked = true }));
