@@ -248,6 +248,8 @@
   <data name="Auth.Login.Heading" xml:space="preserve"><value>Inloggen</value></data>
   <data name="Auth.Login.Submit" xml:space="preserve"><value>Inloggen</value></data>
   <data name="Auth.Login.InvalidCredentials" xml:space="preserve"><value>Ongeldig e-mailadres of wachtwoord.</value></data>
+  <data name="Auth.Login.LockedOut" xml:space="preserve"><value>Dit account is tijdelijk geblokkeerd. Probeer het later opnieuw.</value></data>
+  <data name="Auth.Login.RequiresTwoFactor" xml:space="preserve"><value>Voor dit account is tweefactorauthenticatie vereist.</value></data>
   <data name="Auth.Login.NoAccount" xml:space="preserve"><value>Nog geen account?</value></data>
   <data name="Auth.Login.Link" xml:space="preserve"><value>Inloggen</value></data>
   <data name="Auth.Register.PageTitle" xml:space="preserve"><value>Account aanmaken</value></data>
@@ -256,6 +258,8 @@
   <data name="Auth.Register.Link" xml:space="preserve"><value>Registreren</value></data>
   <data name="Auth.Register.HasAccount" xml:space="preserve"><value>Heb je al een account?</value></data>
   <data name="Auth.Register.Duplicate" xml:space="preserve"><value>Dit e-mailadres of deze gebruikersnaam is al in gebruik.</value></data>
+  <data name="Auth.Register.PasswordRequirements" xml:space="preserve"><value>Het wachtwoord voldoet niet aan de eisen (minimaal 8 tekens, met hoofdletter, kleine letter, cijfer en een niet-alfanumeriek teken).</value></data>
+  <data name="Auth.Register.Failed" xml:space="preserve"><value>Het account kon niet worden aangemaakt. Probeer het opnieuw.</value></data>
   <data name="Auth.Email.Label" xml:space="preserve"><value>E-mailadres</value></data>
   <data name="Auth.UserName.Label" xml:space="preserve"><value>Gebruikersnaam</value></data>
   <data name="Auth.UserName.Invalid" xml:space="preserve"><value>Gebruikersnaam moet 3-32 tekens zijn: letters, cijfers, underscore of streepje.</value></data>

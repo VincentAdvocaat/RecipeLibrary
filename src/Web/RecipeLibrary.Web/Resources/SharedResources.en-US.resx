@@ -248,6 +248,8 @@
   <data name="Auth.Login.Heading" xml:space="preserve"><value>Sign in</value></data>
   <data name="Auth.Login.Submit" xml:space="preserve"><value>Sign in</value></data>
   <data name="Auth.Login.InvalidCredentials" xml:space="preserve"><value>Invalid email or password.</value></data>
+  <data name="Auth.Login.LockedOut" xml:space="preserve"><value>This account is temporarily locked. Try again later.</value></data>
+  <data name="Auth.Login.RequiresTwoFactor" xml:space="preserve"><value>Two-factor authentication is required for this account.</value></data>
   <data name="Auth.Login.NoAccount" xml:space="preserve"><value>No account yet?</value></data>
   <data name="Auth.Login.Link" xml:space="preserve"><value>Sign in</value></data>
   <data name="Auth.Register.PageTitle" xml:space="preserve"><value>Create account</value></data>
@@ -256,6 +258,8 @@
   <data name="Auth.Register.Link" xml:space="preserve"><value>Register</value></data>
   <data name="Auth.Register.HasAccount" xml:space="preserve"><value>Already have an account?</value></data>
   <data name="Auth.Register.Duplicate" xml:space="preserve"><value>That email or username is already in use.</value></data>
+  <data name="Auth.Register.PasswordRequirements" xml:space="preserve"><value>Password does not meet the requirements (at least 8 characters, with upper and lower case, a digit and a non-alphanumeric character).</value></data>
+  <data name="Auth.Register.Failed" xml:space="preserve"><value>Could not create the account. Please try again.</value></data>
   <data name="Auth.Email.Label" xml:space="preserve"><value>Email</value></data>
   <data name="Auth.UserName.Label" xml:space="preserve"><value>Username</value></data>
   <data name="Auth.UserName.Invalid" xml:space="preserve"><value>Username must be 3-32 characters: letters, digits, underscore or hyphen.</value></data>
