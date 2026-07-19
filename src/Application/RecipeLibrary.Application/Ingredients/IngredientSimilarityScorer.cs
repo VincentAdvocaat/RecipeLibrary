@@ -1,11 +1,11 @@
 namespace RecipeLibrary.Application.Ingredients;
 
-public sealed class IngredientSimilarityScorer
+public class IngredientSimilarityScorer
 {
     public const decimal SharedExactTokenBoost = 0.72m;
     public const decimal CandidateSubsetBoost = 0.78m;
 
-    public decimal Score(string normalizedInput, string normalizedCandidate)
+    public virtual decimal Score(string normalizedInput, string normalizedCandidate)
     {
         if (normalizedInput.Length == 0 || normalizedCandidate.Length == 0)
         {

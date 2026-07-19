@@ -1,54 +1,43 @@
 # Mutation testing baseline (E17.F2)
 
-Recorded from branch `feature/stryker-mutation` with Stryker.NET **4.16.0** (after E17.F1 honesty on `main`, PR #59).
+Recorded from branch `feature/stryker-mutation` with Stryker.NET **4.16.0**.
 
 ```powershell
 ./scripts/run-stryker.ps1
 ```
 
-## Scores (pilot, post-triage)
+## Scores (current)
 
-| Target | Mutation score | Killed | Survived | Timeout |
-|--------|----------------|--------|----------|---------|
-| Application (pilot files) | **63.84%** | 271 | 125 | 8 |
-| Abstractions (`RecipeImportUrlSafety`) | **58.46%** | 38 | 10 | 0 |
+| Target | Mutation score | Killed | Survived | Timeout | Previous |
+|--------|----------------|--------|----------|---------|----------|
+| Application (pilot files) | **70.71%** | 301 | 106 | 8 | 63.84% |
+| Abstractions (`RecipeImportUrlSafety`) | **81.54%** | 53 | 8 | 0 | 58.46% |
 
-### Application pilot — per type
+## What raised the score
 
-| Type | Killed | Survived | Notes |
-|------|--------|----------|-------|
-| `ShoppingListAccessGuard` | 10 | 4 (mostly exception **message** strings) | Early-return / missing-item paths tightened |
-| `ShoppingListIngredientMerger` | ~27 | ~21 | Accept for now |
-| `IngredientMatcher` | ~23 | ~7 | Accept for now |
-| `IngredientSimilarityScorer` | ~72 | ~45 | Accept for now |
-| `IngredientLineParser` | ~141 | ~48 | Accept for now |
+- Matcher: exact `0.70` / `0.71` fuzzy boundary, `MaxSuggestions`, tie-break order, search fallback, whitespace input (via injectable scorer)
+- Merger: prep/case merge keys, `MergeItemIntoList`, empty-list sort order, null-quantity sum
+- Parser: blank line, `sap of`, measure adjectives, confidence literals, list-index >20, unit+fraction
+- UrlSafety: `.local` / `.internal` hosts, IPv4-mapped / IPv6 ULA / link-local, CGNAT and `172.31` boundaries
+- Scorer: empty/exact short-circuits + `StringSimilarity` edges
 
-## Survivor triage
+## Remaining survivors (accepted for now)
 
-### Security-critical
-
-| Area | Decision |
-|------|----------|
-| AccessGuard early-return when `ownerUserId` is null (list/group/item) | **Covered** — anonymous + `AccessibleByDefault=false` for clear/summary/toggle; anonymous missing-item must not throw |
-| AccessGuard authenticated missing item | **Covered** — throws `InvalidOperationException` |
-| UrlSafety private ranges / metadata hosts / CGNAT boundaries | **Improved** — extra hosts + boundary addresses that must stay public |
-| Remaining AccessGuard / UrlSafety **string** mutants (exception text, blocked-host literals when DNS/IP still blocks) | **Accepted** — type/behavior asserted; literals alone are not the security boundary |
-
-### Accepted noise
-
-- Large survivor counts in similarity scorer / line parser / merger — revisit when changing those algorithms
-- UrlSafety IPv6 / `ResolvePublicHttpEndpointAsync` Safe Mode (Stryker compile-error cascade) — tool limitation
-- `ArgumentNullException.ThrowIfNull` statement mutants — null is not a production path
+| Area | Why |
+|------|-----|
+| AccessGuard / UrlSafety **string** mutants | Exception/host literals; behavior already typed |
+| Scorer boost `Add(0.72/0.78)` statements | Dominated by exact token `StringSimilarity == 1` — dead for Max |
+| Levenshtein / Jaro arithmetic noise | Low product risk; revisit when changing algorithms |
+| Parser equality/edge on index/`||` | Partial coverage; incremental |
+| UrlSafety `ThrowIfNull` + Safe Mode on resolve | Tool / null-path noise |
 
 ## CI / gate decision
-
-See also `docs/testing.md`:
 
 | Mode | Decision |
 |------|----------|
 | Every PR | **No** |
-| Opt-in pipeline (`runStryker`) | **Yes** — report artifact only (`thresholds.break = 0`) |
-| Hard gate | **Deferred** — candidate later: AccessGuard-focused score ≥ 80% |
+| Opt-in pipeline (`runStryker`) | **Yes** — report only (`thresholds.break = 0`) |
+| Hard gate | **Deferred** — UrlSafety already >80%; Application pilot still climbing |
 
 ## Refresh
 

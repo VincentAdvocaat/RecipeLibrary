@@ -319,4 +319,213 @@ public sealed class ShoppingListIngredientMergerTests
         Assert.Null(result[0].Quantity);
         Assert.Null(result[0].Unit);
     }
+
+    [Fact]
+    public void MergeIntoList_MergesWhenDisplayNameCaseDiffersAndPrepIsWhitespace()
+    {
+        var listId = Guid.NewGuid();
+        var existing = new ShoppingListItem
+        {
+            Id = Guid.NewGuid(),
+            ShoppingListId = listId,
+            DisplayName = "Tomato",
+            Preparation = null,
+            Quantity = new Quantity(1),
+            Unit = Unit.Gram,
+            Sources = [],
+        };
+
+        var result = _merger.MergeIntoList(
+            [existing],
+            [
+                new ShoppingListIngredientLine
+                {
+                    DisplayName = "tomato",
+                    Preparation = "  ",
+                    Quantity = 2,
+                    Unit = Unit.Gram,
+                    RecipeId = Guid.NewGuid(),
+                    RecipeTitle = "Salad",
+                },
+            ],
+            listId);
+
+        Assert.Single(result);
+        Assert.Equal(3, result[0].Quantity!.Value.Value);
+    }
+
+    [Fact]
+    public void MergeIntoList_KeepsSeparateLinesWhenPreparationDiffers()
+    {
+        var listId = Guid.NewGuid();
+        var existing = new ShoppingListItem
+        {
+            Id = Guid.NewGuid(),
+            ShoppingListId = listId,
+            DisplayName = "ui",
+            Preparation = null,
+            Quantity = new Quantity(1),
+            Unit = Unit.Piece,
+            Sources = [],
+        };
+
+        var result = _merger.MergeIntoList(
+            [existing],
+            [
+                new ShoppingListIngredientLine
+                {
+                    DisplayName = "ui",
+                    Preparation = "fijngehakt",
+                    Quantity = 1,
+                    Unit = Unit.Piece,
+                    RecipeId = Guid.NewGuid(),
+                    RecipeTitle = "Soup",
+                },
+            ],
+            listId);
+
+        Assert.Equal(2, result.Count);
+    }
+
+    [Fact]
+    public void MergeIntoList_StartsSortOrderAtZero_WhenListIsEmpty()
+    {
+        var listId = Guid.NewGuid();
+        var result = _merger.MergeIntoList(
+            [],
+            [
+                new ShoppingListIngredientLine
+                {
+                    DisplayName = "zout",
+                    Quantity = 1,
+                    Unit = Unit.Teaspoon,
+                    RecipeId = Guid.NewGuid(),
+                    RecipeTitle = "Soup",
+                },
+            ],
+            listId);
+
+        Assert.Single(result);
+        Assert.Equal(0, result[0].SortOrder);
+    }
+
+    [Fact]
+    public void MergeItemIntoList_SumsQuantityAndDedupesSources()
+    {
+        var listId = Guid.NewGuid();
+        var recipeA = Guid.NewGuid();
+        var recipeB = Guid.NewGuid();
+        var existing = new ShoppingListItem
+        {
+            Id = Guid.NewGuid(),
+            ShoppingListId = listId,
+            DisplayName = "Salt",
+            Quantity = new Quantity(1),
+            Unit = Unit.Gram,
+            Sources =
+            [
+                new ShoppingListItemSource
+                {
+                    ShoppingListItemId = Guid.Empty,
+                    RecipeId = recipeA,
+                    RecipeTitle = "Soup",
+                },
+            ],
+        };
+        existing.Sources.First().ShoppingListItemId = existing.Id;
+
+        var moving = new ShoppingListItem
+        {
+            Id = Guid.NewGuid(),
+            ShoppingListId = Guid.NewGuid(),
+            DisplayName = "Salt",
+            Quantity = new Quantity(2),
+            Unit = Unit.Gram,
+            Sources =
+            [
+                new ShoppingListItemSource
+                {
+                    ShoppingListItemId = Guid.Empty,
+                    RecipeId = recipeA,
+                    RecipeTitle = "Soup",
+                },
+                new ShoppingListItemSource
+                {
+                    ShoppingListItemId = Guid.Empty,
+                    RecipeId = recipeB,
+                    RecipeTitle = "Stew",
+                },
+            ],
+        };
+
+        var result = _merger.MergeItemIntoList([existing], moving, listId);
+
+        Assert.Single(result);
+        Assert.Equal(3, result[0].Quantity!.Value.Value);
+        Assert.Equal(2, result[0].Sources.Count);
+        Assert.Contains(result[0].Sources, s => s.RecipeId == recipeA);
+        Assert.Contains(result[0].Sources, s => s.RecipeId == recipeB);
+    }
+
+    [Fact]
+    public void MergeItemIntoList_AppendsClone_WhenNoMatch()
+    {
+        var targetListId = Guid.NewGuid();
+        var moving = new ShoppingListItem
+        {
+            Id = Guid.NewGuid(),
+            ShoppingListId = Guid.NewGuid(),
+            DisplayName = "Pepper",
+            Quantity = new Quantity(1),
+            Unit = Unit.Teaspoon,
+            IsChecked = true,
+            SortOrder = 9,
+            Sources =
+            [
+                new ShoppingListItemSource
+                {
+                    ShoppingListItemId = Guid.Empty,
+                    RecipeId = Guid.NewGuid(),
+                    RecipeTitle = "Soup",
+                },
+            ],
+        };
+        moving.Sources.First().ShoppingListItemId = moving.Id;
+
+        var result = _merger.MergeItemIntoList([], moving, targetListId);
+
+        Assert.Single(result);
+        Assert.Equal(targetListId, result[0].ShoppingListId);
+        Assert.False(result[0].IsChecked);
+        Assert.Equal(0, result[0].SortOrder);
+        Assert.NotEqual(moving.Id, result[0].Id);
+        Assert.Equal(result[0].Id, result[0].Sources.First().ShoppingListItemId);
+    }
+
+    [Fact]
+    public void MergeManualLineIntoList_SumsOntoExistingNullQuantity()
+    {
+        var listId = Guid.NewGuid();
+        var existing = new ShoppingListItem
+        {
+            Id = Guid.NewGuid(),
+            ShoppingListId = listId,
+            DisplayName = "Melk",
+            Quantity = null,
+            Unit = Unit.Piece,
+            Sources = [],
+        };
+
+        var result = _merger.MergeManualLineIntoList(
+            [existing],
+            null,
+            "Melk",
+            null,
+            2,
+            Unit.Piece,
+            listId);
+
+        Assert.Single(result);
+        Assert.Equal(2, result[0].Quantity!.Value.Value);
+    }
 }

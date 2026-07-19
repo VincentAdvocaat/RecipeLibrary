@@ -294,4 +294,88 @@ public sealed class IngredientLineParserTests
         Assert.Equal(nameof(Unit.Can), result.Unit);
         Assert.Equal("chickpeas", result.Name);
     }
+
+    [Fact]
+    public void Parse_ReturnsEmptyUnmeasured_ForBlankLine()
+    {
+        var result = _sut.Parse("   ");
+
+        Assert.Null(result.Quantity);
+        Assert.Null(result.Unit);
+        Assert.Equal(string.Empty, result.Name);
+        Assert.Equal(0m, result.Confidence);
+    }
+
+    [Fact]
+    public void Parse_ParsesSapOfPhrase()
+    {
+        var result = _sut.Parse("Sap of 1 limoen");
+
+        Assert.Equal(1, result.Quantity);
+        Assert.Equal(nameof(Unit.Piece), result.Unit);
+        Assert.Equal("limoen", result.Name);
+        Assert.Equal("juice", result.Preparation);
+        Assert.Equal(0.85m, result.Confidence);
+    }
+
+    [Fact]
+    public void Parse_CapturesMeasureAdjective_AndHighConfidence()
+    {
+        var result = _sut.Parse("1 heaped tbsp flour");
+
+        Assert.Equal(1, result.Quantity);
+        Assert.Equal(nameof(Unit.Tablespoon), result.Unit);
+        Assert.Equal("flour", result.Name);
+        Assert.Equal("heaped", result.Preparation);
+        Assert.Equal(0.95m, result.Confidence);
+    }
+
+    [Fact]
+    public void Parse_DoesNotSkipListIndex_WhenLeadingQuantityAbove20()
+    {
+        var result = _sut.Parse("21 8 sneetjes stokbrood");
+
+        Assert.Equal(21, result.Quantity);
+        Assert.Contains("8", result.Name, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_NormalizesUnitPlusFractionQuantity()
+    {
+        var result = _sut.Parse("2 tsp + 1/4 salt");
+
+        Assert.Equal(2.25m, result.Quantity);
+        Assert.Equal(nameof(Unit.Teaspoon), result.Unit);
+        Assert.Equal("salt", result.Name);
+        Assert.Equal(0.95m, result.Confidence);
+    }
+
+    [Fact]
+    public void Parse_ReturnsLowConfidence_ForBareUnmeasuredName()
+    {
+        var result = _sut.Parse("olijfolie");
+
+        Assert.Equal(0.35m, result.Confidence);
+        Assert.Equal("olijfolie", result.Name);
+    }
+
+    [Fact]
+    public void Parse_ReturnsMediumConfidence_WhenQuantityWithoutExplicitUnit()
+    {
+        var result = _sut.Parse("2 wortels");
+
+        Assert.Equal(2, result.Quantity);
+        Assert.Equal(nameof(Unit.Piece), result.Unit);
+        Assert.Equal("wortels", result.Name);
+        Assert.Equal(0.75m, result.Confidence);
+    }
+
+    [Fact]
+    public void Parse_CapsConfidence_ForVeryLongComplexLine()
+    {
+        var longName = new string('a', 101);
+        var result = _sut.Parse($"100 g {longName}");
+
+        Assert.Equal(0.65m, result.Confidence);
+    }
 }
