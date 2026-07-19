@@ -1,0 +1,130 @@
+@page "/Account/Register"
+@attribute [AllowAnonymous]
+@layout RecipeLibrary.Components.Layout.AuthLayout
+@rendermode InteractiveServer
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text.RegularExpressions
+@using Microsoft.AspNetCore.Identity
+@using RecipeLibrary.Infrastructure.Identity
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Navigation
+
+<PageTitle>@L["Auth.Register.PageTitle"]</PageTitle>
+
+<div class="mx-auto max-w-md space-y-6">
+    <h1 class="text-2xl font-semibold text-gray-900">@L["Auth.Register.Heading"]</h1>
+
+    <EditForm Model="_model" OnValidSubmit="HandleRegisterAsync" FormName="register">
+        <DataAnnotationsValidator />
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <p class="text-sm text-red-600" role="alert">@_error</p>
+        }
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700" for="register-email">@L["Auth.Email.Label"]</label>
+                <InputText id="register-email" @bind-Value="_model.Email" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" autocomplete="email" />
+                <ValidationMessage For="() => _model.Email" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700" for="register-username">@L["Auth.UserName.Label"]</label>
+                <InputText id="register-username" @bind-Value="_model.UserName" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" autocomplete="username" />
+                <ValidationMessage For="() => _model.UserName" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700" for="register-password">@L["Auth.Password.Label"]</label>
+                <InputText id="register-password" type="password" @bind-Value="_model.Password" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" autocomplete="new-password" />
+                <ValidationMessage For="() => _model.Password" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700" for="register-confirm">@L["Auth.ConfirmPassword.Label"]</label>
+                <InputText id="register-confirm" type="password" @bind-Value="_model.ConfirmPassword" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" autocomplete="new-password" />
+                <ValidationMessage For="() => _model.ConfirmPassword" />
+            </div>
+            <button type="submit" class="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800" disabled="@_busy">
+                @L["Auth.Register.Submit"]
+            </button>
+        </div>
+    </EditForm>
+
+    <p class="text-sm text-gray-600">
+        @L["Auth.Register.HasAccount"]
+        <a href="Account/Login" class="font-medium text-gray-900 hover:underline">@L["Auth.Login.Link"]</a>
+    </p>
+</div>
+
+@code {
+    private readonly RegisterModel _model = new();
+    private string? _error;
+    private bool _busy;
+
+    private static readonly Regex UserNamePattern = new(@"^[a-zA-Z0-9_-]{3,32}$", RegexOptions.Compiled);
+
+    private async Task HandleRegisterAsync()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            var userName = (_model.UserName ?? string.Empty).Trim();
+            if (!UserNamePattern.IsMatch(userName))
+            {
+                _error = L["Auth.UserName.Invalid"];
+                return;
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = userName,
+                Email = (_model.Email ?? string.Empty).Trim(),
+                EmailConfirmed = true,
+            };
+
+            var createResult = await UserManager.CreateAsync(user, _model.Password ?? string.Empty);
+            if (!createResult.Succeeded)
+            {
+                if (createResult.Errors.Any(e => e.Code is "DuplicateUserName" or "DuplicateEmail"))
+                {
+                    _error = L["Auth.Register.Duplicate"];
+                }
+                else
+                {
+                    _error = string.Join(" ", createResult.Errors.Select(e => e.Description));
+                }
+
+                return;
+            }
+
+            await SignInManager.SignInAsync(user, isPersistent: true);
+            Navigation.NavigateTo("/recipes", forceLoad: true);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private sealed class RegisterModel
+    {
+        [Required]
+        [EmailAddress]
+        public string? Email { get; set; }
+
+        [Required]
+        [StringLength(32, MinimumLength = 3)]
+        public string? UserName { get; set; }
+
+        [Required]
+        [StringLength(100, MinimumLength = 8)]
+        public string? Password { get; set; }
+
+        [Required]
+        [Compare(nameof(Password))]
+        public string? ConfirmPassword { get; set; }
+    }
+}

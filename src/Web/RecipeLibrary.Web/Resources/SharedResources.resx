@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -243,6 +243,23 @@
   <data name="Auth.SignIn" xml:space="preserve"><value>Sign in</value></data>
   <data name="Auth.SignOut" xml:space="preserve"><value>Sign out</value></data>
   <data name="Auth.SignedInAs" xml:space="preserve"><value>Signed in as {0}</value></data>
+  <data name="Auth.Login.PageTitle" xml:space="preserve"><value>Sign in</value></data>
+  <data name="Auth.Login.Heading" xml:space="preserve"><value>Sign in</value></data>
+  <data name="Auth.Login.Submit" xml:space="preserve"><value>Sign in</value></data>
+  <data name="Auth.Login.InvalidCredentials" xml:space="preserve"><value>Invalid email or password.</value></data>
+  <data name="Auth.Login.NoAccount" xml:space="preserve"><value>No account yet?</value></data>
+  <data name="Auth.Login.Link" xml:space="preserve"><value>Sign in</value></data>
+  <data name="Auth.Register.PageTitle" xml:space="preserve"><value>Create account</value></data>
+  <data name="Auth.Register.Heading" xml:space="preserve"><value>Create account</value></data>
+  <data name="Auth.Register.Submit" xml:space="preserve"><value>Create account</value></data>
+  <data name="Auth.Register.Link" xml:space="preserve"><value>Register</value></data>
+  <data name="Auth.Register.HasAccount" xml:space="preserve"><value>Already have an account?</value></data>
+  <data name="Auth.Register.Duplicate" xml:space="preserve"><value>That email or username is already in use.</value></data>
+  <data name="Auth.Email.Label" xml:space="preserve"><value>Email</value></data>
+  <data name="Auth.UserName.Label" xml:space="preserve"><value>Username</value></data>
+  <data name="Auth.UserName.Invalid" xml:space="preserve"><value>Username must be 3-32 characters: letters, digits, underscore or hyphen.</value></data>
+  <data name="Auth.Password.Label" xml:space="preserve"><value>Password</value></data>
+  <data name="Auth.ConfirmPassword.Label" xml:space="preserve"><value>Confirm password</value></data>
   <data name="Nav.ShoppingList" xml:space="preserve"><value>Shopping list</value></data>
   <data name="Nav.Pantry" xml:space="preserve"><value>Pantry</value></data>
   <data name="ShoppingList.NumberedNameFormat" xml:space="preserve"><value>Shopping list {0}</value></data>

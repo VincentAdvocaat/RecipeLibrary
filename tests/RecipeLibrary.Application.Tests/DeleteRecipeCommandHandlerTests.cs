@@ -9,11 +9,13 @@ namespace RecipeLibrary.Application.Tests;
 
 public sealed class DeleteRecipeCommandHandlerTests
 {
+    private const string TestUserId = "test-user";
+
     [Fact]
     public async Task HandleAsync_ReturnsFalse_WhenRecipeDoesNotExist()
     {
         var repo = new FakeRecipeRepository(exists: false);
-        var sut = new DeleteRecipeCommandHandler(repo);
+        var sut = new DeleteRecipeCommandHandler(repo, new FixedCurrentUser(TestUserId));
 
         var result = await sut.HandleAsync(new DeleteRecipeCommand { RecipeId = Guid.NewGuid() });
 
@@ -25,7 +27,7 @@ public sealed class DeleteRecipeCommandHandlerTests
     {
         var recipeId = Guid.NewGuid();
         var repo = new FakeRecipeRepository(exists: true, recipeId: recipeId);
-        var sut = new DeleteRecipeCommandHandler(repo);
+        var sut = new DeleteRecipeCommandHandler(repo, new FixedCurrentUser(TestUserId));
 
         var result = await sut.HandleAsync(new DeleteRecipeCommand { RecipeId = recipeId });
 
@@ -41,7 +43,7 @@ public sealed class DeleteRecipeCommandHandlerTests
 
         public Task AddAsync(Recipe recipe, CancellationToken ct = default) => Task.CompletedTask;
 
-        public Task DeleteAsync(Guid id, CancellationToken ct = default)
+        public Task DeleteAsync(string ownerUserId, Guid id, CancellationToken ct = default)
         {
             DeleteWasCalled = true;
             if (id == _id)
@@ -52,7 +54,7 @@ public sealed class DeleteRecipeCommandHandlerTests
             return Task.CompletedTask;
         }
 
-        public Task<Recipe?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        public Task<Recipe?> GetByIdAsync(string ownerUserId, Guid id, CancellationToken ct = default)
         {
             if (!_exists || id != _id)
             {
@@ -62,21 +64,40 @@ public sealed class DeleteRecipeCommandHandlerTests
             return Task.FromResult<Recipe?>(new Recipe
             {
                 Id = _id,
+                OwnerUserId = TestUserId,
                 Title = new RecipeTitle("Test"),
             });
         }
 
-        public Task<Recipe?> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default) => GetByIdAsync(id, ct);
+        public Task<Recipe?> GetByIdForUpdateAsync(string ownerUserId, Guid id, CancellationToken ct = default) =>
+            GetByIdAsync(ownerUserId, id, ct);
 
-        public Task<IReadOnlyList<Recipe>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) =>
+        public Task<IReadOnlyList<Recipe>> GetByIdsAsync(
+            string ownerUserId,
+            IReadOnlyList<Guid> ids,
+            CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<Recipe>>([]);
 
-        public Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(Guid recipeId, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<string>>([]);
+        public Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(
+            string ownerUserId,
+            Guid recipeId,
+            CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
 
-        public Task<IReadOnlyList<Recipe>> GetListAsync(string? search, RecipeCategory? category, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<Recipe>>([]);
+        public Task<IReadOnlyList<Recipe>> GetListAsync(
+            string ownerUserId,
+            string? search,
+            RecipeCategory? category,
+            CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Recipe>>([]);
 
-        public Task UpdateAsync(Recipe recipe, CancellationToken ct = default) => Task.CompletedTask;
+        public Task UpdateAsync(string ownerUserId, Recipe recipe, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
+        public Task<bool> IsRecipeImageAccessibleAsync(
+            string ownerUserId,
+            string fileName,
+            CancellationToken ct = default) =>
+            Task.FromResult(false);
     }
 }

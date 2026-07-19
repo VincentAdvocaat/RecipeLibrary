@@ -6,7 +6,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class ClearShoppingListCommandHandler(
     IShoppingListRepository repository,
-    IShoppingListUserContext userContext)
+    ICurrentUser userContext)
     : ICommandHandler<ClearShoppingListCommand, ClearShoppingListResult>
 {
     public async Task<ClearShoppingListResult> HandleAsync(
@@ -16,7 +16,7 @@ public sealed class ClearShoppingListCommandHandler(
         await ShoppingListAccessGuard.EnsureListAccessAsync(
             repository,
             command.ShoppingListId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
         var list = await repository.GetListByIdAsync(command.ShoppingListId, ct);

@@ -1,10 +1,17 @@
-@* Molecule: redirect unauthenticated users to Entra sign-in. *@
+@* Molecule: redirect unauthenticated users to Identity login. *@
 @namespace RecipeLibrary.Components.Molecules
 @inject NavigationManager Navigation
 
 @code {
     protected override void OnInitialized()
     {
-        Navigation.NavigateTo("MicrosoftIdentity/Account/SignIn", forceLoad: true);
+        var returnUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
+        if (string.IsNullOrWhiteSpace(returnUrl) || returnUrl.StartsWith("Account/", StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo("Account/Login", forceLoad: true);
+            return;
+        }
+
+        Navigation.NavigateTo($"Account/Login?returnUrl={Uri.EscapeDataString("/" + returnUrl.TrimStart('/'))}", forceLoad: true);
     }
 }

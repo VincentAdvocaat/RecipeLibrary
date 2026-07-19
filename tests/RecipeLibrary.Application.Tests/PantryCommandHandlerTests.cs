@@ -36,7 +36,7 @@ public sealed class PantryCommandHandlerTests
         var sut = new GetPantryItemsQueryHandler(
             pantry,
             new RecordingShoppingListRepository(),
-            new AnonymousShoppingListUserContext());
+            new AnonymousCurrentUser());
 
         var result = await sut.HandleAsync(new GetPantryItemsQuery { ShoppingListGroupId = groupId });
 
@@ -66,7 +66,7 @@ public sealed class PantryCommandHandlerTests
         var sut = new GetPantryItemsQueryHandler(
             pantry,
             shopping,
-            new FixedShoppingListUserContext("user-42"));
+            new FixedCurrentUser("user-42"));
 
         // AccessibleByDefault is true, so access passes.
         var result = await sut.HandleAsync(new GetPantryItemsQuery { ShoppingListGroupId = groupId });
@@ -84,7 +84,7 @@ public sealed class PantryCommandHandlerTests
         var sut = new UpsertPantryItemCommandHandler(
             pantry,
             new RecordingShoppingListRepository(),
-            new AnonymousShoppingListUserContext(),
+            new AnonymousCurrentUser(),
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
         var result = await sut.HandleAsync(new UpsertPantryItemCommand
@@ -106,7 +106,7 @@ public sealed class PantryCommandHandlerTests
         var sut = new UpsertPantryItemCommandHandler(
             new RecordingPantryRepository(),
             new RecordingShoppingListRepository(),
-            new AnonymousShoppingListUserContext(),
+            new AnonymousCurrentUser(),
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
@@ -138,7 +138,7 @@ public sealed class PantryCommandHandlerTests
         var sut = new UpsertPantryItemCommandHandler(
             pantry,
             new RecordingShoppingListRepository(),
-            new AnonymousShoppingListUserContext(),
+            new AnonymousCurrentUser(),
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
         var result = await sut.HandleAsync(new UpsertPantryItemCommand
@@ -171,7 +171,7 @@ public sealed class PantryCommandHandlerTests
         var sut = new RemovePantryItemCommandHandler(
             pantry,
             new RecordingShoppingListRepository(),
-            new AnonymousShoppingListUserContext());
+            new AnonymousCurrentUser());
 
         var result = await sut.HandleAsync(new RemovePantryItemCommand
         {
@@ -236,7 +236,7 @@ public sealed class PantryCommandHandlerTests
         var sut = new ApplyPantryToShoppingListCommandHandler(
             shopping,
             pantry,
-            new AnonymousShoppingListUserContext(),
+            new AnonymousCurrentUser(),
             new PantryExclusionFilter(merger));
 
         var result = await sut.HandleAsync(new ApplyPantryToShoppingListCommand { ShoppingListId = listId });
@@ -275,7 +275,7 @@ public sealed class PantryCommandHandlerTests
         var sut = new ApplyPantryToShoppingListCommandHandler(
             shopping,
             new RecordingPantryRepository(),
-            new AnonymousShoppingListUserContext(),
+            new AnonymousCurrentUser(),
             new PantryExclusionFilter(merger));
 
         var result = await sut.HandleAsync(new ApplyPantryToShoppingListCommand { ShoppingListId = listId });

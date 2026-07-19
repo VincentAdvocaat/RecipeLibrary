@@ -6,7 +6,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class UpdateShoppingListNameCommandHandler(
     IShoppingListRepository repository,
-    IShoppingListUserContext userContext)
+    ICurrentUser userContext)
     : ICommandHandler<UpdateShoppingListNameCommand, UpdateShoppingListNameResult>
 {
     public async Task<UpdateShoppingListNameResult> HandleAsync(
@@ -27,7 +27,7 @@ public sealed class UpdateShoppingListNameCommandHandler(
         await ShoppingListAccessGuard.EnsureListAccessAsync(
             repository,
             command.ShoppingListId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
         var updated = await repository.UpdateListNameAsync(command.ShoppingListId, name, ct);

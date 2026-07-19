@@ -10,6 +10,8 @@ namespace RecipeLibrary.Application.Tests;
 
 public sealed class UpdateRecipeCommandHandlerTests
 {
+    private const string TestUserId = "test-user";
+
     [Fact]
     public async Task HandleAsync_Throws_WhenRecipeNotFound()
     {
@@ -32,6 +34,7 @@ public sealed class UpdateRecipeCommandHandlerTests
         var existing = new Recipe
         {
             Id = recipeId,
+            OwnerUserId = TestUserId,
             Title = new RecipeTitle("Old title"),
             CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
             UpdatedAt = DateTimeOffset.UtcNow.AddDays(-1),
@@ -62,28 +65,54 @@ public sealed class UpdateRecipeCommandHandlerTests
             ingredientRepo,
             normalizer,
             new IngredientMatcher(ingredientRepo, normalizer, new IngredientSimilarityScorer()),
-            new IngredientLineResolver(new IngredientNameParser()));
+            new IngredientLineResolver(new IngredientNameParser()),
+            new FixedCurrentUser(TestUserId));
     }
 
     private sealed class FakeRecipeRepository(Recipe? existing) : IRecipeRepository
     {
         public Recipe? UpdatedRecipe { get; private set; }
 
-        public Task<Recipe?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        public Task<Recipe?> GetByIdAsync(string ownerUserId, Guid id, CancellationToken ct = default) =>
             Task.FromResult(existing is not null && existing.Id == id ? existing : null);
 
-        public Task UpdateAsync(Recipe recipe, CancellationToken ct = default)
+        public Task UpdateAsync(string ownerUserId, Recipe recipe, CancellationToken ct = default)
         {
             UpdatedRecipe = recipe;
             return Task.CompletedTask;
         }
 
         public Task AddAsync(Recipe recipe, CancellationToken ct = default) => Task.CompletedTask;
-        public Task DeleteAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
-        public Task<Recipe?> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default) => GetByIdAsync(id, ct);
-        public Task<IReadOnlyList<Recipe>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Recipe>>([]);
-        public Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(Guid recipeId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<string>>([]);
-        public Task<IReadOnlyList<Recipe>> GetListAsync(string? search, RecipeCategory? category, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Recipe>>([]);
+
+        public Task DeleteAsync(string ownerUserId, Guid id, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task<Recipe?> GetByIdForUpdateAsync(string ownerUserId, Guid id, CancellationToken ct = default) =>
+            GetByIdAsync(ownerUserId, id, ct);
+
+        public Task<IReadOnlyList<Recipe>> GetByIdsAsync(
+            string ownerUserId,
+            IReadOnlyList<Guid> ids,
+            CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Recipe>>([]);
+
+        public Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(
+            string ownerUserId,
+            Guid recipeId,
+            CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
+
+        public Task<IReadOnlyList<Recipe>> GetListAsync(
+            string ownerUserId,
+            string? search,
+            RecipeCategory? category,
+            CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Recipe>>([]);
+
+        public Task<bool> IsRecipeImageAccessibleAsync(
+            string ownerUserId,
+            string fileName,
+            CancellationToken ct = default) =>
+            Task.FromResult(false);
     }
 
     private sealed class FakeIngredientRepository : IIngredientRepository

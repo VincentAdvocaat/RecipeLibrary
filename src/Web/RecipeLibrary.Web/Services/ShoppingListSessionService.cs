@@ -22,7 +22,7 @@ public sealed class ShoppingListSessionService(
 
     IQueryBus queryBus,
 
-    IShoppingListUserContext userContext,
+    ICurrentUser userContext,
 
     IStringLocalizer<SharedResources> localizer,
 
@@ -154,7 +154,7 @@ public sealed class ShoppingListSessionService(
 
                 GroupId = groupId,
 
-                OwnerUserId = userContext.OwnerUserId,
+                OwnerUserId = userContext.UserId,
 
                 DefaultListNameFormat = localizer["ShoppingList.NumberedNameFormat"].Value,
 

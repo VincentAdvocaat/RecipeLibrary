@@ -6,7 +6,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class GetShoppingListSummaryQueryHandler(
     IShoppingListRepository repository,
-    IShoppingListUserContext userContext)
+    ICurrentUser userContext)
     : IQueryHandler<GetShoppingListSummaryQuery, ShoppingListSummaryResult>
 {
     public async Task<ShoppingListSummaryResult> HandleAsync(
@@ -16,7 +16,7 @@ public sealed class GetShoppingListSummaryQueryHandler(
         await ShoppingListAccessGuard.EnsureGroupAccessAsync(
             repository,
             query.GroupId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
         var count = await repository.GetUncheckedItemCountForGroupAsync(query.GroupId, ct);

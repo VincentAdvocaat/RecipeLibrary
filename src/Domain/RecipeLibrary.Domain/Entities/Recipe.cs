@@ -9,6 +9,9 @@ public sealed class Recipe
 {
     public Guid Id { get; set; }
 
+    /// <summary>ASP.NET Core Identity user id of the recipe owner.</summary>
+    public string OwnerUserId { get; set; } = string.Empty;
+
     public RecipeTitle Title { get; set; }
 
     public string? Description { get; set; }

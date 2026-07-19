@@ -6,7 +6,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class RemoveShoppingListItemCommandHandler(
     IShoppingListRepository repository,
-    IShoppingListUserContext userContext)
+    ICurrentUser userContext)
     : ICommandHandler<RemoveShoppingListItemCommand, RemoveShoppingListItemResult>
 {
     public async Task<RemoveShoppingListItemResult> HandleAsync(
@@ -16,7 +16,7 @@ public sealed class RemoveShoppingListItemCommandHandler(
         await ShoppingListAccessGuard.EnsureItemAccessAsync(
             repository,
             command.ItemId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
         var removed = await repository.RemoveItemAsync(command.ItemId, ct);

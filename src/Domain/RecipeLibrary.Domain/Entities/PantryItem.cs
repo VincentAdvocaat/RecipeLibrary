@@ -7,7 +7,7 @@ public sealed class PantryItem
 {
     public Guid Id { get; set; }
 
-    /// <summary>Entra object ID or anonymous group key (group:{guid}).</summary>
+    /// <summary>Identity user id or anonymous group key (group:{guid}).</summary>
     public string OwnerUserId { get; set; } = string.Empty;
 
     public Guid? CanonicalIngredientId { get; set; }

@@ -6,18 +6,23 @@ using RecipeLibrary.Domain.ValueObjects;
 
 namespace RecipeLibrary.Application.UseCases.Recipes;
 
-public sealed class GetRecipeListQueryHandler(IRecipeRepository recipeRepository)
+public sealed class GetRecipeListQueryHandler(
+    IRecipeRepository recipeRepository,
+    ICurrentUser currentUser)
     : IQueryHandler<GetRecipeListQuery, GetRecipeListResult>
 {
     public async Task<GetRecipeListResult> HandleAsync(GetRecipeListQuery query, CancellationToken ct = default)
     {
+        var ownerUserId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Authentication is required.");
+
         RecipeCategory? category = null;
         if (query.Category is { } value && Enum.IsDefined(typeof(RecipeCategory), value))
         {
             category = (RecipeCategory)value;
         }
 
-        var recipes = await recipeRepository.GetListAsync(query.Search, category, ct);
+        var recipes = await recipeRepository.GetListAsync(ownerUserId, query.Search, category, ct);
         var items = recipes.Select(MapToOverviewItem).ToList();
         return new GetRecipeListResult(items);
     }

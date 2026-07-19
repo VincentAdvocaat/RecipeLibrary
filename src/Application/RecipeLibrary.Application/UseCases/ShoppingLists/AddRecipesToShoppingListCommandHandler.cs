@@ -9,7 +9,7 @@ public sealed class AddRecipesToShoppingListCommandHandler(
     IRecipeRepository recipeRepository,
     IShoppingListRepository shoppingListRepository,
     IPantryRepository pantryRepository,
-    IShoppingListUserContext userContext,
+    ICurrentUser userContext,
     ShoppingListIngredientMerger merger,
     PantryExclusionFilter pantryExclusionFilter)
     : ICommandHandler<AddRecipesToShoppingListCommand, AddRecipesToShoppingListResult>
@@ -26,13 +26,16 @@ public sealed class AddRecipesToShoppingListCommandHandler(
         await ShoppingListAccessGuard.EnsureListAccessAsync(
             shoppingListRepository,
             command.ShoppingListId,
-            userContext.OwnerUserId,
+            userContext.UserId,
             ct);
 
         var list = await shoppingListRepository.GetListByIdAsync(command.ShoppingListId, ct)
             ?? throw new InvalidOperationException("Shopping list not found.");
 
-        var recipes = await recipeRepository.GetByIdsAsync(command.RecipeIds, ct);
+        var recipes = await recipeRepository.GetByIdsAsync(
+            userContext.UserId ?? throw new UnauthorizedAccessException("Authentication is required."),
+            command.RecipeIds,
+            ct);
         var lines = new List<ShoppingListIngredientLine>();
 
         foreach (var recipe in recipes)
@@ -52,7 +55,7 @@ public sealed class AddRecipesToShoppingListCommandHandler(
             }
         }
 
-        var ownerKey = PantryOwnerKey.Resolve(userContext.OwnerUserId, list.GroupId);
+        var ownerKey = PantryOwnerKey.Resolve(userContext.UserId, list.GroupId);
         var pantryItems = await pantryRepository.GetByOwnerKeyAsync(ownerKey, ct);
         if (pantryItems.Count > 0)
         {

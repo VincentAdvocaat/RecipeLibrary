@@ -19,6 +19,9 @@ public static class TestDataSeeder
 {
     public const string LasagnaTitle = "Test Lasagna";
 
+    /// <summary>Owner user id assigned to seeded recipes (private library scope).</summary>
+    public const string TestOwnerUserId = "test-owner-user-id";
+
     public static async Task<TestSeedData> SeedAsync(IServiceProvider services, CancellationToken ct = default)
     {
         await using var scope = services.CreateAsyncScope();
@@ -52,6 +55,7 @@ public static class TestDataSeeder
         var recipe = new Recipe
         {
             Id = recipeId,
+            OwnerUserId = TestOwnerUserId,
             Title = new RecipeTitle(LasagnaTitle),
             Description = "Seeded recipe for automated tests.",
             PreparationMinutes = 30,
@@ -100,6 +104,7 @@ public static class TestDataSeeder
         db.ShoppingListGroups.Add(new ShoppingListGroup
         {
             Id = groupId,
+            OwnerUserId = TestOwnerUserId,
             CreatedAt = now,
             UpdatedAt = now,
             Lists =
