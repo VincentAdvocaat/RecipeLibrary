@@ -6,6 +6,7 @@ public static class UiTestIds
     public const string NavMenu = "nav-menu";
     public const string NavRecipes = "nav-recipes";
     public const string NavCreate = "nav-create";
+    public const string NavImport = "nav-import";
     public const string NavShoppingList = "nav-shopping-list";
     public const string NavBadge = "nav-badge";
     public const string AddRecipeFab = "add-recipe-fab";

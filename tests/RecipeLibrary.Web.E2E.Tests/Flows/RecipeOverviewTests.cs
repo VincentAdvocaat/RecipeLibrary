@@ -83,5 +83,32 @@ public sealed class RecipeOverviewTests(E2eFixture fixture)
         await page.GetByTestId(UiTestIds.AddRecipeFab).ClickAsync();
         await Assertions.Expect(page).ToHaveURLAsync(new Regex("/recipes/create"));
         await Assertions.Expect(page.GetByTestId(UiTestIds.RecipeTitle)).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByTestId(UiTestIds.AddRecipeFab)).ToHaveCountAsync(0);
+    }
+
+    [Fact]
+    public async Task NavMenu_OpenAndNavigateToCreate()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        page.UseBlazorDefaults();
+        await page.GotoRecipesAsync(fixture.BaseUrl);
+
+        await page.GetByTestId(UiTestIds.NavMenu).ClickAsync();
+        await page.GetByTestId(UiTestIds.NavCreate).ClickAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("/recipes/create"));
+        await Assertions.Expect(page.GetByTestId(UiTestIds.RecipeTitle)).ToBeVisibleAsync();
+    }
+
+    [Fact]
+    public async Task AddRecipeFab_HiddenOnCreatePage()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        page.UseBlazorDefaults();
+        await page.GotoCreateRecipeAsync(fixture.BaseUrl);
+
+        await Assertions.Expect(page.GetByTestId(UiTestIds.NavMenu)).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByTestId(UiTestIds.AddRecipeFab)).ToHaveCountAsync(0);
     }
 }
