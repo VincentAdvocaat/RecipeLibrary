@@ -72,6 +72,42 @@ public sealed class IngredientMeasurePresenterTests
     }
 
     [Fact]
+    public void ApplyMassPreferenceToImported_ConvertsOunceToGram_UnderMetric()
+    {
+        var (qty, unit) = IngredientMeasurePresenter.ApplyMassPreferenceToImported(
+            8m,
+            "Ounce",
+            MeasureSystem.Metric);
+
+        Assert.Equal(227m, qty);
+        Assert.Equal(nameof(Unit.Gram), unit);
+    }
+
+    [Fact]
+    public void ApplyMassPreferenceToImported_ConvertsGramToOunce_UnderImperial()
+    {
+        var (qty, unit) = IngredientMeasurePresenter.ApplyMassPreferenceToImported(
+            100m,
+            "Gram",
+            MeasureSystem.Imperial);
+
+        Assert.Equal(3.53m, qty);
+        Assert.Equal(nameof(Unit.Ounce), unit);
+    }
+
+    [Fact]
+    public void ApplyMassPreferenceToImported_LeavesKitchenMeasureUnchanged()
+    {
+        var (qty, unit) = IngredientMeasurePresenter.ApplyMassPreferenceToImported(
+            1m,
+            "Cup",
+            MeasureSystem.Metric);
+
+        Assert.Equal(1m, qty);
+        Assert.Equal("Cup", unit);
+    }
+
+    [Fact]
     public void MeasureSystemDefaults_IsMetricIndependentOfCulture()
     {
         Assert.Equal(MeasureSystem.Metric, MeasureSystemDefaults.Default);

@@ -374,6 +374,16 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
 
             b.HasIndex(x => new { x.CanonicalIngredientId, x.FromUnit, x.ToUnit, x.Status });
 
+            // At most one Pending suggestion per matched ingredient + direction.
+            b.HasIndex(x => new { x.CanonicalIngredientId, x.FromUnit, x.ToUnit })
+                .IsUnique()
+                .HasFilter("[Status] = N'Pending' AND [CanonicalIngredientId] IS NOT NULL");
+
+            // At most one Pending suggestion per unmatched display name + direction.
+            b.HasIndex(x => new { x.IngredientDisplayName, x.FromUnit, x.ToUnit })
+                .IsUnique()
+                .HasFilter("[Status] = N'Pending' AND [CanonicalIngredientId] IS NULL");
+
             b.HasOne(x => x.CanonicalIngredient)
                 .WithMany()
                 .HasForeignKey(x => x.CanonicalIngredientId)

@@ -114,6 +114,12 @@ Curated rows are seeded from `data/ingredients/unit-conversions.json` (King Arth
 - Show the convert action only when a curated/pending estimate exists or AI fallback is configured.
 - Optional “convert” → approximate mass (then apply presentation); AI results stay as `Pending` suggestions.
 - Label as an estimate; do not rewrite the recipe line.
+- Pending suggestions are unique per ingredient + direction; display names are normalized (trim + lowercase).
+- The uniqueness migration normalizes existing display names and keeps the newest Pending row when duplicates exist, then creates the filtered unique indexes.
+
+### Import → editor
+
+When an import draft is applied to the create form, **mass** units are rewritten to the current measure preference (cookie): oz/lb → g under Metric, g → oz/lb under Imperial. Kitchen measures and count units are left as parsed. The stored recipe keeps whatever the user saves from the editor.
 
 ## Related
 

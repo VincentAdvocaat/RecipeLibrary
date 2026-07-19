@@ -8,13 +8,16 @@
 @using RecipeLibrary.Application.Contracts
 @using RecipeLibrary.Domain.ValueObjects
 @using RecipeLibrary.Resources
+@using RecipeLibrary.Application.Ingredients
 @using RecipeLibrary.Web.Models
+@using RecipeLibrary.Web.Services
 @using RecipeCategory = RecipeLibrary.Domain.ValueObjects.RecipeCategory
 @using RecipeDifficulty = RecipeLibrary.Domain.ValueObjects.Difficulty
 @inject ICommandBus CommandBus
 @inject NavigationManager Navigation
 @inject HttpClient Http
 @inject IOptions<RecipeImportOptions> ImportOptions
+@inject MeasureSystemService MeasureSystemService
 
 <PageTitle>@L["RecipeCreate.PageTitle"]</PageTitle>
 
@@ -645,13 +648,21 @@
         {
             _vm.Category = category;
         }
-        _vm.Ingredients = draft.Ingredients.Select(x => new RecipeIngredientEditorItem
+        var measureSystem = MeasureSystemService.GetMeasureSystem();
+        _vm.Ingredients = draft.Ingredients.Select(x =>
         {
-            Name = x.Name,
-            Preparation = x.Preparation,
-            Quantity = x.Quantity,
-            UnitName = string.IsNullOrWhiteSpace(x.Unit) ? null : x.Unit,
-            NeedsReview = x.Confidence < reviewThreshold,
+            var (quantity, unitName) = IngredientMeasurePresenter.ApplyMassPreferenceToImported(
+                x.Quantity,
+                string.IsNullOrWhiteSpace(x.Unit) ? null : x.Unit,
+                measureSystem);
+            return new RecipeIngredientEditorItem
+            {
+                Name = x.Name,
+                Preparation = x.Preparation,
+                Quantity = quantity,
+                UnitName = unitName,
+                NeedsReview = x.Confidence < reviewThreshold,
+            };
         }).ToList();
 
         if (_vm.Ingredients.Count == 0)

@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Localization;
 using RecipeLibrary.Application;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
+using RecipeLibrary.Application.Security;
 using RecipeLibrary.Components;
 using RecipeLibrary.Infrastructure.FileStorage;
 using RecipeLibrary.Infrastructure.Identity;
@@ -459,9 +460,7 @@ app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext htt
     if (culture is not ("nl-NL" or "en-US"))
         return Results.BadRequest();
 
-    var returnPath = string.IsNullOrWhiteSpace(redirectUri) || !redirectUri.StartsWith('/')
-        ? "/"
-        : redirectUri;
+    var returnPath = LocalRedirect.Normalize(redirectUri);
 
     httpContext.Response.Cookies.Append(
         CookieRequestCultureProvider.DefaultCookieName,
@@ -471,7 +470,8 @@ app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext htt
             Expires = DateTimeOffset.UtcNow.AddYears(1),
             IsEssential = true,
             SameSite = SameSiteMode.Lax,
-            HttpOnly = true
+            HttpOnly = true,
+            Secure = httpContext.Request.IsHttps,
         });
 
     return Results.Redirect(returnPath);
@@ -482,14 +482,12 @@ app.MapGet("/measure-system/set", (string system, string? redirectUri, HttpConte
     if (!MeasureSystemService.TryParse(system, out var measureSystem))
         return Results.BadRequest();
 
-    var returnPath = string.IsNullOrWhiteSpace(redirectUri) || !redirectUri.StartsWith('/')
-        ? "/"
-        : redirectUri;
+    var returnPath = LocalRedirect.Normalize(redirectUri);
 
     httpContext.Response.Cookies.Append(
         MeasureSystemService.CookieName,
         measureSystem.ToString(),
-        MeasureSystemService.CreateCookieOptions());
+        MeasureSystemService.CreateCookieOptions(secure: httpContext.Request.IsHttps));
 
     return Results.Redirect(returnPath);
 }).AllowAnonymous();
