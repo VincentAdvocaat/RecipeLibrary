@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["RecipeLibrary.styles.css"]" />
     <ImportMap />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="PageRenderMode" />
 </head>
 
 <body>
@@ -19,6 +19,7 @@
     <ReconnectModal @rendermode="InteractiveServer" />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="photoUploadZone.js"></script>
+    <script src="disableSubmitOnPost.js"></script>
 </body>
 
 </html>
