@@ -89,7 +89,10 @@ When using `azure-pipelines.yml`:
 3. **Second run on `main`**: new revision becomes healthy; smoke check should pass.
 
 Cold starts (scale-from-zero + serverless SQL resume) can take several minutes.
-The pipeline smoke check retries for up to ~10 minutes.
+The pipeline smoke check retries for up to ~10 minutes. Success requires
+`/api/system/readiness` = `Ready` and `GET /` either `200` or a `302` to
+`/Account/Login` (Identity always-on auth). EF migrations do **not** remove
+database users or role grants; only recreating the Azure SQL database does.
 
 Soft readiness: ACA probes use `/health/live` (startup/liveness) and `/health/ready`
 (process can accept HTTP — not database-ready). While SQL wakes up, browsers are
