@@ -16,7 +16,7 @@
 <PageTitle>@L["ShoppingList.PageTitle"]</PageTitle>
 
 <div class="min-h-screen bg-gray-100" data-testid="@UiTestIds.ShoppingListReady">
-    <div class="container mx-auto p-4 max-w-4xl">
+    <div class="container mx-auto p-4 max-w-5xl">
         <RecipeOverviewHeader Title="@L["ShoppingList.PageTitle"]" ShoppingBadgeCount="@_badgeCount" />
 
         @if (_group is null)
@@ -42,7 +42,7 @@
 
             @if (_activeList is not null)
             {
-                <div class="bg-white rounded-lg shadow p-6 space-y-4">
+                <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 space-y-4">
                     <div class="flex flex-wrap items-center gap-3 justify-between">
                         @if (_editingName)
                         {

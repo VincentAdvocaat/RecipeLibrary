@@ -1,50 +1,194 @@
-@* Organism: page header with title, nav links, optional view toggle in header. *@
+@* Organism: page header with hamburger nav, title, optional add button and view toggle. *@
 @namespace RecipeLibrary.Components.Organisms
+@implements IDisposable
+@inject NavigationManager Navigation
 
-<header class="flex flex-wrap items-center justify-between gap-4 mb-6 @CssClass">
-    <div class="flex items-center gap-4">
-        <Heading Level="1" CssClass="m-0">@Title</Heading>
-        <nav class="flex items-center gap-4">
-            @if (IsCreatePage)
-            {
-                <AppNavLink Href="/recipes" data-testid="@UiTestIds.NavRecipes">@L["Nav.MyRecipes"]</AppNavLink>
-                <AppNavLink Href="/recipes/import">@L["Nav.ImportRecipe"]</AppNavLink>
-                <AppNavLink Href="/">@L["Nav.Overview"]</AppNavLink>
-            }
-            else
-            {
-                <AppNavLink Href="/recipes/create" data-testid="@UiTestIds.NavCreate">@L["Nav.AddRecipe"]</AppNavLink>
-                <AppNavLink Href="/recipes/import">@L["Nav.ImportRecipe"]</AppNavLink>
-                <AppNavLink Href="/recipes" data-testid="@UiTestIds.NavRecipes">@L["Nav.MyRecipes"]</AppNavLink>
-            }
-            <a href="/shopping-list" data-testid="@UiTestIds.NavShoppingList" class="relative text-gray-700 text-sm font-medium hover:text-gray-900 no-underline">
-                @L["Nav.ShoppingList"]
-                @if (ShoppingBadgeCount > 0)
+<header class="mb-6 border-b border-gray-200 pb-4 @CssClass">
+    <div class="flex min-h-10 flex-wrap items-center justify-between gap-2">
+        <div class="flex min-w-0 flex-1 items-center gap-2">
+            <div class="relative flex-shrink-0">
+                @if (_isOpen)
                 {
-                    <span data-testid="@UiTestIds.NavBadge" class="absolute -top-2 -right-3 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-gray-800 px-1.5 py-0.5 text-xs font-medium text-white">
-                        @ShoppingBadgeCount
-                    </span>
+                    <button type="button"
+                            class="fixed inset-0 z-10 cursor-default"
+                            tabindex="-1"
+                            aria-hidden="true"
+                            @onclick="CloseFromBackdrop"></button>
                 }
-            </a>
-            <AppNavLink Href="/pantry" data-testid="@UiTestIds.NavPantry">@L["Nav.Pantry"]</AppNavLink>
-        </nav>
-    </div>
-    <div class="flex items-center gap-4">
-        @if (ShowViewToggleInHeader)
-        {
-            <ViewToggle ViewMode="@ViewMode" ViewModeChanged="@ViewModeChanged" ShowCardsLabel="false" />
-        }
-        <AuthNav />
-        <LanguageSwitcher />
+                <button type="button"
+                        @ref="_menuTrigger"
+                        id="app-nav-menu-trigger"
+                        data-testid="@UiTestIds.NavMenu"
+                        class="relative z-20 inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1"
+                        aria-expanded="@(_isOpen ? "true" : "false")"
+                        aria-controls="app-nav-menu"
+                        aria-label="@L["Common.Menu.AriaLabel"]"
+                        @onclick="ToggleAsync"
+                        @onkeydown="OnTriggerKeyDown">
+                    <Icon Name="Icon.IconName.Menu" CssClass="h-5 w-5" />
+                </button>
+                @if (_isOpen)
+                {
+                    <nav id="app-nav-menu"
+                         @ref="_menuPanel"
+                         tabindex="-1"
+                         class="absolute left-0 z-20 mt-1 min-w-[14rem] rounded border border-gray-300 bg-white py-1 shadow-lg focus:outline-none"
+                         aria-labelledby="app-nav-menu-trigger"
+                         @onkeydown="OnMenuKeyDown">
+                        <AppNavLink Href="/recipes"
+                                    CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
+                                    data-testid="@UiTestIds.NavRecipes">@L["Nav.MyRecipes"]</AppNavLink>
+                        <AppNavLink Href="/recipes/create"
+                                    CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
+                                    data-testid="@UiTestIds.NavCreate">@L["Nav.AddRecipe"]</AppNavLink>
+                        <AppNavLink Href="/recipes/import"
+                                    CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
+                                    data-testid="@UiTestIds.NavImport">@L["Nav.ImportRecipe"]</AppNavLink>
+                        <a href="/shopping-list"
+                           data-testid="@UiTestIds.NavShoppingList"
+                           class="relative block px-3 py-2 text-sm font-medium text-gray-700 no-underline hover:bg-gray-50 hover:text-gray-900">
+                            @L["Nav.ShoppingList"]
+                            @if (ShoppingBadgeCount > 0)
+                            {
+                                <span data-testid="@UiTestIds.NavBadge"
+                                      class="ml-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-gray-800 px-1.5 py-0.5 text-xs font-medium text-white">
+                                    @ShoppingBadgeCount
+                                </span>
+                            }
+                        </a>
+                        <AppNavLink Href="/pantry"
+                                    CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
+                                    data-testid="@UiTestIds.NavPantry">@L["Nav.Pantry"]</AppNavLink>
+                    </nav>
+                }
+            </div>
+            <Heading Level="1" CssClass="m-0 truncate">@Title</Heading>
+        </div>
+        <div class="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
+            @if (ShowAddRecipeFab)
+            {
+                <a href="/recipes/create"
+                   data-testid="@UiTestIds.AddRecipeFab"
+                   class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-800 bg-gray-800 text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1"
+                   aria-label="@L["Nav.AddRecipe"]"
+                   title="@L["Nav.AddRecipe"]">
+                    <Icon Name="Icon.IconName.Plus" CssClass="h-5 w-5" />
+                </a>
+            }
+            @if (ShowViewToggleInHeader)
+            {
+                <ViewToggle ViewMode="@ViewMode" ViewModeChanged="@ViewModeChanged" ShowCardsLabel="false" />
+            }
+            <AuthNav />
+            <LanguageSwitcher />
+        </div>
     </div>
 </header>
 
 @code {
+    private bool _isOpen;
+    private bool _focusMenuAfterOpen;
+    private ElementReference _menuTrigger;
+    private ElementReference _menuPanel;
+
     [Parameter, EditorRequired] public string Title { get; set; } = null!;
-    [Parameter] public bool IsCreatePage { get; set; }
     [Parameter] public bool ShowViewToggleInHeader { get; set; }
     [Parameter] public ViewToggle.ViewModeKind ViewMode { get; set; }
     [Parameter] public EventCallback<ViewToggle.ViewModeKind> ViewModeChanged { get; set; }
     [Parameter] public string? CssClass { get; set; }
     [Parameter] public int ShoppingBadgeCount { get; set; }
+
+    private bool ShowAddRecipeFab
+    {
+        get
+        {
+            var path = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].TrimEnd('/');
+            if (path.Equals("recipes/create", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return !(path.StartsWith("recipes/", StringComparison.OrdinalIgnoreCase)
+                     && path.EndsWith("/edit", StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusMenuAfterOpen)
+        {
+            return;
+        }
+
+        _focusMenuAfterOpen = false;
+        await _menuPanel.FocusAsync();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (!_isOpen)
+        {
+            return;
+        }
+
+        _isOpen = false;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleAsync()
+    {
+        if (_isOpen)
+        {
+            await CloseAsync(returnFocus: false);
+            return;
+        }
+
+        _isOpen = true;
+        _focusMenuAfterOpen = true;
+    }
+
+    private Task CloseFromBackdrop() => CloseAsync(returnFocus: true);
+
+    private async Task CloseAsync(bool returnFocus)
+    {
+        if (!_isOpen)
+        {
+            return;
+        }
+
+        _isOpen = false;
+        _focusMenuAfterOpen = false;
+        await InvokeAsync(StateHasChanged);
+
+        if (returnFocus)
+        {
+            await _menuTrigger.FocusAsync();
+        }
+    }
+
+    private async Task OnTriggerKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && _isOpen)
+        {
+            await CloseAsync(returnFocus: true);
+        }
+    }
+
+    private async Task OnMenuKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await CloseAsync(returnFocus: true);
+        }
+    }
 }
