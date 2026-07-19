@@ -23,6 +23,27 @@ public sealed class EfIngredientUnitConversionStore(RecipeDbContext dbContext) :
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<IngredientUnitConversion>> GetConversionsForIngredientsAsync(
+        IReadOnlyCollection<Guid> canonicalIngredientIds,
+        IReadOnlyCollection<Unit> fromUnits,
+        Unit toUnit,
+        CancellationToken ct = default)
+    {
+        if (canonicalIngredientIds.Count == 0 || fromUnits.Count == 0)
+        {
+            return [];
+        }
+
+        return await dbContext.IngredientUnitConversions
+            .AsNoTracking()
+            .Include(x => x.ConversionSource)
+            .Where(x =>
+                canonicalIngredientIds.Contains(x.CanonicalIngredientId)
+                && fromUnits.Contains(x.FromUnit)
+                && x.ToUnit == toUnit)
+            .ToListAsync(ct);
+    }
+
     public async Task<IngredientUnitConversionSuggestion?> GetPendingSuggestionAsync(
         Guid? canonicalIngredientId,
         string displayName,
@@ -30,7 +51,7 @@ public sealed class EfIngredientUnitConversionStore(RecipeDbContext dbContext) :
         Unit toUnit,
         CancellationToken ct = default)
     {
-        var normalizedName = displayName.Trim();
+        var normalizedName = NormalizeDisplayName(displayName);
         var query = dbContext.IngredientUnitConversionSuggestions
             .AsNoTracking()
             .Where(x =>
@@ -54,10 +75,95 @@ public sealed class EfIngredientUnitConversionStore(RecipeDbContext dbContext) :
             .FirstOrDefaultAsync(ct);
     }
 
-    public async Task AddSuggestionAsync(IngredientUnitConversionSuggestion suggestion, CancellationToken ct = default)
+    public async Task<IReadOnlyList<IngredientUnitConversionSuggestion>> GetPendingSuggestionsBatchAsync(
+        IReadOnlyCollection<Guid> canonicalIngredientIds,
+        IReadOnlyCollection<string> displayNamesWithoutCanonical,
+        IReadOnlyCollection<Unit> fromUnits,
+        Unit toUnit,
+        CancellationToken ct = default)
     {
-        dbContext.IngredientUnitConversionSuggestions.Add(suggestion);
-        await dbContext.SaveChangesAsync(ct);
+        if (fromUnits.Count == 0
+            || (canonicalIngredientIds.Count == 0 && displayNamesWithoutCanonical.Count == 0))
+        {
+            return [];
+        }
+
+        var normalizedNames = displayNamesWithoutCanonical
+            .Select(NormalizeDisplayName)
+            .Where(static n => n.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var query = dbContext.IngredientUnitConversionSuggestions
+            .AsNoTracking()
+            .Where(x =>
+                x.Status == ConversionSuggestionStatus.Pending
+                && fromUnits.Contains(x.FromUnit)
+                && x.ToUnit == toUnit);
+
+        if (canonicalIngredientIds.Count > 0 && normalizedNames.Count > 0)
+        {
+            query = query.Where(x =>
+                (x.CanonicalIngredientId != null && canonicalIngredientIds.Contains(x.CanonicalIngredientId.Value))
+                || (x.CanonicalIngredientId == null && normalizedNames.Contains(x.IngredientDisplayName)));
+        }
+        else if (canonicalIngredientIds.Count > 0)
+        {
+            query = query.Where(x =>
+                x.CanonicalIngredientId != null
+                && canonicalIngredientIds.Contains(x.CanonicalIngredientId.Value));
+        }
+        else
+        {
+            query = query.Where(x =>
+                x.CanonicalIngredientId == null
+                && normalizedNames.Contains(x.IngredientDisplayName));
+        }
+
+        return await query.ToListAsync(ct);
+    }
+
+    public async Task<IngredientUnitConversionSuggestion> AddOrGetPendingSuggestionAsync(
+        IngredientUnitConversionSuggestion suggestion,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(suggestion);
+
+        suggestion.IngredientDisplayName = NormalizeDisplayName(suggestion.IngredientDisplayName);
+
+        var existing = await GetPendingSuggestionAsync(
+            suggestion.CanonicalIngredientId,
+            suggestion.IngredientDisplayName,
+            suggestion.FromUnit,
+            suggestion.ToUnit,
+            ct);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        try
+        {
+            dbContext.IngredientUnitConversionSuggestions.Add(suggestion);
+            await dbContext.SaveChangesAsync(ct);
+            return suggestion;
+        }
+        catch (DbUpdateException)
+        {
+            dbContext.Entry(suggestion).State = EntityState.Detached;
+            var raced = await GetPendingSuggestionAsync(
+                suggestion.CanonicalIngredientId,
+                suggestion.IngredientDisplayName,
+                suggestion.FromUnit,
+                suggestion.ToUnit,
+                ct);
+            if (raced is not null)
+            {
+                return raced;
+            }
+
+            throw;
+        }
     }
 
     public async Task AddConversionAsync(IngredientUnitConversion conversion, CancellationToken ct = default)
@@ -93,4 +199,7 @@ public sealed class EfIngredientUnitConversionStore(RecipeDbContext dbContext) :
             .FirstOrDefaultAsync(ct);
         return id;
     }
+
+    internal static string NormalizeDisplayName(string displayName) =>
+        (displayName ?? string.Empty).Trim().ToLowerInvariant();
 }

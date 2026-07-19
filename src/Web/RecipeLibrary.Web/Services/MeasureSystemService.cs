@@ -41,12 +41,13 @@ public sealed class MeasureSystemService(IHttpContextAccessor httpContextAccesso
         return false;
     }
 
-    public static CookieOptions CreateCookieOptions() =>
+    public static CookieOptions CreateCookieOptions(bool secure = false) =>
         new()
         {
             Expires = DateTimeOffset.UtcNow.AddYears(1),
             IsEssential = true,
             SameSite = SameSiteMode.Lax,
             HttpOnly = true,
+            Secure = secure,
         };
 }

@@ -82,7 +82,7 @@ public sealed class IngredientQuantityConversionService(
             {
                 Id = Guid.NewGuid(),
                 CanonicalIngredientId = request.CanonicalIngredientId,
-                IngredientDisplayName = request.IngredientDisplayName.Trim(),
+                IngredientDisplayName = request.IngredientDisplayName,
                 FromUnit = proposal.FromUnit,
                 ToUnit = proposal.ToUnit,
                 AmountFrom = proposal.AmountFrom,
@@ -93,9 +93,9 @@ public sealed class IngredientQuantityConversionService(
                 CreatedAt = DateTimeOffset.UtcNow,
             };
             // Persist as Pending only — AI is a generator, not trusted catalog truth.
-            await store.AddSuggestionAsync(suggestion, ct);
+            var stored = await store.AddOrGetPendingSuggestionAsync(suggestion, ct);
 
-            return BuildResult(request.Quantity, proposal.AmountFrom, proposal.AmountTo, Unit.Gram, "AiSuggestion");
+            return BuildResult(request.Quantity, stored.AmountFrom, stored.AmountTo, Unit.Gram, "AiSuggestion");
         }
         catch (Exception ex)
         {
@@ -106,6 +106,90 @@ public sealed class IngredientQuantityConversionService(
                 request.FromUnit);
             return IngredientQuantityConversionResult.Failed();
         }
+    }
+
+    /// <summary>
+    /// Batch: which item keys can use curated/pending rows or AI fallback (no AI call).
+    /// </summary>
+    public async Task<IReadOnlySet<string>> GetConvertibleKeysAsync(
+        IReadOnlyList<(string Key, IngredientQuantityConversionRequest Request)> items,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        var result = new HashSet<string>(StringComparer.Ordinal);
+        var candidates = items
+            .Where(x =>
+                !string.IsNullOrEmpty(x.Key)
+                && UnitClassification.IsKitchenMeasure(x.Request.FromUnit)
+                && x.Request.Quantity > 0)
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            return result;
+        }
+
+        // AI fallback covers every kitchen measure — skip per-row DB lookups.
+        if (IsAiFallbackAvailable)
+        {
+            foreach (var (key, _) in candidates)
+            {
+                result.Add(key);
+            }
+
+            return result;
+        }
+
+        var ingredientIds = candidates
+            .Select(x => x.Request.CanonicalIngredientId)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+
+        var fromUnits = candidates
+            .Select(x => x.Request.FromUnit)
+            .Distinct()
+            .ToList();
+
+        var conversions = await store.GetConversionsForIngredientsAsync(
+            ingredientIds,
+            fromUnits,
+            Unit.Gram,
+            ct);
+        var convertibleByIngredient = conversions
+            .Select(c => (c.CanonicalIngredientId, c.FromUnit))
+            .ToHashSet();
+
+        var namesWithoutId = candidates
+            .Where(x => x.Request.CanonicalIngredientId is null)
+            .Select(x => x.Request.IngredientDisplayName)
+            .ToList();
+
+        var pendings = await store.GetPendingSuggestionsBatchAsync(
+            ingredientIds,
+            namesWithoutId,
+            fromUnits,
+            Unit.Gram,
+            ct);
+
+        foreach (var (key, request) in candidates)
+        {
+            if (request.CanonicalIngredientId is Guid id
+                && convertibleByIngredient.Contains((id, request.FromUnit)))
+            {
+                result.Add(key);
+                continue;
+            }
+
+            if (HasMatchingPending(pendings, request))
+            {
+                result.Add(key);
+            }
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -120,6 +204,11 @@ public sealed class IngredientQuantityConversionService(
         if (!UnitClassification.IsKitchenMeasure(request.FromUnit) || request.Quantity <= 0)
         {
             return false;
+        }
+
+        if (IsAiFallbackAvailable)
+        {
+            return true;
         }
 
         if (request.CanonicalIngredientId is Guid ingredientId)
@@ -137,12 +226,7 @@ public sealed class IngredientQuantityConversionService(
             request.FromUnit,
             Unit.Gram,
             ct);
-        if (pending is not null)
-        {
-            return true;
-        }
-
-        return IsAiFallbackAvailable;
+        return pending is not null;
     }
 
     public bool IsAiFallbackAvailable =>
@@ -185,6 +269,24 @@ public sealed class IngredientQuantityConversionService(
         }
 
         return best;
+    }
+
+    private static bool HasMatchingPending(
+        IReadOnlyList<IngredientUnitConversionSuggestion> pendings,
+        IngredientQuantityConversionRequest request)
+    {
+        if (request.CanonicalIngredientId is Guid id)
+        {
+            return pendings.Any(p =>
+                p.CanonicalIngredientId == id
+                && p.FromUnit == request.FromUnit);
+        }
+
+        var name = request.IngredientDisplayName.Trim();
+        return pendings.Any(p =>
+            p.CanonicalIngredientId is null
+            && p.FromUnit == request.FromUnit
+            && string.Equals(p.IngredientDisplayName, name, StringComparison.OrdinalIgnoreCase));
     }
 
     private static IngredientQuantityConversionResult BuildResult(

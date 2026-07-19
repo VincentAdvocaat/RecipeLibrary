@@ -59,7 +59,7 @@ public sealed class IngredientQuantityConversionServiceTests
         var sut = CreateSut(store, aiEnabled: true, ai);
         var result = await sut.ConvertToMassAsync(new IngredientQuantityConversionRequest
         {
-            IngredientDisplayName = "mystery spice",
+            IngredientDisplayName = "Mystery Spice",
             FromUnit = Unit.Teaspoon,
             Quantity = 2m,
         });
@@ -134,6 +134,76 @@ public sealed class IngredientQuantityConversionServiceTests
         });
 
         Assert.True(available);
+    }
+
+    [Fact]
+    public async Task GetConvertibleKeysAsync_BatchesWithoutPerItemStoreCalls_WhenAiEnabled()
+    {
+        var store = new FakeStore();
+        var sut = CreateSut(store, aiEnabled: true);
+        var keys = await sut.GetConvertibleKeysAsync(
+        [
+            ("a", new IngredientQuantityConversionRequest
+            {
+                IngredientDisplayName = "a",
+                FromUnit = Unit.Cup,
+                Quantity = 1,
+            }),
+            ("b", new IngredientQuantityConversionRequest
+            {
+                IngredientDisplayName = "b",
+                FromUnit = Unit.Teaspoon,
+                Quantity = 1,
+            }),
+            ("c", new IngredientQuantityConversionRequest
+            {
+                IngredientDisplayName = "c",
+                FromUnit = Unit.Gram,
+                Quantity = 100,
+            }),
+        ]);
+
+        Assert.Equal(2, keys.Count);
+        Assert.Contains("a", keys);
+        Assert.Contains("b", keys);
+        Assert.DoesNotContain("c", keys);
+        Assert.Equal(0, store.ConversionBatchCalls);
+        Assert.Equal(0, store.PendingBatchCalls);
+    }
+
+    [Fact]
+    public async Task GetConvertibleKeysAsync_UsesBatchLookups_WhenAiDisabled()
+    {
+        var ingredientId = Guid.NewGuid();
+        var store = new FakeStore
+        {
+            Conversions =
+            [
+                CreateConversion(ingredientId, ConversionSourceNames.Usda, 185m, ConversionOrigin.Curated),
+            ],
+        };
+        var sut = CreateSut(store, aiEnabled: false);
+        var keys = await sut.GetConvertibleKeysAsync(
+        [
+            ("rice", new IngredientQuantityConversionRequest
+            {
+                CanonicalIngredientId = ingredientId,
+                IngredientDisplayName = "rice",
+                FromUnit = Unit.Cup,
+                Quantity = 1,
+            }),
+            ("unknown", new IngredientQuantityConversionRequest
+            {
+                IngredientDisplayName = "mystery",
+                FromUnit = Unit.Cup,
+                Quantity = 1,
+            }),
+        ]);
+
+        Assert.Contains("rice", keys);
+        Assert.DoesNotContain("unknown", keys);
+        Assert.Equal(1, store.ConversionBatchCalls);
+        Assert.Equal(1, store.PendingBatchCalls);
     }
 
     [Fact]
@@ -220,6 +290,10 @@ public sealed class IngredientQuantityConversionServiceTests
 
         public List<IngredientUnitConversion> AddedConversions { get; } = [];
 
+        public int ConversionBatchCalls { get; private set; }
+
+        public int PendingBatchCalls { get; private set; }
+
         public Task<IReadOnlyList<IngredientUnitConversion>> GetConversionsAsync(
             Guid canonicalIngredientId,
             Unit fromUnit,
@@ -231,18 +305,74 @@ public sealed class IngredientQuantityConversionServiceTests
                     && c.FromUnit == fromUnit
                     && c.ToUnit == toUnit).ToList());
 
+        public Task<IReadOnlyList<IngredientUnitConversion>> GetConversionsForIngredientsAsync(
+            IReadOnlyCollection<Guid> canonicalIngredientIds,
+            IReadOnlyCollection<Unit> fromUnits,
+            Unit toUnit,
+            CancellationToken ct = default)
+        {
+            ConversionBatchCalls++;
+            return Task.FromResult<IReadOnlyList<IngredientUnitConversion>>(
+                Conversions.Where(c =>
+                    canonicalIngredientIds.Contains(c.CanonicalIngredientId)
+                    && fromUnits.Contains(c.FromUnit)
+                    && c.ToUnit == toUnit).ToList());
+        }
+
         public Task<IngredientUnitConversionSuggestion?> GetPendingSuggestionAsync(
             Guid? canonicalIngredientId,
             string displayName,
             Unit fromUnit,
             Unit toUnit,
-            CancellationToken ct = default) =>
-            Task.FromResult(Pending);
+            CancellationToken ct = default)
+        {
+            if (Pending is null
+                || Pending.FromUnit != fromUnit
+                || Pending.ToUnit != toUnit)
+            {
+                return Task.FromResult<IngredientUnitConversionSuggestion?>(null);
+            }
 
-        public Task AddSuggestionAsync(IngredientUnitConversionSuggestion suggestion, CancellationToken ct = default)
+            if (canonicalIngredientId is Guid id)
+            {
+                return Task.FromResult(
+                    Pending.CanonicalIngredientId == id ? Pending : null);
+            }
+
+            return Task.FromResult(
+                Pending.CanonicalIngredientId is null
+                && string.Equals(
+                    Pending.IngredientDisplayName,
+                    displayName.Trim(),
+                    StringComparison.OrdinalIgnoreCase)
+                    ? Pending
+                    : null);
+        }
+
+        public Task<IReadOnlyList<IngredientUnitConversionSuggestion>> GetPendingSuggestionsBatchAsync(
+            IReadOnlyCollection<Guid> canonicalIngredientIds,
+            IReadOnlyCollection<string> displayNamesWithoutCanonical,
+            IReadOnlyCollection<Unit> fromUnits,
+            Unit toUnit,
+            CancellationToken ct = default)
+        {
+            PendingBatchCalls++;
+            if (Pending is null
+                || !fromUnits.Contains(Pending.FromUnit)
+                || Pending.ToUnit != toUnit)
+            {
+                return Task.FromResult<IReadOnlyList<IngredientUnitConversionSuggestion>>([]);
+            }
+
+            return Task.FromResult<IReadOnlyList<IngredientUnitConversionSuggestion>>([Pending]);
+        }
+
+        public Task<IngredientUnitConversionSuggestion> AddOrGetPendingSuggestionAsync(
+            IngredientUnitConversionSuggestion suggestion,
+            CancellationToken ct = default)
         {
             AddedSuggestions.Add(suggestion);
-            return Task.CompletedTask;
+            return Task.FromResult(suggestion);
         }
 
         public Task AddConversionAsync(IngredientUnitConversion conversion, CancellationToken ct = default)

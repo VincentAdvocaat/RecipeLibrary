@@ -11,6 +11,12 @@ public interface IIngredientUnitConversionStore
         Unit toUnit,
         CancellationToken ct = default);
 
+    Task<IReadOnlyList<IngredientUnitConversion>> GetConversionsForIngredientsAsync(
+        IReadOnlyCollection<Guid> canonicalIngredientIds,
+        IReadOnlyCollection<Unit> fromUnits,
+        Unit toUnit,
+        CancellationToken ct = default);
+
     Task<IngredientUnitConversionSuggestion?> GetPendingSuggestionAsync(
         Guid? canonicalIngredientId,
         string displayName,
@@ -18,7 +24,19 @@ public interface IIngredientUnitConversionStore
         Unit toUnit,
         CancellationToken ct = default);
 
-    Task AddSuggestionAsync(IngredientUnitConversionSuggestion suggestion, CancellationToken ct = default);
+    Task<IReadOnlyList<IngredientUnitConversionSuggestion>> GetPendingSuggestionsBatchAsync(
+        IReadOnlyCollection<Guid> canonicalIngredientIds,
+        IReadOnlyCollection<string> displayNamesWithoutCanonical,
+        IReadOnlyCollection<Unit> fromUnits,
+        Unit toUnit,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Inserts a pending suggestion, or returns the existing pending row on race/duplicate.
+    /// </summary>
+    Task<IngredientUnitConversionSuggestion> AddOrGetPendingSuggestionAsync(
+        IngredientUnitConversionSuggestion suggestion,
+        CancellationToken ct = default);
 
     Task AddConversionAsync(IngredientUnitConversion conversion, CancellationToken ct = default);
 

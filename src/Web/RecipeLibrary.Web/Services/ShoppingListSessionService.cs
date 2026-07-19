@@ -75,12 +75,7 @@ public sealed class ShoppingListSessionService(
 
 
     public static string NormalizeRedirect(string? redirectUri) =>
-
-        string.IsNullOrWhiteSpace(redirectUri) || !redirectUri.StartsWith('/')
-
-            ? "/recipes"
-
-            : redirectUri;
+        RecipeLibrary.Application.Security.LocalRedirect.Normalize(redirectUri, fallback: "/recipes");
 
 
 
