@@ -1,10 +1,12 @@
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using RecipeLibrary.Application.Abstractions;
 
 namespace RecipeLibrary.Testing;
 
@@ -36,6 +38,12 @@ public sealed class TestWebApplicationFactory(string connectionString) : WebAppl
                     options.DefaultScheme = TestAuthHandler.SchemeName;
                 })
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
+
+            // Persistence tests resolve handlers via CreateScope() without an HTTP request,
+            // so HttpCurrentUser has no HttpContext. Provide a fixed owner matching seed data.
+            services.RemoveAll<ICurrentUser>();
+            services.AddScoped<ICurrentUser>(_ =>
+                new FixedCurrentUser(TestDataSeeder.TestOwnerUserId, "testuser"));
         });
     }
 
