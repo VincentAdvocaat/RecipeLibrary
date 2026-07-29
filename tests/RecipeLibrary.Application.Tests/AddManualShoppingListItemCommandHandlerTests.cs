@@ -16,7 +16,10 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
     [Fact]
     public async Task HandleAsync_Throws_WhenNameEmpty()
     {
-        var sut = new AddManualShoppingListItemCommandHandler(new FakeShoppingListRepository(), _merger);
+        var sut = new AddManualShoppingListItemCommandHandler(
+            new FakeShoppingListRepository(),
+            new FixedCurrentUser("user-a"),
+            _merger);
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new AddManualShoppingListItemCommand
@@ -40,7 +43,10 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
                 Items = [],
             },
         };
-        var sut = new AddManualShoppingListItemCommandHandler(repo, _merger);
+        var sut = new AddManualShoppingListItemCommandHandler(
+            repo,
+            new FixedCurrentUser("user-a"),
+            _merger);
 
         var result = await sut.HandleAsync(new AddManualShoppingListItemCommand
         {
@@ -80,7 +86,10 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
                 Items = [existing],
             },
         };
-        var sut = new AddManualShoppingListItemCommandHandler(repo, _merger);
+        var sut = new AddManualShoppingListItemCommandHandler(
+            repo,
+            new FixedCurrentUser("user-a"),
+            _merger);
 
         await sut.HandleAsync(new AddManualShoppingListItemCommand
         {

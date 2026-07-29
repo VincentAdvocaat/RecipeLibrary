@@ -28,6 +28,8 @@ internal static class RecipeIngredientBuilder
             var resolved = lineResolver.Resolve(ingredientDto.Name, ingredientDto.Preparation);
 
             var match = await matcher.MatchAsync(resolved.DisplayName, cultureName, ct);
+            // Shared-token-only hits are MatchType "none" (Ingredient null) after matcher gating;
+            // exact/alias/high-confidence fuzzy typos still set Ingredient and auto-link.
             var canonicalIngredient = match.Ingredient
                 ?? await FindOrCreateNewIngredientAsync(
                     ingredientRepository,

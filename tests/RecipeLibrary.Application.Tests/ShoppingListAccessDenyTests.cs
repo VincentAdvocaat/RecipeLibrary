@@ -1,6 +1,7 @@
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.Pantry;
+using RecipeLibrary.Application.ShoppingLists;
 using RecipeLibrary.Application.UseCases.Pantry;
 using RecipeLibrary.Application.UseCases.ShoppingLists;
 using RecipeLibrary.Domain.Entities;
@@ -204,6 +205,57 @@ public sealed class ShoppingListAccessDenyTests
 
         Assert.True(result.IsChecked);
         Assert.Equal(itemId, repo.LastToggledItemId);
+    }
+
+    [Fact]
+    public async Task AddManualItem_Throws_WhenListNotAccessible()
+    {
+        var listId = Guid.NewGuid();
+        var repo = new RecordingShoppingListRepository
+        {
+            AccessibleByDefault = false,
+            List = new ShoppingList { Id = listId, GroupId = Guid.NewGuid(), Items = [] },
+        };
+        var sut = new AddManualShoppingListItemCommandHandler(
+            repo,
+            new FixedCurrentUser(UserB),
+            new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new AddManualShoppingListItemCommand
+            {
+                ShoppingListId = listId,
+                DisplayName = "Melk",
+                Quantity = 1,
+                Unit = nameof(Unit.Piece),
+            }));
+
+        Assert.Null(repo.LastReplacedListId);
+    }
+
+    [Fact]
+    public async Task UpdateItemQuantity_Throws_WhenListNotAccessible()
+    {
+        var itemId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        var repo = new RecordingShoppingListRepository
+        {
+            AccessibleByDefault = false,
+            Item = new ShoppingListItem
+            {
+                Id = itemId,
+                ShoppingListId = listId,
+                DisplayName = "Melk",
+                Quantity = new Quantity(1),
+                Unit = Unit.Piece,
+            },
+        };
+        var sut = new UpdateShoppingListItemQuantityCommandHandler(repo, new FixedCurrentUser(UserB));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new UpdateShoppingListItemQuantityCommand { ItemId = itemId, Quantity = 3 }));
+
+        Assert.Null(repo.LastQuantityItemId);
     }
 
     [Fact]
