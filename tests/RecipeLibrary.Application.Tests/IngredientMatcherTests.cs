@@ -187,13 +187,14 @@ public sealed class IngredientMatcherTests
     [Fact]
     public async Task MatchAsync_LimitsSuggestionsToMaxSuggestions()
     {
+        // Names close enough that full-string similarity still allows fuzzy auto-accept.
         var ingredients = Enumerable.Range(1, 8)
-            .Select(i => IngredientTestFactory.Create($"item{i}"))
+            .Select(i => IngredientTestFactory.Create($"gember{i}"))
             .ToList();
         var repo = new FakeIngredientRepository(ingredients);
         var matcher = new IngredientMatcher(repo, new IngredientTextNormalizer(), new FixedScorer(0.80m));
 
-        var result = await matcher.MatchAsync("query", "nl");
+        var result = await matcher.MatchAsync("gemberx", "nl");
 
         Assert.Equal(IngredientMatcher.MaxSuggestions, result.Suggestions.Count);
         Assert.Equal("fuzzy", result.MatchType);
@@ -202,30 +203,61 @@ public sealed class IngredientMatcherTests
     [Fact]
     public async Task MatchAsync_PrefersShorterDisplayName_WhenScoresTie()
     {
-        var shortName = IngredientTestFactory.Create("ab");
-        var longName = IngredientTestFactory.Create("abcdefgh");
+        var shortName = IngredientTestFactory.Create("gember");
+        var longName = IngredientTestFactory.Create("gemberwortel");
         var repo = new FakeIngredientRepository([longName, shortName]);
         var matcher = new IngredientMatcher(repo, new IngredientTextNormalizer(), new FixedScorer(0.80m));
 
-        var result = await matcher.MatchAsync("query", "nl");
+        var result = await matcher.MatchAsync("gembre", "nl");
 
-        Assert.Equal("ab", result.Suggestions[0].Display.DisplayName);
+        Assert.Equal("gember", result.Suggestions[0].Display.DisplayName);
         Assert.Equal("fuzzy", result.MatchType);
         Assert.Equal(shortName.Id, result.Ingredient!.Id);
     }
 
     [Fact]
-    public async Task MatchAsync_FallsBackToSearch_WhenFuzzyCandidatesEmpty()
+    public async Task MatchAsync_ReturnsNone_WhenFuzzyCandidatesEmpty_WithoutCatalogFallback()
     {
         var tomato = IngredientTestFactory.Create("tomaat");
         var repo = new FakeIngredientRepository([tomato], fuzzyCandidates: []);
         var matcher = new IngredientMatcher(repo, new IngredientTextNormalizer(), new FixedScorer(0.80m));
 
-        var result = await matcher.MatchAsync("xyz", "nl");
+        // Too short for prefix fallback — must not call SearchAsync("", …).
+        var result = await matcher.MatchAsync("xy", "nl");
 
-        Assert.Equal("fuzzy", result.MatchType);
-        Assert.Equal(tomato.Id, result.Ingredient!.Id);
+        Assert.Equal("none", result.MatchType);
+        Assert.Null(result.Ingredient);
+        Assert.Empty(result.Suggestions);
+        Assert.False(repo.SearchWasCalled);
+    }
+
+    [Fact]
+    public async Task MatchAsync_UsesPrefixSearch_NotEmptyCatalog_WhenFuzzyCandidatesEmpty()
+    {
+        var tomato = IngredientTestFactory.Create("tomaat");
+        var repo = new FakeIngredientRepository([tomato], fuzzyCandidates: []);
+        var matcher = new IngredientMatcher(repo, new IngredientTextNormalizer(), new FixedScorer(0.80m));
+
+        var result = await matcher.MatchAsync("xyzunrelated", "nl");
+
+        Assert.Equal("none", result.MatchType);
+        Assert.Null(result.Ingredient);
         Assert.True(repo.SearchWasCalled);
+        Assert.Equal("xyz", repo.LastSearchQuery);
+    }
+
+    [Fact]
+    public async Task MatchAsync_DoesNotAutoAccept_WhenOnlySharedExactToken()
+    {
+        var runderGehakt = IngredientTestFactory.Create("runder gehakt");
+        var repo = new FakeIngredientRepository([runderGehakt]);
+
+        var result = await CreateMatcher(repo).MatchAsync("gehakt", "nl");
+
+        Assert.Equal("none", result.MatchType);
+        Assert.Null(result.Ingredient);
+        Assert.True(result.RequiresConfirmation);
+        Assert.Contains(result.Suggestions, x => x.Display.DisplayName == "runder gehakt");
     }
 
     private static IngredientMatcher CreateMatcher(IIngredientRepository repo) =>
@@ -242,6 +274,7 @@ public sealed class IngredientMatcherTests
         : IIngredientRepository
     {
         public bool SearchWasCalled { get; private set; }
+        public string? LastSearchQuery { get; private set; }
 
         public Task AddMatchLogAsync(IngredientMatchLog log, CancellationToken ct = default) => Task.CompletedTask;
 
@@ -323,6 +356,7 @@ public sealed class IngredientMatcherTests
             CancellationToken ct = default)
         {
             SearchWasCalled = true;
+            LastSearchQuery = normalizedQuery;
             return Task.FromResult<IReadOnlyList<CanonicalIngredient>>(
                 string.IsNullOrWhiteSpace(normalizedQuery)
                     ? ingredients.Take(take).ToList()

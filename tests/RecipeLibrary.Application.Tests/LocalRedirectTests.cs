@@ -11,9 +11,11 @@ public sealed class LocalRedirectTests
     [InlineData(null, "/")]
     [InlineData("", "/")]
     [InlineData("https://evil.com", "/")]
+    [InlineData("http://evil.com/path", "/")]
     [InlineData("//evil.com", "/")]
     [InlineData("/\\evil", "/")]
     [InlineData("recipes", "/")]
+    [InlineData("/recipes/../evil", "/recipes/../evil")]
     public void Normalize_BlocksOpenRedirects(string? input, string expected)
     {
         Assert.Equal(expected, LocalRedirect.Normalize(input));

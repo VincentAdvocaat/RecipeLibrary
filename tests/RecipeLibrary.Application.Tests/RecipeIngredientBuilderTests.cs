@@ -74,6 +74,36 @@ public sealed class RecipeIngredientBuilderTests
     }
 
     [Fact]
+    public async Task BuildAsync_SharedExactTokenOnly_DoesNotAutoLink()
+    {
+        var recipeId = Guid.NewGuid();
+        var existingId = Guid.NewGuid();
+        var existing = IngredientTestFactory.Create("runder gehakt", id: existingId);
+        var repo = new TrackingIngredientRepository([existing]);
+        var sut = new IngredientLineResolver(new IngredientNameParser());
+
+        var ingredients = await RecipeIngredientBuilder.BuildAsync(
+            recipeId,
+            [
+                new CreateRecipeIngredientDto
+                {
+                    Name = "gehakt",
+                    Quantity = 1,
+                    Unit = nameof(Unit.Gram),
+                },
+            ],
+            repo,
+            new IngredientTextNormalizer(),
+            new IngredientMatcher(repo, new IngredientTextNormalizer(), new IngredientSimilarityScorer()),
+            sut,
+            CancellationToken.None);
+
+        Assert.Single(ingredients);
+        Assert.NotEqual(existingId, ingredients[0].IngredientId);
+        Assert.Equal(1, repo.CreateCallCount);
+    }
+
+    [Fact]
     public async Task BuildAsync_UnmatchedIngredient_UsesStorageLanguageCode()
     {
         var previousUi = CultureInfo.CurrentUICulture;

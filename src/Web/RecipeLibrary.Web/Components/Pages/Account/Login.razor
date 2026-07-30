@@ -6,6 +6,7 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Endpoints
 @using Microsoft.AspNetCore.Identity
+@using RecipeLibrary.Application.Security
 @using RecipeLibrary.Infrastructure.Identity
 
 @inject SignInManager<ApplicationUser> SignInManager
@@ -99,18 +100,8 @@
         Navigation.NavigateTo(GetSafeReturnUrl(), forceLoad: true);
     }
 
-    private string GetSafeReturnUrl()
-    {
-        if (!string.IsNullOrWhiteSpace(ReturnUrl)
-            && ReturnUrl.StartsWith('/')
-            && !ReturnUrl.StartsWith("//", StringComparison.Ordinal)
-            && !ReturnUrl.Contains('\\'))
-        {
-            return ReturnUrl;
-        }
-
-        return "/recipes";
-    }
+    private string GetSafeReturnUrl() =>
+        LocalRedirect.Normalize(ReturnUrl, fallback: "/recipes");
 
     private sealed class LoginModel
     {

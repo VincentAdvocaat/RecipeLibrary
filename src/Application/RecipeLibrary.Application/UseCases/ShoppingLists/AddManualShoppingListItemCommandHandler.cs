@@ -8,6 +8,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class AddManualShoppingListItemCommandHandler(
     IShoppingListRepository shoppingListRepository,
+    ICurrentUser userContext,
     ShoppingListIngredientMerger merger)
     : ICommandHandler<AddManualShoppingListItemCommand, AddManualShoppingListItemResult>
 {
@@ -48,6 +49,12 @@ public sealed class AddManualShoppingListItemCommandHandler(
             IngredientQuantityFormatter.ValidateQuantity(command.Quantity.Value, unit.Value);
             quantity = command.Quantity.Value;
         }
+
+        await ShoppingListAccessGuard.EnsureListAccessAsync(
+            shoppingListRepository,
+            command.ShoppingListId,
+            userContext.UserId,
+            ct);
 
         var list = await shoppingListRepository.GetListByIdAsync(command.ShoppingListId, ct)
             ?? throw new InvalidOperationException("Shopping list not found.");

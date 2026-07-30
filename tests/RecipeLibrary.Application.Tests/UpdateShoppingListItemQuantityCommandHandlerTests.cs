@@ -24,7 +24,7 @@ public sealed class UpdateShoppingListItemQuantityCommandHandlerTests
                 Quantity = new Quantity(2),
             },
         };
-        var sut = new UpdateShoppingListItemQuantityCommandHandler(repo);
+        var sut = new UpdateShoppingListItemQuantityCommandHandler(repo, new FixedCurrentUser("user-a"));
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new UpdateShoppingListItemQuantityCommand { ItemId = itemId, Quantity = 0 }));
@@ -44,7 +44,7 @@ public sealed class UpdateShoppingListItemQuantityCommandHandlerTests
             },
             UpdateQuantityResult = true,
         };
-        var sut = new UpdateShoppingListItemQuantityCommandHandler(repo);
+        var sut = new UpdateShoppingListItemQuantityCommandHandler(repo, new FixedCurrentUser("user-a"));
 
         var result = await sut.HandleAsync(new UpdateShoppingListItemQuantityCommand { ItemId = itemId, Quantity = 5 });
 

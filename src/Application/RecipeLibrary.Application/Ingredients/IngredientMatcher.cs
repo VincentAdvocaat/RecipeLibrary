@@ -42,9 +42,16 @@ public sealed class IngredientMatcher(
         }
 
         var candidates = await ingredientRepository.GetFuzzyCandidatesAsync(normalized, languageChain, 40, ct);
+        if (candidates.Count == 0 && normalized.Length >= 3)
+        {
+            // Narrow prefix search for typos (e.g. "gembre" → candidates starting with "gem").
+            // Never fall back to SearchAsync("", …) which scores unrelated catalog rows.
+            candidates = await ingredientRepository.SearchAsync(normalized[..3], languageChain, 40, ct);
+        }
+
         if (candidates.Count == 0)
         {
-            candidates = await ingredientRepository.SearchAsync(string.Empty, languageChain, 40, ct);
+            return IngredientMatchResult.None(normalized, languageChain, []);
         }
 
         var scored = candidates
@@ -70,7 +77,20 @@ public sealed class IngredientMatcher(
         var best = filteredSuggestions.FirstOrDefault();
         if (best is not null && best.Score > FuzzyMatchScore)
         {
-            return IngredientMatchResult.Fuzzy(normalized, languageChain, best.Ingredient, best.Score, filteredSuggestions);
+            // Shared-token / subset boosts can exceed FuzzyMatchScore without a close full-string
+            // match; only auto-accept when the whole names are similar enough (true typos).
+            var bestName = IngredientDisplayResolver.ResolveNormalizedDisplayName(best.Ingredient, languageChain)
+                ?? string.Empty;
+            var fullSimilarity = IngredientSimilarityScorer.StringSimilarity(normalized, bestName);
+            if (fullSimilarity > FuzzyMatchScore)
+            {
+                return IngredientMatchResult.Fuzzy(
+                    normalized,
+                    languageChain,
+                    best.Ingredient,
+                    best.Score,
+                    filteredSuggestions);
+            }
         }
 
         return IngredientMatchResult.None(normalized, languageChain, filteredSuggestions);

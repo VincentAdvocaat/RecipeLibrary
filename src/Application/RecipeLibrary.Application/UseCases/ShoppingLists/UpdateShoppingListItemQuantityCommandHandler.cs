@@ -1,17 +1,26 @@
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
+using RecipeLibrary.Application.ShoppingLists;
 using RecipeLibrary.Domain.ValueObjects;
 
 namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
-public sealed class UpdateShoppingListItemQuantityCommandHandler(IShoppingListRepository repository)
+public sealed class UpdateShoppingListItemQuantityCommandHandler(
+    IShoppingListRepository repository,
+    ICurrentUser userContext)
     : ICommandHandler<UpdateShoppingListItemQuantityCommand, UpdateShoppingListItemQuantityResult>
 {
     public async Task<UpdateShoppingListItemQuantityResult> HandleAsync(
         UpdateShoppingListItemQuantityCommand command,
         CancellationToken ct = default)
     {
+        await ShoppingListAccessGuard.EnsureItemAccessAsync(
+            repository,
+            command.ItemId,
+            userContext.UserId,
+            ct);
+
         var item = await repository.GetItemByIdAsync(command.ItemId, ct)
             ?? throw new InvalidOperationException("Shopping list item not found.");
 
