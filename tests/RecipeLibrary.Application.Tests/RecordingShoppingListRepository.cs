@@ -98,7 +98,7 @@ public sealed class RecordingShoppingListRepository : IShoppingListRepository
         return Task.FromResult(UpdateNameResult);
     }
 
-    public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, CancellationToken ct = default)
+    public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default)
     {
         LastReplacedListId = shoppingListId;
         LastReplacedItems = items;

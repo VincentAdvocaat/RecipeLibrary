@@ -33,7 +33,15 @@ public interface IShoppingListRepository
 
     Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default);
 
-    Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, CancellationToken ct = default);
+    /// <summary>
+    /// Replaces all items on the list. When <paramref name="expectedUpdatedAt"/> is set,
+    /// fails with <see cref="InvalidOperationException"/> if the list changed concurrently.
+    /// </summary>
+    Task ReplaceListItemsAsync(
+        Guid shoppingListId,
+        IReadOnlyList<ShoppingListItem> items,
+        DateTimeOffset? expectedUpdatedAt = null,
+        CancellationToken ct = default);
 
     Task<ShoppingList> AddListToGroupAsync(Guid groupId, string name, int storeOrder, CancellationToken ct = default);
 

@@ -75,6 +75,7 @@
   <data name="RecipeImport.Ingredient.LowConfidence" xml:space="preserve"><value>Lage betrouwbaarheid ({0}) — geparsed via {1}. Controleer dit.</value></data>
   <data name="RecipeImport.Error.EmptyContent" xml:space="preserve"><value>Plak recepttekst om te importeren.</value></data>
   <data name="RecipeImport.Error.NoResult" xml:space="preserve"><value>Import leverde geen resultaat op.</value></data>
+  <data name="RecipeImport.Error.Failed" xml:space="preserve"><value>Importeren is mislukt. Probeer het opnieuw.</value></data>
   <data name="RecipeCreate.Mode.AriaLabel" xml:space="preserve"><value>Hoe wil je het recept toevoegen</value></data>
   <data name="RecipeCreate.Mode.Manual" xml:space="preserve"><value>Handmatig</value></data>
   <data name="RecipeCreate.Mode.Text" xml:space="preserve"><value>Tekst</value></data>

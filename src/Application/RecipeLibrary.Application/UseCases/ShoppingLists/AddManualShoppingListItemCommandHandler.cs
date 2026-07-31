@@ -71,7 +71,7 @@ public sealed class AddManualShoppingListItemCommandHandler(
         var previousIds = list.Items.Select(i => i.Id).ToHashSet();
         var addedItem = merged.FirstOrDefault(i => !previousIds.Contains(i.Id));
 
-        await shoppingListRepository.ReplaceListItemsAsync(list.Id, merged, ct);
+        await shoppingListRepository.ReplaceListItemsAsync(list.Id, merged, list.UpdatedAt, ct);
 
         return new AddManualShoppingListItemResult(true, addedItem?.Id);
     }

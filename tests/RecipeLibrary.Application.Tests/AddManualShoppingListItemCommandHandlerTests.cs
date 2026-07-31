@@ -113,7 +113,7 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) =>
             Task.FromResult(List?.Id == listId ? List : null);
 
-        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, CancellationToken ct = default)
+        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default)
         {
             LastReplacedListId = shoppingListId;
             LastReplacedItems = items;

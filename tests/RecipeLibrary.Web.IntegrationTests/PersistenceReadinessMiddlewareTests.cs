@@ -245,6 +245,35 @@ public sealed class PersistenceReadinessMiddlewareTests
 
         Assert.True(called);
     }
+
+    [Fact]
+    public async Task Invoke_WhenNotReady_IngredientsPath_Returns503()
+    {
+        var readiness = new PersistenceReadiness();
+        var middleware = new PersistenceReadinessMiddleware(_ => Task.CompletedTask);
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/ingredients/search";
+        context.Request.Headers.Accept = "text/html";
+        context.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(context, readiness);
+
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Invoke_WhenNotReady_RecipesImportPath_Returns503()
+    {
+        var readiness = new PersistenceReadiness();
+        var middleware = new PersistenceReadinessMiddleware(_ => Task.CompletedTask);
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/recipes/import-url";
+        context.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(context, readiness);
+
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
+    }
 }
 
 public sealed class PersistenceReadinessTests

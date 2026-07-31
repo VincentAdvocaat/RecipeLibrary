@@ -29,6 +29,7 @@ public sealed class ShoppingListPersistenceTests(SqlContainerFixture fixture)
             new GetOrCreateShoppingListGroupQuery
             {
                 GroupId = fixture.Seed.ShoppingListGroupId,
+                OwnerUserId = TestDataSeeder.TestOwnerUserId,
                 DefaultListNameFormat = "List {0}",
             });
 
@@ -43,6 +44,7 @@ public sealed class ShoppingListPersistenceTests(SqlContainerFixture fixture)
             new GetOrCreateShoppingListGroupQuery
             {
                 GroupId = fixture.Seed.ShoppingListGroupId,
+                OwnerUserId = TestDataSeeder.TestOwnerUserId,
                 DefaultListNameFormat = "List {0}",
             });
 
@@ -68,6 +70,7 @@ public sealed class ShoppingListPersistenceTests(SqlContainerFixture fixture)
             new GetOrCreateShoppingListGroupQuery
             {
                 GroupId = fixture.Seed.ShoppingListGroupId,
+                OwnerUserId = TestDataSeeder.TestOwnerUserId,
                 DefaultListNameFormat = "List {0}",
             });
 
@@ -89,6 +92,7 @@ public sealed class ShoppingListPersistenceTests(SqlContainerFixture fixture)
             new GetOrCreateShoppingListGroupQuery
             {
                 GroupId = fixture.Seed.ShoppingListGroupId,
+                OwnerUserId = TestDataSeeder.TestOwnerUserId,
                 DefaultListNameFormat = "List {0}",
             });
 

@@ -79,22 +79,15 @@ public sealed class ShoppingListSessionService(
 
 
 
-    public static CookieOptions CreateGroupCookieOptions() =>
-
+    public static CookieOptions CreateGroupCookieOptions(bool secure) =>
         new()
-
         {
-
             Expires = DateTimeOffset.UtcNow.AddYears(1),
-
             IsEssential = true,
-
             SameSite = SameSiteMode.Lax,
-
             HttpOnly = true,
-
+            Secure = secure,
             Path = "/",
-
         };
 
 
@@ -115,7 +108,7 @@ public sealed class ShoppingListSessionService(
 
 
 
-        context.Response.Cookies.Append(GroupIdCookieName, groupId.ToString(), CreateGroupCookieOptions());
+        context.Response.Cookies.Append(GroupIdCookieName, groupId.ToString(), CreateGroupCookieOptions(context.Request.IsHttps));
 
         return true;
 

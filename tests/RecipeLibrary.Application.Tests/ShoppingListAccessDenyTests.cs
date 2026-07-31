@@ -11,8 +11,7 @@ using Xunit;
 namespace RecipeLibrary.Application.Tests;
 
 /// <summary>
-/// Simulates authenticated user B accessing resources owned by user A.
-/// These paths are dormant in anonymous mode (OwnerUserId null) but must work when Entra is on.
+/// Fail-closed access: unauthenticated callers and non-owners are denied.
 /// </summary>
 public sealed class ShoppingListAccessDenyTests
 {
@@ -150,7 +149,7 @@ public sealed class ShoppingListAccessDenyTests
     }
 
     [Fact]
-    public async Task AnonymousUser_SkipsAccessCheck_AndClearsList()
+    public async Task AnonymousUser_Throws_WhenClearingList()
     {
         var listId = Guid.NewGuid();
         var repo = new RecordingShoppingListRepository
@@ -160,14 +159,14 @@ public sealed class ShoppingListAccessDenyTests
         };
         var sut = new ClearShoppingListCommandHandler(repo, new AnonymousCurrentUser());
 
-        var result = await sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId });
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId }));
 
-        Assert.True(result.Cleared);
-        Assert.Equal(listId, repo.LastClearedListId);
+        Assert.Null(repo.LastClearedListId);
     }
 
     [Fact]
-    public async Task AnonymousUser_SkipsGroupAccessCheck_AndReturnsSummary()
+    public async Task AnonymousUser_Throws_WhenGettingSummary()
     {
         var groupId = Guid.NewGuid();
         var repo = new RecordingShoppingListRepository
@@ -177,13 +176,12 @@ public sealed class ShoppingListAccessDenyTests
         };
         var sut = new GetShoppingListSummaryQueryHandler(repo, new AnonymousCurrentUser());
 
-        var result = await sut.HandleAsync(new GetShoppingListSummaryQuery { GroupId = groupId });
-
-        Assert.Equal(3, result.UncheckedItemCount);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new GetShoppingListSummaryQuery { GroupId = groupId }));
     }
 
     [Fact]
-    public async Task AnonymousUser_SkipsItemAccessCheck_AndToggles()
+    public async Task AnonymousUser_Throws_WhenTogglingItem()
     {
         var itemId = Guid.NewGuid();
         var listId = Guid.NewGuid();
@@ -201,10 +199,10 @@ public sealed class ShoppingListAccessDenyTests
         };
         var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousCurrentUser());
 
-        var result = await sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true });
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true }));
 
-        Assert.True(result.IsChecked);
-        Assert.Equal(itemId, repo.LastToggledItemId);
+        Assert.Null(repo.LastToggledItemId);
     }
 
     [Fact]
@@ -259,18 +257,16 @@ public sealed class ShoppingListAccessDenyTests
     }
 
     [Fact]
-    public async Task AnonymousUser_SkipsItemLookup_WhenItemMissing()
+    public async Task AnonymousUser_Throws_BeforeItemLookup_WhenItemMissing()
     {
-        // Anonymous mode must short-circuit before GetItemById; otherwise a missing item throws.
         var itemId = Guid.NewGuid();
         var repo = new RecordingShoppingListRepository { AccessibleByDefault = false };
         var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousCurrentUser());
 
-        var exception = await Record.ExceptionAsync(() =>
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true }));
 
-        Assert.Null(exception);
-        Assert.Equal(itemId, repo.LastToggledItemId);
+        Assert.Null(repo.LastToggledItemId);
     }
 
     [Fact]

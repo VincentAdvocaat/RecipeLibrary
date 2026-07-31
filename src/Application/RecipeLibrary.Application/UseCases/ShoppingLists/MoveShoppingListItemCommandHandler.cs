@@ -45,8 +45,8 @@ public sealed class MoveShoppingListItemCommandHandler(
             item,
             targetList.Id);
 
-        await repository.ReplaceListItemsAsync(sourceList.Id, sourceItems, ct);
-        await repository.ReplaceListItemsAsync(targetList.Id, targetItems, ct);
+        await repository.ReplaceListItemsAsync(sourceList.Id, sourceItems, sourceList.UpdatedAt, ct);
+        await repository.ReplaceListItemsAsync(targetList.Id, targetItems, targetList.UpdatedAt, ct);
 
         return new MoveShoppingListItemResult(true);
     }

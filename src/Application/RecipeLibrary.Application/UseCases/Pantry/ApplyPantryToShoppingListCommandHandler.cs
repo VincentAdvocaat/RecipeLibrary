@@ -36,7 +36,7 @@ public sealed class ApplyPantryToShoppingListCommandHandler(
         var remaining = exclusionFilter.ExcludeMatchingItems(list.Items.ToList(), pantryItems);
         var removed = originalCount - remaining.Count;
 
-        await shoppingListRepository.ReplaceListItemsAsync(list.Id, remaining, ct);
+        await shoppingListRepository.ReplaceListItemsAsync(list.Id, remaining, list.UpdatedAt, ct);
 
         return new ApplyPantryToShoppingListResult(removed);
     }

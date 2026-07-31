@@ -72,7 +72,11 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
 
     private static bool IsApiOrNonHtmlRequest(HttpRequest request)
     {
-        if (request.Path.StartsWithSegments("/api"))
+        var path = request.Path;
+        if (path.StartsWithSegments("/api")
+            || path.StartsWithSegments("/ingredients")
+            || path.StartsWithSegments("/tags")
+            || IsRecipeImportApiPath(path))
         {
             return true;
         }
@@ -85,5 +89,19 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
 
         return !accept.Contains("text/html", StringComparison.OrdinalIgnoreCase)
                && accept.Contains("application/json", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsRecipeImportApiPath(PathString path)
+    {
+        var value = path.Value;
+        if (string.IsNullOrEmpty(value))
+        {
+            return false;
+        }
+
+        // /recipes/import, /recipes/import-url, /recipes/import-image (not /recipes/importing-ui etc.)
+        return value.Equals("/recipes/import", StringComparison.OrdinalIgnoreCase)
+               || value.StartsWith("/recipes/import-", StringComparison.OrdinalIgnoreCase)
+               || value.StartsWith("/recipes/import/", StringComparison.OrdinalIgnoreCase);
     }
 }

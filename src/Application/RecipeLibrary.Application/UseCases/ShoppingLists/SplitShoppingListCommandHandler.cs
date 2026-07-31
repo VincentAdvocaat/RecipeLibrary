@@ -58,8 +58,8 @@ public sealed class SplitShoppingListCommandHandler(
             secondaryItems = merger.MergeItemIntoList(secondaryItems, item, secondary.Id).ToList();
         }
 
-        await repository.ReplaceListItemsAsync(secondary.Id, secondaryItems, ct);
-        await repository.ReplaceListItemsAsync(primary.Id, remaining, ct);
+        await repository.ReplaceListItemsAsync(secondary.Id, secondaryItems, secondary.UpdatedAt, ct);
+        await repository.ReplaceListItemsAsync(primary.Id, remaining, primary.UpdatedAt, ct);
 
         return new SplitShoppingListResult(secondary.Id, selected.Count);
     }

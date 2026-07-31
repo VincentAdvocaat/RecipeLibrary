@@ -1,6 +1,6 @@
 using RecipeLibrary.Application.Contracts;
 
-namespace RecipeLibrary.Application.RecipeImport;
+namespace RecipeLibrary.Application.Tests.RecipeImport;
 
 public static class ImportRecipeResultMapper
 {

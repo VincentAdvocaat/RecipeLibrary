@@ -461,14 +461,8 @@
         {
             _importError = ex.Message;
         }
-        catch (InvalidOperationException ex)
-        {
-            _importError = ex.Message;
-        }
-        catch (Exception ex)
-        {
-            _importError = ex.Message;
-        }
+        catch (InvalidOperationException) { _importError = L["RecipeImport.Error.Failed"]; }
+        catch (Exception) { _importError = L["RecipeImport.Error.Failed"]; }
         finally
         {
             _isProcessing = false;
@@ -546,14 +540,8 @@
         {
             _importError = ex.Message;
         }
-        catch (InvalidOperationException ex)
-        {
-            _importError = ex.Message;
-        }
-        catch (Exception ex)
-        {
-            _importError = ex.Message;
-        }
+        catch (InvalidOperationException) { _importError = L["RecipeImport.Error.Failed"]; }
+        catch (Exception) { _importError = L["RecipeImport.Error.Failed"]; }
         finally
         {
             _isProcessing = false;
@@ -585,14 +573,8 @@
         {
             _importError = ex.Message;
         }
-        catch (InvalidOperationException ex)
-        {
-            _importError = ex.Message;
-        }
-        catch (Exception ex)
-        {
-            _importError = ex.Message;
-        }
+        catch (InvalidOperationException) { _importError = L["RecipeImport.Error.Failed"]; }
+        catch (Exception) { _importError = L["RecipeImport.Error.Failed"]; }
         finally
         {
             _isProcessing = false;

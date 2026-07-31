@@ -63,7 +63,7 @@ public sealed class AddRecipesToShoppingListCommandHandler(
         }
 
         var merged = merger.MergeIntoList(list.Items.ToList(), lines, list.Id);
-        await shoppingListRepository.ReplaceListItemsAsync(list.Id, merged, ct);
+        await shoppingListRepository.ReplaceListItemsAsync(list.Id, merged, list.UpdatedAt, ct);
 
         return new AddRecipesToShoppingListResult(recipes.Count, lines.Count);
     }

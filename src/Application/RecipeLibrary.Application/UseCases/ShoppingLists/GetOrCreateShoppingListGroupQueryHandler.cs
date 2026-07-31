@@ -17,21 +17,15 @@ public sealed class GetOrCreateShoppingListGroupQueryHandler(IShoppingListReposi
             throw new ArgumentException("Default list name format is required.");
         }
 
-        if (!string.IsNullOrWhiteSpace(query.OwnerUserId))
+        if (string.IsNullOrWhiteSpace(query.OwnerUserId))
         {
-            var ownedGroup = await repository.GetGroupByOwnerUserIdAsync(query.OwnerUserId, ct);
-            if (ownedGroup is not null)
-            {
-                return ShoppingListMapping.MapGroup(ownedGroup);
-            }
+            throw new UnauthorizedAccessException("Authentication is required to get or create a shopping list group.");
         }
-        else if (query.GroupId is { } groupId && groupId != Guid.Empty)
+
+        var ownedGroup = await repository.GetGroupByOwnerUserIdAsync(query.OwnerUserId, ct);
+        if (ownedGroup is not null)
         {
-            var existing = await repository.GetGroupWithListsAsync(groupId, ct);
-            if (existing is not null)
-            {
-                return ShoppingListMapping.MapGroup(existing);
-            }
+            return ShoppingListMapping.MapGroup(ownedGroup);
         }
 
         var existingNames = await repository.GetListNamesAsync(groupId: null, ct);

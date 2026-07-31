@@ -35,7 +35,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         var sut = new MoveShoppingListItemToPantryCommandHandler(
             shoppingRepo,
             pantryRepo,
-            new AnonymousCurrentUser(),
+            new FixedCurrentUser("user-a"),
             unitOfWork,
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
@@ -45,7 +45,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         Assert.True(unitOfWork.Executed);
         Assert.NotNull(pantryRepo.UpsertedItem);
         Assert.Equal("Zout", pantryRepo.UpsertedItem!.DisplayName);
-        Assert.Equal($"group:{groupId:D}", pantryRepo.UpsertedItem.OwnerUserId);
+        Assert.Equal("user-a", pantryRepo.UpsertedItem.OwnerUserId);
         Assert.Equal(itemId, shoppingRepo.LastRemovedItemId);
     }
 
@@ -56,7 +56,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         var listId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
         var existingPantryId = Guid.NewGuid();
-        var ownerKey = $"group:{groupId:D}";
+        const string ownerKey = "user-a";
         var shoppingRepo = new FakeShoppingListRepository
         {
             Item = new ShoppingListItem
@@ -85,7 +85,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         var sut = new MoveShoppingListItemToPantryCommandHandler(
             shoppingRepo,
             pantryRepo,
-            new AnonymousCurrentUser(),
+            new FixedCurrentUser(ownerKey),
             new FakeUnitOfWork(),
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
@@ -169,7 +169,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, CancellationToken ct = default) => Task.CompletedTask;
+        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default) => Task.CompletedTask;
         public Task<ShoppingList> AddListToGroupAsync(Guid groupId, string name, int storeOrder, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<bool> ToggleItemCheckedAsync(Guid itemId, bool isChecked, CancellationToken ct = default) => Task.FromResult(false);
         public Task<bool> UpdateListNameAsync(Guid shoppingListId, string name, CancellationToken ct = default) => Task.FromResult(false);
