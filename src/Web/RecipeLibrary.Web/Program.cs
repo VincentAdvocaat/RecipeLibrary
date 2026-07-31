@@ -154,9 +154,12 @@ builder.Services.AddScoped(sp =>
 {
     var nav = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
     var accessor = sp.GetRequiredService<IHttpContextAccessor>();
-    // Forward Identity (and culture) cookies; UseCookies=false so our Cookie header is not stripped.
+    // Capture cookies once at scoped client creation (circuit start). Do not re-read
+    // IHttpContextAccessor on each send — HttpContext is unreliable after the circuit starts.
+    // UseCookies=false so our Cookie header is not stripped.
     // Accept-Language still helps RequestLocalization when the culture cookie is absent.
-    var handler = new BlazorCircuitCookieHandler(accessor)
+    var cookie = accessor.HttpContext?.Request.Headers.Cookie.ToString();
+    var handler = new BlazorCircuitCookieHandler(cookie)
     {
         InnerHandler = new HttpClientHandler { UseCookies = false },
     };

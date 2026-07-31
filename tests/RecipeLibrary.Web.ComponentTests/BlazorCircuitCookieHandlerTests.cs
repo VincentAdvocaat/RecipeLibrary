@@ -1,5 +1,4 @@
 using System.Net.Http;
-using Microsoft.AspNetCore.Http;
 using RecipeLibrary.Web.Services;
 using Xunit;
 
@@ -8,13 +7,13 @@ namespace RecipeLibrary.Web.ComponentTests;
 public sealed class BlazorCircuitCookieHandlerTests
 {
     [Fact]
-    public async Task SendAsync_forwards_cookie_header_from_http_context()
+    public async Task SendAsync_forwards_cookie_captured_at_construction()
     {
-        var httpContext = new DefaultHttpContext();
-        httpContext.Request.Headers.Cookie = ".AspNetCore.Identity.Application=test-cookie";
-        var accessor = new HttpContextAccessor { HttpContext = httpContext };
         var inner = new CaptureHandler();
-        var sut = new BlazorCircuitCookieHandler(accessor) { InnerHandler = inner };
+        var sut = new BlazorCircuitCookieHandler(".AspNetCore.Identity.Application=test-cookie")
+        {
+            InnerHandler = inner,
+        };
 
         using var client = new HttpClient(sut) { BaseAddress = new Uri("https://localhost/") };
         _ = await client.GetAsync("/recipes/import-url");
@@ -23,11 +22,22 @@ public sealed class BlazorCircuitCookieHandlerTests
     }
 
     [Fact]
-    public async Task SendAsync_omits_cookie_header_when_http_context_has_none()
+    public async Task SendAsync_omits_cookie_header_when_none_was_captured()
     {
-        var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
         var inner = new CaptureHandler();
-        var sut = new BlazorCircuitCookieHandler(accessor) { InnerHandler = inner };
+        var sut = new BlazorCircuitCookieHandler(null) { InnerHandler = inner };
+
+        using var client = new HttpClient(sut) { BaseAddress = new Uri("https://localhost/") };
+        _ = await client.GetAsync("/ping");
+
+        Assert.Null(inner.CookieHeader);
+    }
+
+    [Fact]
+    public async Task SendAsync_omits_cookie_header_when_captured_cookie_is_empty()
+    {
+        var inner = new CaptureHandler();
+        var sut = new BlazorCircuitCookieHandler(string.Empty) { InnerHandler = inner };
 
         using var client = new HttpClient(sut) { BaseAddress = new Uri("https://localhost/") };
         _ = await client.GetAsync("/ping");
