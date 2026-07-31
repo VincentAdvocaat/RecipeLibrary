@@ -5,8 +5,8 @@ namespace RecipeLibrary.Web.Models;
 
 /// <summary>
 /// Builds ingredient API requests with the Blazor circuit UI culture.
-/// Loopback <see cref="HttpClient"/> calls do not send the culture cookie, so culture must be explicit
-/// (and/or Accept-Language on the client).
+/// Culture is passed explicitly (and via Accept-Language) so search/match stay consistent
+/// even when the culture cookie is not present on the loopback request.
 /// </summary>
 public static class IngredientApi
 {
