@@ -3,7 +3,10 @@ using RecipeLibrary.Application.Contracts;
 
 namespace RecipeLibrary.Application.UseCases.Ingredients;
 
-public sealed class AddIngredientTagsCommandHandler(IIngredientRepository ingredientRepository, IIngredientTextNormalizer normalizer)
+public sealed class AddIngredientTagsCommandHandler(
+    IIngredientRepository ingredientRepository,
+    IIngredientTextNormalizer normalizer,
+    IUnitOfWork? unitOfWork = null)
     : ICommandHandler<AddIngredientTagsCommand, AddIngredientTagsResult>
 {
     public async Task<AddIngredientTagsResult> HandleAsync(AddIngredientTagsCommand command, CancellationToken ct = default)
@@ -15,6 +18,7 @@ public sealed class AddIngredientTagsCommandHandler(IIngredientRepository ingred
             .ToList();
 
         await ingredientRepository.AddTagsAsync(command.IngredientId, cleaned, ct);
+        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
         return new AddIngredientTagsResult(cleaned.Count);
     }
 }

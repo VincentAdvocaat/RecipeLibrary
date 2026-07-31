@@ -1,8 +1,9 @@
+using RecipeLibrary.Application.Abstractions;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace RecipeLibrary.Application.Abstractions;
+namespace RecipeLibrary.Infrastructure.RecipeImport;
 
 /// <summary>
 /// Detects Blogger Dynamic Views shells (JS-rendered posts) and recovers post HTML via Atom.

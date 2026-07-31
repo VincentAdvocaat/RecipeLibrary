@@ -78,6 +78,7 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
                 }
 
                 var created = await InsertGroupWithPrimaryListAsync(primaryListName, ownerUserId, ct);
+                await dbContext.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
                 return created;
             }
@@ -129,7 +130,6 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
         };
 
         await dbContext.ShoppingListGroups.AddAsync(group, ct);
-        await dbContext.SaveChangesAsync(ct);
         return group;
     }
 
@@ -163,9 +163,6 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
             .Where(i => i.ShoppingList!.GroupId == groupId && !i.IsChecked)
             .CountAsync(ct);
     }
-
-    public Task SaveChangesAsync(CancellationToken ct = default) =>
-        dbContext.SaveChangesAsync(ct);
 
     public async Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default)
     {
@@ -235,6 +232,10 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
         var strategy = dbContext.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
+            // Self-contained write: drop prior tracked graphs so AddRange cannot clash with
+            // instances loaded by earlier handlers in the same scoped DbContext.
+            dbContext.ChangeTracker.Clear();
+
             await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
             try
             {
@@ -255,20 +256,20 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
                     .Where(i => i.ShoppingListId == shoppingListId)
                     .ExecuteDeleteAsync(ct);
 
-                foreach (var entry in dbContext.ChangeTracker.Entries<ShoppingListItem>()
-                    .Where(e => e.Entity.ShoppingListId == shoppingListId)
-                    .ToList())
-                {
-                    entry.State = EntityState.Detached;
-                }
-
-                foreach (var entry in dbContext.ChangeTracker.Entries<ShoppingListItemSource>().ToList())
-                {
-                    entry.State = EntityState.Detached;
-                }
-
                 if (items.Count > 0)
                 {
+                    // Callers often pass graphs from AsNoTracking queries that still have
+                    // ShoppingList/Item navigations set — clear them so AddRange cannot clash
+                    // with the list instance we just loaded above.
+                    foreach (var item in items)
+                    {
+                        item.ShoppingList = null;
+                        foreach (var source in item.Sources)
+                        {
+                            source.Item = null;
+                        }
+                    }
+
                     await dbContext.ShoppingListItems.AddRangeAsync(items, ct);
                 }
 
@@ -277,7 +278,7 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
                 await dbContext.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
 
-                dbContext.Entry(list).State = EntityState.Detached;
+                dbContext.ChangeTracker.Clear();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -310,7 +311,6 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
                 s => s.SetProperty(g => g.UpdatedAt, now),
                 ct);
 
-        await dbContext.SaveChangesAsync(ct);
         return list;
     }
 

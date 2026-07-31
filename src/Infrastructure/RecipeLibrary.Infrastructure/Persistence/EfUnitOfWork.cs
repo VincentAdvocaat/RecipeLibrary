@@ -5,6 +5,9 @@ namespace RecipeLibrary.Infrastructure.Persistence;
 
 public sealed class EfUnitOfWork(RecipeDbContext dbContext) : IUnitOfWork
 {
+    public Task SaveChangesAsync(CancellationToken ct = default) =>
+        dbContext.SaveChangesAsync(ct);
+
     public Task ExecuteInTransactionAsync(Func<CancellationToken, Task> action, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -14,6 +17,7 @@ public sealed class EfUnitOfWork(RecipeDbContext dbContext) : IUnitOfWork
         {
             await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
             await action(ct);
+            await dbContext.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
         });
     }

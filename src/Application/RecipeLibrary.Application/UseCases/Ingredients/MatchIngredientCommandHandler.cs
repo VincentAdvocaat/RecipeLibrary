@@ -1,3 +1,4 @@
+using RecipeLibrary.Domain.Ingredients;
 using System.Globalization;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
@@ -8,7 +9,8 @@ namespace RecipeLibrary.Application.UseCases.Ingredients;
 
 public sealed class MatchIngredientCommandHandler(
     IngredientMatcher matcher,
-    IIngredientRepository ingredientRepository)
+    IIngredientRepository ingredientRepository,
+    IUnitOfWork? unitOfWork = null)
     : ICommandHandler<MatchIngredientCommand, MatchIngredientResult>
 {
     public async Task<MatchIngredientResult> HandleAsync(MatchIngredientCommand command, CancellationToken ct = default)
@@ -25,10 +27,11 @@ public sealed class MatchIngredientCommandHandler(
             Input = rawInput,
             NormalizedInput = result.NormalizedInput,
             MatchedIngredientId = result.Ingredient?.Id,
-            MatchType = result.MatchType,
+            MatchType = result.MatchType.ToString().ToLowerInvariant(),
             Confidence = result.Confidence,
             CreatedAt = DateTimeOffset.UtcNow
         }, ct);
+        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
 
         return new MatchIngredientResult
         {

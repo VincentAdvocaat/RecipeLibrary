@@ -13,7 +13,8 @@ public sealed class CreateRecipeCommandHandler(
     IIngredientTextNormalizer normalizer,
     IngredientMatcher matcher,
     IngredientLineResolver lineResolver,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    IUnitOfWork? unitOfWork = null)
     : ICommandHandler<CreateRecipeCommand, CreateRecipeResult>
 {
     public async Task<CreateRecipeResult> HandleAsync(CreateRecipeCommand command, CancellationToken ct = default)
@@ -71,6 +72,7 @@ public sealed class CreateRecipeCommandHandler(
         }
 
         await recipeRepository.AddAsync(recipe, ct);
+        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
         return new CreateRecipeResult(recipeId);
     }
 

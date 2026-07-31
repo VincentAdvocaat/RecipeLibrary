@@ -1,5 +1,13 @@
 namespace RecipeLibrary.Application.Contracts;
 
+public enum IngredientMatchType
+{
+    Exact,
+    Alias,
+    Fuzzy,
+    None,
+}
+
 public sealed class ParseIngredientLineRequest
 {
     public string Input { get; init; } = string.Empty;
@@ -32,7 +40,7 @@ public sealed class IngredientSuggestionItem
 
 public sealed class MatchIngredientResult
 {
-    public string MatchType { get; init; } = "none";
+    public IngredientMatchType MatchType { get; init; } = IngredientMatchType.None;
     public IngredientLookupItem? Ingredient { get; init; }
     public decimal Confidence { get; init; }
     public bool RequiresConfirmation { get; init; }

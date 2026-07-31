@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace RecipeLibrary.Application.Abstractions;
+namespace RecipeLibrary.Infrastructure.RecipeImport;
 
 /// <summary>
 /// Reads a UTF-8 text body up to a byte limit, then stops (soft truncate) instead of failing.

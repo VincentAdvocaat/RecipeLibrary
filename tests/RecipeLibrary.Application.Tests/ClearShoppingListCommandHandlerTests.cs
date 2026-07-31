@@ -56,7 +56,6 @@ public sealed class ClearShoppingListCommandHandlerTests
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;
         public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default) => Task.CompletedTask;

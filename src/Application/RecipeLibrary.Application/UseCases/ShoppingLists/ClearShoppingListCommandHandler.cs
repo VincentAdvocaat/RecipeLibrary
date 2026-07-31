@@ -6,7 +6,8 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class ClearShoppingListCommandHandler(
     IShoppingListRepository repository,
-    ICurrentUser userContext)
+    ICurrentUser userContext,
+    IUnitOfWork? unitOfWork = null)
     : ICommandHandler<ClearShoppingListCommand, ClearShoppingListResult>
 {
     public async Task<ClearShoppingListResult> HandleAsync(
@@ -26,6 +27,7 @@ public sealed class ClearShoppingListCommandHandler(
         }
 
         await repository.ClearListItemsAsync(command.ShoppingListId, ct);
+        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
         return new ClearShoppingListResult(true);
     }
 }

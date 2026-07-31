@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
-namespace RecipeLibrary.Application.Abstractions;
+namespace RecipeLibrary.Infrastructure.RecipeImport;
 
 /// <summary>
 /// Detects Instagram / YouTube recipe post URLs and normalizes them for caption APIs.

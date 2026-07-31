@@ -13,9 +13,14 @@ public sealed class ImportRecipeContentQueryHandler(
         recipeImportService.ImportContentAsync(query, ct);
 }
 
+/// <summary>
+/// Imports recipe data through network I/O without writing to the application database.
+/// This is an accepted CQRS query exception.
+/// </summary>
 public sealed class ImportRecipeFromUrlQueryHandler(
     IRecipeImportContentFetcher contentFetcher,
     IRecipeSocialCaptionFetcher socialCaptionFetcher,
+    IRecipeImportUrlGuard urlGuard,
     RecipeImportService recipeImportService)
     : IQueryHandler<ImportRecipeFromUrlQuery, ImportRecipeResult>
 {
@@ -27,7 +32,7 @@ public sealed class ImportRecipeFromUrlQueryHandler(
             throw new ArgumentException("URL is required.");
         }
 
-        await RecipeImportUrlSafety.EnsurePublicHttpUrlAsync(url, ct);
+        await urlGuard.EnsurePublicHttpUrlAsync(url, ct);
 
         // Instagram/YouTube pages are JS shells; captions live in platform APIs.
         var socialCaption = await socialCaptionFetcher.TryFetchCaptionAsync(url, ct);
@@ -45,6 +50,10 @@ public sealed class ImportRecipeFromUrlQueryHandler(
     }
 }
 
+/// <summary>
+/// Imports recipe data through OCR I/O without writing to the application database.
+/// This is an accepted CQRS query exception.
+/// </summary>
 public sealed class ImportRecipeFromImageQueryHandler(
     IRecipeImageTextExtractor imageTextExtractor,
     RecipeImportService recipeImportService,

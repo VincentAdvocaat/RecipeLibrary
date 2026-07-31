@@ -13,7 +13,6 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
         ArgumentException.ThrowIfNullOrWhiteSpace(recipe.OwnerUserId);
 
         await dbContext.Recipes.AddAsync(recipe, ct);
-        await dbContext.SaveChangesAsync(ct);
     }
 
     public async Task<IReadOnlyList<Recipe>> GetListAsync(
@@ -116,11 +115,6 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
         if (recipe.InstructionSteps.Count > 0)
         {
             await dbContext.InstructionSteps.AddRangeAsync(recipe.InstructionSteps, ct);
-        }
-
-        if (recipe.Ingredients.Count > 0 || recipe.InstructionSteps.Count > 0)
-        {
-            await dbContext.SaveChangesAsync(ct);
         }
 
         await OwnedRecipes(ownerUserId)

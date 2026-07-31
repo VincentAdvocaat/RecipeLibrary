@@ -5,5 +5,7 @@ namespace RecipeLibrary.Application.Abstractions;
 /// </summary>
 public interface IUnitOfWork
 {
+    Task SaveChangesAsync(CancellationToken ct = default);
+
     Task ExecuteInTransactionAsync(Func<CancellationToken, Task> action, CancellationToken ct = default);
 }

@@ -6,7 +6,8 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class DeleteShoppingListGroupCommandHandler(
     IShoppingListRepository repository,
-    ICurrentUser userContext)
+    ICurrentUser userContext,
+    IUnitOfWork? unitOfWork = null)
     : ICommandHandler<DeleteShoppingListGroupCommand, DeleteShoppingListGroupResult>
 {
     public async Task<DeleteShoppingListGroupResult> HandleAsync(
@@ -20,6 +21,7 @@ public sealed class DeleteShoppingListGroupCommandHandler(
             ct);
 
         await repository.DeleteGroupAsync(command.GroupId, ct);
+        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
         return new DeleteShoppingListGroupResult(true);
     }
 }

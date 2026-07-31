@@ -8,7 +8,8 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 public sealed class SplitShoppingListCommandHandler(
     IShoppingListRepository repository,
     ICurrentUser userContext,
-    ShoppingListIngredientMerger merger)
+    ShoppingListIngredientMerger merger,
+    IUnitOfWork? unitOfWork = null)
     : ICommandHandler<SplitShoppingListCommand, SplitShoppingListResult>
 {
     public async Task<SplitShoppingListResult> HandleAsync(
@@ -51,6 +52,8 @@ public sealed class SplitShoppingListCommandHandler(
         var remaining = primary.Items.Where(i => !selectedIds.Contains(i.Id)).ToList();
 
         var secondary = await repository.AddListToGroupAsync(command.GroupId, name, storeOrder: 2, ct);
+        // ReplaceListItemsAsync queries by id and runs its own transaction; persist the new list first.
+        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
 
         var secondaryItems = new List<ShoppingListItem>();
         foreach (var item in selected)

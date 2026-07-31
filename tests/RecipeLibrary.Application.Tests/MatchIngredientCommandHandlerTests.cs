@@ -20,13 +20,14 @@ public sealed class MatchIngredientCommandHandlerTests
 
         var result = await sut.HandleAsync(new MatchIngredientCommand { Input = "Gehakt" });
 
-        Assert.Equal("exact", result.MatchType);
+        Assert.Equal(IngredientMatchType.Exact, result.MatchType);
         Assert.False(result.RequiresConfirmation);
         Assert.NotNull(result.Ingredient);
         Assert.Equal("Gehakt", result.Ingredient!.Name);
         Assert.Equal("nl", result.Ingredient.LanguageCode);
         Assert.NotNull(repo.LastLog);
         Assert.Equal("Gehakt", repo.LastLog!.Input);
+        Assert.Equal("exact", repo.LastLog.MatchType);
     }
 
     [Fact]
@@ -48,7 +49,7 @@ public sealed class MatchIngredientCommandHandlerTests
 
         var result = await sut.HandleAsync(new MatchIngredientCommand { Input = "tomato", CultureName = "en-US" });
 
-        Assert.Equal("exact", result.MatchType);
+        Assert.Equal(IngredientMatchType.Exact, result.MatchType);
         Assert.NotNull(result.Ingredient);
         Assert.Equal("tomato", result.Ingredient!.Name);
         Assert.Equal("en", result.Ingredient.LanguageCode);

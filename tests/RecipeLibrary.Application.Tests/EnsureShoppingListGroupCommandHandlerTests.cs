@@ -6,7 +6,7 @@ using Xunit;
 
 namespace RecipeLibrary.Application.Tests;
 
-public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
+public sealed class EnsureShoppingListGroupCommandHandlerTests
 {
     [Fact]
     public async Task HandleAsync_ReturnsExistingGroup_WhenOwnerHasGroup()
@@ -25,9 +25,9 @@ public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
         };
 
         var repo = new FakeShoppingListRepository { ExistingGroup = group };
-        var sut = new GetOrCreateShoppingListGroupQueryHandler(repo);
+        var sut = new EnsureShoppingListGroupCommandHandler(repo, new FakeUnitOfWork());
 
-        var result = await sut.HandleAsync(new GetOrCreateShoppingListGroupQuery
+        var result = await sut.HandleAsync(new EnsureShoppingListGroupCommand
         {
             OwnerUserId = ownerUserId,
             DefaultListNameFormat = "List {0}",
@@ -55,9 +55,9 @@ public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
             },
         };
 
-        var sut = new GetOrCreateShoppingListGroupQueryHandler(repo);
+        var sut = new EnsureShoppingListGroupCommandHandler(repo, new FakeUnitOfWork());
 
-        var result = await sut.HandleAsync(new GetOrCreateShoppingListGroupQuery
+        var result = await sut.HandleAsync(new EnsureShoppingListGroupCommand
         {
             OwnerUserId = ownerUserId,
             DefaultListNameFormat = "List {0}",
@@ -71,10 +71,10 @@ public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
     [Fact]
     public async Task HandleAsync_Throws_WhenOwnerUserIdMissing()
     {
-        var sut = new GetOrCreateShoppingListGroupQueryHandler(new FakeShoppingListRepository());
+        var sut = new EnsureShoppingListGroupCommandHandler(new FakeShoppingListRepository(), new FakeUnitOfWork());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-            sut.HandleAsync(new GetOrCreateShoppingListGroupQuery
+            sut.HandleAsync(new EnsureShoppingListGroupCommand
             {
                 OwnerUserId = null,
                 DefaultListNameFormat = "List {0}",
@@ -84,10 +84,10 @@ public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
     [Fact]
     public async Task HandleAsync_Throws_WhenNameFormatMissing()
     {
-        var sut = new GetOrCreateShoppingListGroupQueryHandler(new FakeShoppingListRepository());
+        var sut = new EnsureShoppingListGroupCommandHandler(new FakeShoppingListRepository(), new FakeUnitOfWork());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            sut.HandleAsync(new GetOrCreateShoppingListGroupQuery
+            sut.HandleAsync(new EnsureShoppingListGroupCommand
             {
                 OwnerUserId = "user-a",
                 DefaultListNameFormat = "  ",
@@ -142,7 +142,6 @@ public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;
@@ -152,5 +151,14 @@ public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
         public Task<bool> RemoveItemAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult(false);
         public Task<ShoppingListItem?> GetItemByIdAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult<ShoppingListItem?>(null);
         public Task<bool> UpdateListNameAsync(Guid shoppingListId, string name, CancellationToken ct = default) => Task.FromResult(false);
+    }
+
+    private sealed class FakeUnitOfWork : IUnitOfWork
+    {
+
+        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task ExecuteInTransactionAsync(Func<CancellationToken, Task> action, CancellationToken ct = default) =>
+            action(ct);
     }
 }

@@ -96,7 +96,6 @@ public sealed class SplitShoppingListCommandHandlerTests
         public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, string? ownerUserId = null, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;
