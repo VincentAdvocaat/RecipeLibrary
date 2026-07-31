@@ -153,9 +153,17 @@ ConfigureDataProtection(builder);
 builder.Services.AddScoped(sp =>
 {
     var nav = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
-    // Blazor Server loopback HttpClient does not forward the browser culture cookie.
-    // Accept-Language lets RequestLocalization set CurrentUICulture for ingredient i18n APIs.
-    var client = new HttpClient
+    var accessor = sp.GetRequiredService<IHttpContextAccessor>();
+    // Capture cookies once at scoped client creation (circuit start). Do not re-read
+    // IHttpContextAccessor on each send — HttpContext is unreliable after the circuit starts.
+    // UseCookies=false so our Cookie header is not stripped.
+    // Accept-Language still helps RequestLocalization when the culture cookie is absent.
+    var cookie = accessor.HttpContext?.Request.Headers.Cookie.ToString();
+    var handler = new BlazorCircuitCookieHandler(cookie)
+    {
+        InnerHandler = new HttpClientHandler { UseCookies = false },
+    };
+    var client = new HttpClient(handler)
     {
         BaseAddress = new Uri(nav.BaseUri),
         // OCR of multiple screenshots can take longer than the default 100s.

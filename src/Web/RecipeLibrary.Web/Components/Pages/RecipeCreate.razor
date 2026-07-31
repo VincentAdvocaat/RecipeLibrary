@@ -1,7 +1,6 @@
 @page "/recipes/create"
 @using System.ComponentModel.DataAnnotations
-@using System.Net.Http.Headers
-@using System.Net.Http.Json
+@using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.Options
 @using RecipeLibrary.Application.Abstractions
@@ -14,8 +13,8 @@
 @using RecipeCategory = RecipeLibrary.Domain.ValueObjects.RecipeCategory
 @using RecipeDifficulty = RecipeLibrary.Domain.ValueObjects.Difficulty
 @inject ICommandBus CommandBus
+@inject IQueryBus QueryBus
 @inject NavigationManager Navigation
-@inject HttpClient Http
 @inject IOptions<RecipeImportOptions> ImportOptions
 @inject MeasureSystemService MeasureSystemService
 
@@ -448,8 +447,7 @@
         _isProcessing = true;
         try
         {
-            var response = await Http.PostAsJsonAsync(
-                "/recipes/import",
+            var result = await QueryBus.QueryAsync<ImportRecipeContentQuery, ImportRecipeResult>(
                 new ImportRecipeContentQuery
                 {
                     Content = _pasteContent,
@@ -457,24 +455,15 @@
                     ParseOptions = BuildParseOptions(),
                 });
 
-            if (!response.IsSuccessStatusCode)
-            {
-                _importError = await response.Content.ReadAsStringAsync();
-                return;
-            }
-
-            var result = await response.Content.ReadFromJsonAsync<ImportRecipeResult>();
-            if (result is null)
-            {
-                _importError = L["RecipeImport.Error.NoResult"];
-                return;
-            }
-
             CompleteImport(result);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            _importError = ex.Message;
+            _importError = MapImportException(ex);
+        }
+        catch (Exception)
+        {
+            _importError = L["RecipeImport.Error.Failed"];
         }
         finally
         {
@@ -517,45 +506,31 @@
         _isProcessing = true;
         try
         {
-            // Buffer each browser file fully before HTTP. Streaming BrowserFileStream into
-            // MultipartContent over Blazor Server SignalR causes TimeoutException.
-            var payloads = new List<(byte[] Bytes, string ContentType, string FileName)>(_photoFiles.Count);
+            // Buffer each browser file fully before OCR. Streaming BrowserFileStream over
+            // Blazor Server SignalR can cause TimeoutException.
+            var images = new List<ImportImageFile>(_photoFiles.Count);
             foreach (var photo in _photoFiles)
             {
                 await using var browserStream = photo.OpenReadStream(maxAllowedSize: maxBytes);
                 using var memory = new MemoryStream();
                 await browserStream.CopyToAsync(memory);
-                payloads.Add((
-                    memory.ToArray(),
-                    string.IsNullOrWhiteSpace(photo.ContentType) ? "application/octet-stream" : photo.ContentType,
-                    photo.Name));
+                images.Add(new ImportImageFile
+                {
+                    ImageBytes = memory.ToArray(),
+                    ContentType = string.IsNullOrWhiteSpace(photo.ContentType)
+                        ? "application/octet-stream"
+                        : photo.ContentType,
+                    FileName = photo.Name,
+                });
             }
 
-            using var content = new MultipartFormDataContent();
-            foreach (var payload in payloads)
-            {
-                var part = new ByteArrayContent(payload.Bytes);
-                part.Headers.ContentType = new MediaTypeHeaderValue(payload.ContentType);
-                content.Add(part, "file", payload.FileName);
-            }
-
-            content.Add(new StringContent(_ocrLanguage), "language");
-            content.Add(new StringContent(_useAiFallback.ToString()), "useAiFallback");
-            content.Add(new StringContent(_useFullRecipeAi.ToString()), "useFullRecipeAi");
-
-            var response = await Http.PostAsync("/recipes/import-image", content);
-            if (!response.IsSuccessStatusCode)
-            {
-                _importError = await response.Content.ReadAsStringAsync();
-                return;
-            }
-
-            var result = await response.Content.ReadFromJsonAsync<ImportRecipeResult>();
-            if (result is null)
-            {
-                _importError = L["RecipeImport.Error.NoResult"];
-                return;
-            }
+            var result = await QueryBus.QueryAsync<ImportRecipeFromImageQuery, ImportRecipeResult>(
+                new ImportRecipeFromImageQuery
+                {
+                    Images = images,
+                    Language = _ocrLanguage,
+                    ParseOptions = BuildParseOptions(),
+                });
 
             CompleteImport(result);
         }
@@ -563,9 +538,13 @@
         {
             _importError = L["RecipeCreate.PhotoImport.Error.UploadTimeout"];
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            _importError = ex.Message;
+            _importError = MapImportException(ex);
+        }
+        catch (Exception)
+        {
+            _importError = L["RecipeImport.Error.Failed"];
         }
         finally
         {
@@ -585,37 +564,82 @@
         _isProcessing = true;
         try
         {
-            var response = await Http.PostAsJsonAsync(
-                "/recipes/import-url",
+            var result = await QueryBus.QueryAsync<ImportRecipeFromUrlQuery, ImportRecipeResult>(
                 new ImportRecipeFromUrlQuery
                 {
                     Url = _importUrl.Trim(),
                     ParseOptions = BuildParseOptions(),
                 });
 
-            if (!response.IsSuccessStatusCode)
-            {
-                _importError = await response.Content.ReadAsStringAsync();
-                return;
-            }
-
-            var result = await response.Content.ReadFromJsonAsync<ImportRecipeResult>();
-            if (result is null)
-            {
-                _importError = L["RecipeImport.Error.NoResult"];
-                return;
-            }
-
             CompleteImport(result);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            _importError = ex.Message;
+            _importError = MapImportException(ex);
+        }
+        catch (Exception)
+        {
+            _importError = L["RecipeImport.Error.Failed"];
         }
         finally
         {
             _isProcessing = false;
         }
+    }
+
+    private string MapImportException(Exception ex)
+    {
+        var message = ex.Message ?? string.Empty;
+
+        if (message.Equals("URL is required.", StringComparison.Ordinal)
+            || message.Equals("URL host is required.", StringComparison.Ordinal))
+        {
+            return L["RecipeCreate.Url.Error.Empty"];
+        }
+
+        if (message.Equals("URL must be an absolute http or https address.", StringComparison.Ordinal))
+        {
+            return L["RecipeImport.Error.UrlInvalid"];
+        }
+
+        if (message.Equals("URL host is not allowed.", StringComparison.Ordinal))
+        {
+            return L["RecipeImport.Error.UrlHostNotAllowed"];
+        }
+
+        if (message.Equals("URL host could not be resolved.", StringComparison.Ordinal))
+        {
+            return L["RecipeImport.Error.UrlHostUnresolved"];
+        }
+
+        if (message.Equals("Image is required.", StringComparison.Ordinal))
+        {
+            return L["RecipeCreate.PhotoImport.Error.NoFile"];
+        }
+
+        if (message.StartsWith("At most ", StringComparison.Ordinal)
+            && message.Contains(" images are allowed per import.", StringComparison.Ordinal))
+        {
+            var maxImages = Math.Max(1, ImportOptions.Value.Ocr.MaxImagesPerImport);
+            return L["RecipeCreate.PhotoImport.Error.MaxImages", maxImages];
+        }
+
+        if (message.StartsWith("Image exceeds maximum size of ", StringComparison.Ordinal))
+        {
+            return L["RecipeImport.Error.ImageTooLarge"];
+        }
+
+        if (message.Equals("No text could be extracted from the image.", StringComparison.Ordinal))
+        {
+            return L["RecipeImport.Error.NoOcrText"];
+        }
+
+        if (message.Equals("Unsupported image type. Use jpg, png, or webp.", StringComparison.Ordinal))
+        {
+            return L["RecipeImport.Error.UnsupportedImageType"];
+        }
+
+        return L["RecipeImport.Error.Failed"];
     }
 
     private void CompleteImport(ImportRecipeResult result)
@@ -789,8 +813,13 @@
             return;
         }
 
-        var suggestions = await Http.GetFromJsonAsync<List<IngredientLookupItem>>(IngredientApi.SearchUrl(query)) ?? [];
-        _ingredientSuggestions[index] = suggestions;
+        var suggestions = await QueryBus.QueryAsync<SearchIngredientsQuery, IReadOnlyList<IngredientLookupItem>>(
+            new SearchIngredientsQuery
+            {
+                Query = query,
+                CultureName = CultureInfo.CurrentUICulture.Name,
+            });
+        _ingredientSuggestions[index] = suggestions.ToList();
         StateHasChanged();
     }
 
@@ -874,16 +903,19 @@
                 continue;
             }
 
-            var match = await Http.PostAsJsonAsync("/ingredients/match", IngredientApi.MatchCommand(input));
-            var payload = await match.Content.ReadFromJsonAsync<MatchIngredientResult>();
-            if (payload?.Ingredient?.Id is not Guid ingredientId)
+            var payload = await CommandBus.SendAsync<MatchIngredientCommand, MatchIngredientResult>(
+                IngredientApi.MatchCommand(input));
+            if (payload.Ingredient?.Id is not Guid ingredientId)
             {
                 continue;
             }
 
-            await Http.PostAsJsonAsync(
-                $"/ingredients/{ingredientId}/tags",
-                new AddIngredientTagsRequest { Tags = _ingredientTags });
+            await CommandBus.SendAsync<AddIngredientTagsCommand, AddIngredientTagsResult>(
+                new AddIngredientTagsCommand
+                {
+                    IngredientId = ingredientId,
+                    Tags = _ingredientTags,
+                });
         }
     }
 }
