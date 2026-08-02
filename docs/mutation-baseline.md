@@ -1,6 +1,6 @@
 # Mutation testing baseline (E17.F2)
 
-Recorded with Stryker.NET **4.16.0** on `bugfix/stryker-survivor-cleanup` (behavior-boundary tests after pipeline run 116).
+Recorded with Stryker.NET **4.16.0** on `feature/stryker-survivor-cleanup` (behavior-boundary tests after pipeline run 116).
 
 ```powershell
 ./scripts/run-stryker.ps1
@@ -12,6 +12,8 @@ Recorded with Stryker.NET **4.16.0** on `bugfix/stryker-survivor-cleanup` (behav
 |--------|----------------|--------|----------|---------|----------|
 | Application (pilot files) | **71.30%** | 313 | 105 | 5 | 69.51% (run 116: 69.06%) |
 | Infrastructure (`RecipeImportUrlSafety`) | **90.77%** | 56 | 3 | 3 | 86.15% (run 116: 84.62%) |
+
+Timeout counts rose slightly (Application 3→5, Infrastructure 0→3). Treat further inflation as a signal to re-check flaky mutants before raising the hard gate.
 
 ## What raised the score (this pass)
 

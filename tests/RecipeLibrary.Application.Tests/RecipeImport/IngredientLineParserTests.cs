@@ -299,14 +299,14 @@ public sealed class IngredientLineParserTests
     [Fact]
     public void Parse_DoesNotTakeJuiceOfPath_WhenQuantityIsZero()
     {
-        // quantity > 0 is required — zero must fall through (not Piece/juice @ 0.85).
+        // quantity > 0 is required — zero must fall through to unmeasured (not Piece/juice @ 0.85).
         var result = _sut.Parse("Juice of 0 lime");
 
-        Assert.False(
-            result.Quantity == 0m
-            && result.Unit == nameof(Unit.Piece)
-            && result.Preparation == "juice"
-            && result.Confidence == 0.85m);
+        Assert.Null(result.Quantity);
+        Assert.Null(result.Unit);
+        Assert.Equal("Juice of 0 lime", result.Name);
+        Assert.Null(result.Preparation);
+        Assert.Equal(0.35m, result.Confidence);
     }
 
     [Fact]
@@ -413,6 +413,8 @@ public sealed class IngredientLineParserTests
 
         var result = _sut.Parse(line);
 
-        Assert.True(result.Confidence > 0.65m);
+        Assert.Equal(100, result.Quantity);
+        Assert.Equal(nameof(Unit.Gram), result.Unit);
+        Assert.Equal(0.95m, result.Confidence);
     }
 }
