@@ -46,7 +46,13 @@
             try
             {
                 var uploadFailedMessage = L["Photo.UploadFailed.Message"].Value;
-                await JS.InvokeVoidAsync("RecipeLibrary.photoUploadZone.init", _zoneRef, _dotNetRef, uploadFailedMessage);
+                var contentRejectedMessage = L["ContentModeration.Rejected"].Value;
+                await JS.InvokeVoidAsync(
+                    "RecipeLibrary.photoUploadZone.init",
+                    _zoneRef,
+                    _dotNetRef,
+                    uploadFailedMessage,
+                    contentRejectedMessage);
             }
             catch
             {

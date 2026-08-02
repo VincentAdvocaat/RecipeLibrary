@@ -137,7 +137,10 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
                             .SetProperty(r => r.Category, recipe.Category)
                             .SetProperty(r => r.Servings, recipe.Servings)
                             .SetProperty(r => r.Difficulty, recipe.Difficulty)
-                            .SetProperty(r => r.UpdatedAt, recipe.UpdatedAt),
+                            .SetProperty(r => r.UpdatedAt, recipe.UpdatedAt)
+                            .SetProperty(r => r.ModerationStatus, recipe.ModerationStatus)
+                            .SetProperty(r => r.ModeratedAt, recipe.ModeratedAt)
+                            .SetProperty(r => r.ModerationSummary, recipe.ModerationSummary),
                         ct);
 
                 await dbContext.SaveChangesAsync(ct);

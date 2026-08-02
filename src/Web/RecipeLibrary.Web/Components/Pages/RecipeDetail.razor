@@ -106,12 +106,24 @@ else if (_recipe is not null)
                         </button>
                         <AppNavLink Href="@($"/recipes/{_recipe.Id}/edit")" data-testid="@UiTestIds.RecipeEdit">@L["RecipeDetail.EditButton"]</AppNavLink>
                         <button type="button"
+                                data-testid="@UiTestIds.RecipeReport"
+                                class="text-sm font-medium text-gray-700 hover:text-gray-900"
+                                disabled="@_reportBusy"
+                                @onclick="ReportAsync">
+                            @L["RecipeDetail.ReportButton"]
+                        </button>
+                        <button type="button"
                                 data-testid="@UiTestIds.RecipeDelete"
                                 class="text-sm font-medium text-red-600 hover:text-red-800"
                                 @onclick="ConfirmDelete">
                             @L["RecipeDetail.DeleteButton"]
                         </button>
                     </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_reportMessage))
+                    {
+                        <p class="text-sm text-green-700">@_reportMessage</p>
+                    }
 
                     @if (_showDeleteConfirm)
                     {
@@ -149,6 +161,8 @@ else if (_recipe is not null)
     private bool _redirected;
     private bool _showDeleteConfirm;
     private string? _addMessage;
+    private string? _reportMessage;
+    private bool _reportBusy;
 
     protected override async Task OnInitializedAsync()
     {
@@ -206,6 +220,26 @@ else if (_recipe is not null)
     };
 
     private void ConfirmDelete() => _showDeleteConfirm = true;
+
+    private async Task ReportAsync()
+    {
+        _reportBusy = true;
+        _reportMessage = null;
+        try
+        {
+            await CommandBus.SendAsync<ReportRecipeContentCommand, ReportRecipeContentResult>(
+                new ReportRecipeContentCommand { RecipeId = RecipeId });
+            _reportMessage = L["RecipeDetail.Report.Submitted"];
+        }
+        catch (Exception)
+        {
+            _reportMessage = L["RecipeDetail.Report.Failed"];
+        }
+        finally
+        {
+            _reportBusy = false;
+        }
+    }
 
     private async Task DeleteRecipeAsync()
     {

@@ -1,6 +1,7 @@
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.UseCases.RecipeImages;
+using RecipeLibrary.Domain.ValueObjects;
 using Xunit;
 
 namespace RecipeLibrary.Application.Tests;
@@ -12,7 +13,10 @@ public sealed class UploadRecipeImageCommandHandlerTests
     {
         using var content = new MemoryStream([0x01, 0x02]);
         var storage = new FakeRecipeFileStorage("/api/recipe-images/test.png");
-        var sut = new UploadRecipeImageCommandHandler(storage);
+        var sut = new UploadRecipeImageCommandHandler(
+            storage,
+            TestContentModeration.Disabled(),
+            new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new UploadRecipeImageCommand
         {
@@ -29,13 +33,40 @@ public sealed class UploadRecipeImageCommandHandlerTests
     public async Task HandleAsync_Throws_WhenFileNameMissing()
     {
         using var content = new MemoryStream([0x01]);
-        var sut = new UploadRecipeImageCommandHandler(new FakeRecipeFileStorage("unused"));
+        var sut = new UploadRecipeImageCommandHandler(
+            new FakeRecipeFileStorage("unused"),
+            TestContentModeration.Disabled(),
+            new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new UploadRecipeImageCommand
             {
                 Content = content,
                 FileName = "",
+                ContentType = "image/png",
+            }));
+    }
+
+    [Fact]
+    public async Task HandleAsync_ThrowsContentRejected_WhenModeratorBlocks()
+    {
+        using var content = new MemoryStream([0x01, 0x02]);
+        var blocked = new ContentModerationResult(
+            ModerationStatus.Rejected,
+            MaxSeverity: 6,
+            Categories: [new ContentModerationCategoryScore("Violence", 6)],
+            Summary: "Violence:6",
+            Skipped: false);
+        var sut = new UploadRecipeImageCommandHandler(
+            new FakeRecipeFileStorage("/api/recipe-images/should-not-save.png"),
+            TestContentModeration.WithModerator(new TestContentModeration.FakeContentModerator(blocked)),
+            new NoOpUnitOfWork());
+
+        await Assert.ThrowsAsync<ContentRejectedException>(() =>
+            sut.HandleAsync(new UploadRecipeImageCommand
+            {
+                Content = content,
+                FileName = "bad.png",
                 ContentType = "image/png",
             }));
     }

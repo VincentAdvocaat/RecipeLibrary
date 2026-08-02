@@ -28,6 +28,8 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
     public DbSet<IngredientUnitConversion> IngredientUnitConversions => Set<IngredientUnitConversion>();
     public DbSet<IngredientUnitConversionSuggestion> IngredientUnitConversionSuggestions =>
         Set<IngredientUnitConversionSuggestion>();
+    public DbSet<ContentModerationEvent> ContentModerationEvents => Set<ContentModerationEvent>();
+    public DbSet<ContentReport> ContentReports => Set<ContentReport>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -80,6 +82,18 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
             b.Property(x => x.CreatedAt);
             b.Property(x => x.UpdatedAt);
 
+            b.Property(x => x.ModerationStatus)
+                .HasConversion<string>()
+                .HasMaxLength(32)
+                .IsRequired();
+
+            b.Property(x => x.ModeratedAt);
+
+            b.Property(x => x.ModerationSummary)
+                .HasMaxLength(1000);
+
+            b.HasIndex(x => x.ModerationStatus);
+
             b.HasMany(x => x.Ingredients)
                 .WithOne()
                 .HasForeignKey(x => x.RecipeId)
@@ -89,6 +103,30 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
                 .WithOne()
                 .HasForeignKey(x => x.RecipeId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ContentModerationEvent>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16).IsRequired();
+            b.Property(x => x.Decision).HasConversion<string>().HasMaxLength(32).IsRequired();
+            b.Property(x => x.CategoriesSummary).HasMaxLength(1000);
+            b.Property(x => x.CreatedAt).IsRequired();
+            b.HasIndex(x => x.RecipeId);
+            b.HasIndex(x => x.CreatedAt);
+        });
+
+        modelBuilder.Entity<ContentReport>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.Property(x => x.ReporterUserId)
+                .HasMaxLength(IdentityOwnerIds.MaxLength)
+                .IsRequired();
+            b.Property(x => x.Reason).HasMaxLength(1000);
+            b.Property(x => x.CreatedAt).IsRequired();
+            b.Property(x => x.Handled).IsRequired();
+            b.HasIndex(x => new { x.Handled, x.CreatedAt });
+            b.HasIndex(x => x.RecipeId);
         });
 
         modelBuilder.Entity<Ingredient>(b =>

@@ -12,6 +12,7 @@ using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.Security;
 using RecipeLibrary.Components;
+using RecipeLibrary.Infrastructure.ContentModeration;
 using RecipeLibrary.Infrastructure.FileStorage;
 using RecipeLibrary.Infrastructure.Identity;
 using RecipeLibrary.Infrastructure.Persistence;
@@ -129,6 +130,7 @@ builder.Services.AddHostedService<IdentitySeedUserHostedService>();
 
 builder.Services.AddHostedService<PersistenceWarmupHostedService>();
 builder.Services.AddRecipeImport(builder.Configuration);
+builder.Services.AddContentModeration(builder.Configuration);
 builder.Services.AddApplication();
 
 var ocrOptions = builder.Configuration.GetSection($"{RecipeImportOptions.SectionName}:Ocr").Get<RecipeImportOcrOptions>()
@@ -278,15 +280,22 @@ app.MapPost("/api/upload-recipe-image", async (IFormFile file, ICommandBus comma
     if (file == null || file.Length == 0)
         return Results.BadRequest("No file uploaded.");
 
-    await using var stream = file.OpenReadStream();
-    var command = new UploadRecipeImageCommand
+    try
     {
-        Content = stream,
-        FileName = file.FileName,
-        ContentType = file.ContentType ?? "application/octet-stream"
-    };
-    var result = await commandBus.SendAsync<UploadRecipeImageCommand, UploadRecipeImageResult>(command, ct);
-    return Results.Ok(new { url = result.Url });
+        await using var stream = file.OpenReadStream();
+        var command = new UploadRecipeImageCommand
+        {
+            Content = stream,
+            FileName = file.FileName,
+            ContentType = file.ContentType ?? "application/octet-stream"
+        };
+        var result = await commandBus.SendAsync<UploadRecipeImageCommand, UploadRecipeImageResult>(command, ct);
+        return Results.Ok(new { url = result.Url });
+    }
+    catch (ContentRejectedException)
+    {
+        return Results.Json(new { error = "content_rejected" }, statusCode: StatusCodes.Status400BadRequest);
+    }
 }).DisableAntiforgery().RequireAuthorization(); // E16.F2.T5: browser FormData upload; antiforgery deferred (SameSite Lax + auth)
 
 app.MapGet("/api/recipe-images/{fileName}", async (
