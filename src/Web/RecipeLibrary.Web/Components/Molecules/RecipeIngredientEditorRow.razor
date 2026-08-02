@@ -1,12 +1,11 @@
 @* Molecule: one ingredient row for recipe create/edit with preparation field. *@
 @namespace RecipeLibrary.Components.Molecules
 
-@using System.Net.Http.Json
 @using RecipeLibrary.Application.Contracts
+@using RecipeLibrary.Application.Ingredients
 @using RecipeLibrary.Domain.ValueObjects
-@using RecipeLibrary.Web.Models
 
-@inject HttpClient Http
+@inject IngredientNameParser IngredientNameParser
 
 <div class="space-y-1">
     <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(9rem,11rem)_8rem_auto] gap-x-3 gap-y-0.5">
@@ -135,15 +134,11 @@
 
         if (string.IsNullOrWhiteSpace(Item.Preparation))
         {
-            var parseResponse = await Http.PostAsJsonAsync("/ingredients/parse-line", new ParseIngredientLineRequest { Input = input });
-            var parsed = await parseResponse.Content.ReadFromJsonAsync<ParseIngredientLineResult>();
-            if (parsed is not null)
+            var parsed = IngredientNameParser.ParseIngredient(input);
+            Item.Name = parsed.Name;
+            if (!string.IsNullOrWhiteSpace(parsed.Preparation))
             {
-                Item.Name = parsed.Name;
-                if (!string.IsNullOrWhiteSpace(parsed.Preparation))
-                {
-                    Item.Preparation = parsed.Preparation;
-                }
+                Item.Preparation = parsed.Preparation;
             }
         }
 

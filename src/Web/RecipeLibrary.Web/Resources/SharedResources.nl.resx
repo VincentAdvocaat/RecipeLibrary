@@ -75,7 +75,13 @@
   <data name="RecipeImport.Ingredient.LowConfidence" xml:space="preserve"><value>Lage betrouwbaarheid ({0}) — geparsed via {1}. Controleer dit.</value></data>
   <data name="RecipeImport.Error.EmptyContent" xml:space="preserve"><value>Plak recepttekst om te importeren.</value></data>
   <data name="RecipeImport.Error.NoResult" xml:space="preserve"><value>Import leverde geen resultaat op.</value></data>
-  <data name="RecipeImport.Error.Failed" xml:space="preserve"><value>Importeren is mislukt. Probeer het opnieuw.</value></data>
+  <data name="RecipeImport.Error.Failed" xml:space="preserve"><value>Importeren mislukt. Probeer het opnieuw of gebruik een andere bron.</value></data>
+  <data name="RecipeImport.Error.UrlInvalid" xml:space="preserve"><value>Vul een geldige http- of https-link in.</value></data>
+  <data name="RecipeImport.Error.UrlHostNotAllowed" xml:space="preserve"><value>Deze link kan om veiligheidsredenen niet worden geïmporteerd.</value></data>
+  <data name="RecipeImport.Error.UrlHostUnresolved" xml:space="preserve"><value>Het websiteadres kon niet worden gevonden.</value></data>
+  <data name="RecipeImport.Error.ImageTooLarge" xml:space="preserve"><value>Een van de foto's is te groot. Probeer een kleinere afbeelding.</value></data>
+  <data name="RecipeImport.Error.NoOcrText" xml:space="preserve"><value>Er kon geen tekst van de foto worden gelezen.</value></data>
+  <data name="RecipeImport.Error.UnsupportedImageType" xml:space="preserve"><value>Niet-ondersteund afbeeldingstype. Gebruik jpg, png of webp.</value></data>
   <data name="RecipeCreate.Mode.AriaLabel" xml:space="preserve"><value>Hoe wil je het recept toevoegen</value></data>
   <data name="RecipeCreate.Mode.Manual" xml:space="preserve"><value>Handmatig</value></data>
   <data name="RecipeCreate.Mode.Text" xml:space="preserve"><value>Tekst</value></data>
