@@ -1,5 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Domain.Entities;
+using RecipeLibrary.Domain.ValueObjects;
+using RecipeLibrary.Infrastructure.Persistence;
 using RecipeLibrary.Testing;
 using Xunit;
 
@@ -143,5 +147,66 @@ public sealed class ShoppingListCommandsPersistenceTests(SqlContainerFixture fix
             new GetRecipeByIdQuery { RecipeId = create.RecipeId });
 
         Assert.Null(loaded);
+    }
+
+    [Fact]
+    public async Task ClearList_ThrowsUnauthorized_WhenListOwnedByAnotherUser()
+    {
+        var foreignGroupId = Guid.NewGuid();
+        var foreignListId = Guid.NewGuid();
+        var foreignItemId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        using (var seedScope = fixture.Factory.Services.CreateScope())
+        {
+            var db = seedScope.ServiceProvider.GetRequiredService<RecipeDbContext>();
+            db.ShoppingListGroups.Add(new ShoppingListGroup
+            {
+                Id = foreignGroupId,
+                OwnerUserId = "foreign-owner",
+                CreatedAt = now,
+                UpdatedAt = now,
+                Lists =
+                [
+                    new ShoppingList
+                    {
+                        Id = foreignListId,
+                        GroupId = foreignGroupId,
+                        Name = "Foreign list",
+                        StoreOrder = 1,
+                        CreatedAt = now,
+                        UpdatedAt = now,
+                        Items =
+                        [
+                            new ShoppingListItem
+                            {
+                                Id = foreignItemId,
+                                ShoppingListId = foreignListId,
+                                DisplayName = "Melk",
+                                Quantity = new Quantity(1),
+                                Unit = Unit.Piece,
+                                SortOrder = 0,
+                                IsChecked = false,
+                            },
+                        ],
+                    },
+                ],
+            });
+            await db.SaveChangesAsync();
+        }
+
+        using var scope = fixture.Factory.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<ICommandBus>();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            bus.SendAsync<ClearShoppingListCommand, ClearShoppingListResult>(
+                new ClearShoppingListCommand { ShoppingListId = foreignListId }));
+
+        using var verifyScope = fixture.Factory.Services.CreateScope();
+        var dbVerify = verifyScope.ServiceProvider.GetRequiredService<RecipeDbContext>();
+        var remaining = await dbVerify.ShoppingListItems
+            .AsNoTracking()
+            .CountAsync(i => i.ShoppingListId == foreignListId);
+        Assert.Equal(1, remaining);
     }
 }

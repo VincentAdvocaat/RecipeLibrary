@@ -9,13 +9,13 @@
   Targets:
     - Application: ShoppingListAccessGuard, ShoppingListIngredientMerger,
       IngredientMatcher, IngredientSimilarityScorer, IngredientLineParser
-    - Abstractions: RecipeImportUrlSafety
+    - Infrastructure: RecipeImportUrlSafety
 
   Reports are written under tests/RecipeLibrary.Application.Tests/StrykerOutput/
   (gitignored). This is intentionally NOT a PR gate — thresholds.break is 0.
 
 .PARAMETER Target
-  Which pilot config to run: Application, Abstractions, or All (default).
+  Which pilot config to run: Application, Infrastructure, or All (default).
 
 .PARAMETER BreakAt
   Optional mutation-score break threshold (overrides config). Use only when
@@ -31,7 +31,7 @@
 [CmdletBinding()]
 param(
   [Parameter()]
-  [ValidateSet("All", "Application", "Abstractions")]
+  [ValidateSet("All", "Application", "Infrastructure")]
   [string] $Target = "All",
 
   [Parameter()]
@@ -70,10 +70,10 @@ try {
       File = "stryker-config.json"
     }
   }
-  if ($Target -eq "All" -or $Target -eq "Abstractions") {
+  if ($Target -eq "All" -or $Target -eq "Infrastructure") {
     $configs += @{
-      Name = "Abstractions"
-      File = "stryker-config.abstractions.json"
+      Name = "Infrastructure"
+      File = "stryker-config.infrastructure.json"
     }
   }
 

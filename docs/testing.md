@@ -74,9 +74,9 @@ Stryker is used as a **quality lamp** on a small set of critical Application mod
 | Project | Types |
 |---------|--------|
 | `RecipeLibrary.Application` | `ShoppingListAccessGuard`, `ShoppingListIngredientMerger`, `IngredientMatcher`, `IngredientSimilarityScorer`, `IngredientLineParser` |
-| `RecipeLibrary.Application.Abstractions` | `RecipeImportUrlSafety` |
+| `RecipeLibrary.Infrastructure` | `RecipeImportUrlSafety` |
 
-Out of scope initially: Infrastructure, Blazor, E2E, and large import extractors (e.g. `RecipeTextDocumentExtractor`).
+Out of scope initially: Blazor, E2E, and large import extractors (e.g. `RecipeTextDocumentExtractor`).
 
 ### Run locally
 
@@ -84,7 +84,7 @@ Out of scope initially: Infrastructure, Blazor, E2E, and large import extractors
 ./scripts/run-stryker.ps1
 # or one target:
 ./scripts/run-stryker.ps1 -Target Application
-./scripts/run-stryker.ps1 -Target Abstractions
+./scripts/run-stryker.ps1 -Target Infrastructure
 ```
 
 Requires the local tool manifest (`.config/dotnet-tools.json`). Reports land in `tests/RecipeLibrary.Application.Tests/StrykerOutput/` (gitignored).
@@ -92,7 +92,7 @@ Requires the local tool manifest (`.config/dotnet-tools.json`). Reports land in 
 Configs:
 
 - `tests/RecipeLibrary.Application.Tests/stryker-config.json`
-- `tests/RecipeLibrary.Application.Tests/stryker-config.abstractions.json`
+- `tests/RecipeLibrary.Application.Tests/stryker-config.infrastructure.json`
 
 `thresholds.break` is **0** (report-only). Do not raise a PR gate without updating this doc and agreeing a score.
 
