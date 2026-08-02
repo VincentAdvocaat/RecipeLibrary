@@ -51,9 +51,11 @@ public sealed class RecipeImportUrlSafetyTests
         Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("192.168.0.1")));
         Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("169.254.169.254")));
         Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.IPv6Loopback));
+        Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.IPv6Any));
         Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("::ffff:10.1.2.3")));
         Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("fe80::1")));
         Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("fc00::1")));
+        Assert.True(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("fd00::1")));
         Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("8.8.8.8")));
         Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("1.1.1.1")));
         Assert.False(RecipeImportUrlSafety.IsBlockedAddress(IPAddress.Parse("100.63.0.1")));

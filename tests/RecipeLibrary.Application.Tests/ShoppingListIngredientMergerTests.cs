@@ -410,6 +410,39 @@ public sealed class ShoppingListIngredientMergerTests
     }
 
     [Fact]
+    public void MergeIntoList_AppendsSortOrderAfterMax_WhenListIsNonEmpty()
+    {
+        var listId = Guid.NewGuid();
+        var existing = new ShoppingListItem
+        {
+            Id = Guid.NewGuid(),
+            ShoppingListId = listId,
+            DisplayName = "peper",
+            Quantity = new Quantity(1),
+            Unit = Unit.Teaspoon,
+            SortOrder = 4,
+        };
+
+        var result = _merger.MergeIntoList(
+            [existing],
+            [
+                new ShoppingListIngredientLine
+                {
+                    DisplayName = "zout",
+                    Quantity = 1,
+                    Unit = Unit.Teaspoon,
+                    RecipeId = Guid.NewGuid(),
+                    RecipeTitle = "Soup",
+                },
+            ],
+            listId);
+
+        Assert.Equal(2, result.Count);
+        var appended = Assert.Single(result, i => i.DisplayName == "zout");
+        Assert.Equal(5, appended.SortOrder);
+    }
+
+    [Fact]
     public void MergeItemIntoList_SumsQuantityAndDedupesSources()
     {
         var listId = Guid.NewGuid();

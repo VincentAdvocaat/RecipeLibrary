@@ -249,6 +249,38 @@ public sealed class IngredientMatcherTests
     }
 
     [Fact]
+    public async Task MatchAsync_UsesPrefixSearch_WhenNormalizedLengthIsExactly3()
+    {
+        // Prefix fallback requires Length >= 3 — exactly 3 must call SearchAsync.
+        var tomato = IngredientTestFactory.Create("tomaat");
+        var repo = new FakeIngredientRepository([tomato], fuzzyCandidates: []);
+        var matcher = new IngredientMatcher(repo, new IngredientTextNormalizer(), new FixedScorer(0.80m));
+
+        var result = await matcher.MatchAsync("xyz", "nl");
+
+        Assert.Equal(IngredientMatchType.None, result.MatchType);
+        Assert.True(repo.SearchWasCalled);
+        Assert.Equal("xyz", repo.LastSearchQuery);
+    }
+
+    [Fact]
+    public async Task MatchAsync_IncludesSuggestions_WhenScoreEqualsSuggestionMinScore()
+    {
+        var gember = IngredientTestFactory.Create("gember");
+        var repo = new FakeIngredientRepository([gember]);
+        var matcher = new IngredientMatcher(
+            repo,
+            new IngredientTextNormalizer(),
+            new FixedScorer(IngredientMatcher.SuggestionMinScore));
+
+        var result = await matcher.MatchAsync("gembre", "nl");
+
+        Assert.Equal(IngredientMatchType.None, result.MatchType);
+        Assert.Contains(result.Suggestions, x => x.Display.DisplayName == "gember");
+        Assert.All(result.Suggestions, x => Assert.Equal(IngredientMatcher.SuggestionMinScore, x.Score));
+    }
+
+    [Fact]
     public async Task MatchAsync_DoesNotAutoAccept_WhenOnlySharedExactToken()
     {
         var runderGehakt = IngredientTestFactory.Create("runder gehakt");
