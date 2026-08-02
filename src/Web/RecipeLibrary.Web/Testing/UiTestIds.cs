@@ -91,6 +91,8 @@ public static class UiTestIds
     public const string PantryAddName = "pantry-add-name";
     public const string PantryAddSubmit = "pantry-add-submit";
     public const string NavPantry = "nav-pantry";
+    public const string NavModeration = "nav-moderation";
+    public const string RecipeReport = "recipe-report";
 
     public static string PantryItemRemove(Guid itemId) => $"pantry-{itemId:D}-remove";
 

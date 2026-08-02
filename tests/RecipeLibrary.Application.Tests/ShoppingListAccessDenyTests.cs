@@ -167,6 +167,27 @@ public sealed class ShoppingListAccessDenyTests
     }
 
     [Fact]
+    public async Task WhitespaceOnlyOwner_Throws_WhenClearingList()
+    {
+        // IsNullOrWhiteSpace (not only IsNullOrEmpty) must deny blank owner ids.
+        var listId = Guid.NewGuid();
+        var repo = new RecordingShoppingListRepository
+        {
+            AccessibleByDefault = true,
+            List = new ShoppingList { Id = listId, GroupId = Guid.NewGuid() },
+        };
+        var sut = new ClearShoppingListCommandHandler(
+            repo,
+            new FixedCurrentUser("   "),
+            new NoOpUnitOfWork());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId }));
+
+        Assert.Null(repo.LastClearedListId);
+    }
+
+    [Fact]
     public async Task AnonymousUser_Throws_WhenGettingSummary()
     {
         var groupId = Guid.NewGuid();

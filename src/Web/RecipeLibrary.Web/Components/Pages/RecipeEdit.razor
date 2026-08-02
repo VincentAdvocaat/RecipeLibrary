@@ -385,6 +385,12 @@
             _statusMessage = L["RecipeEdit.Saved.Message"];
             Navigation.NavigateTo($"/recipes/{RecipeId}");
         }
+        catch (ContentRejectedException)
+        {
+            _saveSucceeded = false;
+            _statusMessage = L["ContentModeration.Rejected"];
+            StateHasChanged();
+        }
         catch (Exception ex)
         {
             _saveSucceeded = false;

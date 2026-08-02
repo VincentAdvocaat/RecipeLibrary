@@ -75,6 +75,7 @@ On startup in Development the user is created/updated if missing. Do not use the
 | Local SQL details & troubleshooting | [local-debug.md](local-debug.md) |
 | Connect SSMS / Azure Data Studio | [database-connection.md](database-connection.md) |
 | Tests | [testing.md](testing.md) |
+| Content moderation (feature flag) | [content-moderation.md](content-moderation.md) |
 | Azure test environment | [azure/test-runbook.md](azure/test-runbook.md) |
 | How we contribute | [../CONTRIBUTING.md](../CONTRIBUTING.md) |
 

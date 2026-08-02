@@ -40,4 +40,14 @@ public sealed class HttpCurrentUser(IHttpContextAccessor httpContextAccessor) : 
 
     public bool IsAuthenticated =>
         httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated == true;
+
+    public bool IsInRole(string roleName)
+    {
+        if (string.IsNullOrWhiteSpace(roleName))
+        {
+            return false;
+        }
+
+        return httpContextAccessor.HttpContext?.User?.IsInRole(roleName) == true;
+    }
 }

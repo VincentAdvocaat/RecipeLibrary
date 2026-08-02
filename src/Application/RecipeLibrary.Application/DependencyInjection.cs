@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Application.ContentModeration;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.Pantry;
@@ -33,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<RecipeTextParser>();
         services.AddScoped<RecipeImportService>();
         services.AddScoped<IngredientQuantityConversionService>();
+        services.AddScoped<RecipeContentModerationService>();
 
         RegisterHandlers(services, typeof(DependencyInjection).Assembly);
 

@@ -1,4 +1,5 @@
 using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Application.ContentModeration;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.Validators;
@@ -14,7 +15,8 @@ public sealed class CreateRecipeCommandHandler(
     IngredientMatcher matcher,
     IngredientLineResolver lineResolver,
     ICurrentUser currentUser,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    RecipeContentModerationService contentModeration)
     : ICommandHandler<CreateRecipeCommand, CreateRecipeResult>
 {
     public async Task<CreateRecipeResult> HandleAsync(CreateRecipeCommand command, CancellationToken ct = default)
@@ -52,6 +54,8 @@ public sealed class CreateRecipeCommandHandler(
             CreatedAt = now,
             UpdatedAt = now,
         };
+
+        await contentModeration.ApplyTextModerationAsync(recipe, command, ct);
 
         var builtIngredients = await RecipeIngredientBuilder.BuildAsync(
             recipeId,

@@ -1,0 +1,122 @@
+@page "/admin/moderation"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = ContentModerationOptions.AdminRoleName)]
+
+@inject IQueryBus QueryBus
+@inject ICommandBus CommandBus
+
+<PageTitle>@L["Moderation.PageTitle"]</PageTitle>
+
+<div class="min-h-screen bg-gray-100">
+    <div class="container mx-auto p-4 max-w-4xl">
+        <RecipeOverviewHeader Title="@L["Moderation.PageTitle"]" ShowAddRecipeFab="false" />
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <p class="mb-4 text-sm text-green-700">@_statusMessage</p>
+        }
+
+        @if (_loading)
+        {
+            <p class="text-gray-600">@L["Moderation.Loading"]</p>
+        }
+        else if (_queue is not null)
+        {
+            <section class="mb-8 rounded-lg bg-white p-6 shadow">
+                <Heading Level="2" CssClass="text-base font-semibold text-gray-900 mb-4">@L["Moderation.NeedsReview.Heading"]</Heading>
+                @if (_queue.NeedsReview.Count == 0)
+                {
+                    <p class="text-sm text-gray-600">@L["Moderation.NeedsReview.Empty"]</p>
+                }
+                else
+                {
+                    <ul class="divide-y divide-gray-200">
+                        @foreach (var item in _queue.NeedsReview)
+                        {
+                            <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+                                <div class="min-w-0">
+                                    <AppNavLink Href="@($"/recipes/{item.RecipeId}")" CssClass="font-medium text-gray-900">@item.Title</AppNavLink>
+                                    <p class="text-xs text-gray-500">@item.Summary</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="button"
+                                            class="rounded bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-700"
+                                            @onclick="() => DecideAsync(item.RecipeId, nameof(ModerationStatus.Approved), null)">
+                                        @L["Moderation.ApproveButton"]
+                                    </button>
+                                    <button type="button"
+                                            class="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50"
+                                            @onclick="() => DecideAsync(item.RecipeId, nameof(ModerationStatus.Rejected), null)">
+                                        @L["Moderation.RejectButton"]
+                                    </button>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            <section class="rounded-lg bg-white p-6 shadow">
+                <Heading Level="2" CssClass="text-base font-semibold text-gray-900 mb-4">@L["Moderation.Reports.Heading"]</Heading>
+                @if (_queue.OpenReports.Count == 0)
+                {
+                    <p class="text-sm text-gray-600">@L["Moderation.Reports.Empty"]</p>
+                }
+                else
+                {
+                    <ul class="divide-y divide-gray-200">
+                        @foreach (var report in _queue.OpenReports)
+                        {
+                            <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+                                <div class="min-w-0">
+                                    <AppNavLink Href="@($"/recipes/{report.RecipeId}")" CssClass="font-medium text-gray-900">@report.RecipeTitle</AppNavLink>
+                                    <p class="text-xs text-gray-500">@(report.Reason ?? L["Moderation.Reports.NoReason"])</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="button"
+                                            class="rounded bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-700"
+                                            @onclick="() => DecideAsync(report.RecipeId, nameof(ModerationStatus.Approved), report.ReportId)">
+                                        @L["Moderation.ApproveButton"]
+                                    </button>
+                                    <button type="button"
+                                            class="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50"
+                                            @onclick="() => DecideAsync(report.RecipeId, nameof(ModerationStatus.Rejected), report.ReportId)">
+                                        @L["Moderation.RejectButton"]
+                                    </button>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+        }
+    </div>
+</div>
+
+@code {
+    private ModerationQueueResult? _queue;
+    private bool _loading = true;
+    private string? _statusMessage;
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    private async Task ReloadAsync()
+    {
+        _loading = true;
+        _queue = await QueryBus.QueryAsync<GetModerationQueueQuery, ModerationQueueResult>(new GetModerationQueueQuery());
+        _loading = false;
+    }
+
+    private async Task DecideAsync(Guid recipeId, string decision, Guid? reportId)
+    {
+        await CommandBus.SendAsync<SetRecipeModerationDecisionCommand, SetRecipeModerationDecisionResult>(
+            new SetRecipeModerationDecisionCommand
+            {
+                RecipeId = recipeId,
+                Decision = decision,
+                RelatedReportId = reportId,
+            });
+        _statusMessage = L["Moderation.DecisionSaved"];
+        await ReloadAsync();
+    }
+}

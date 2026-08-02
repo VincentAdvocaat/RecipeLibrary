@@ -40,6 +40,14 @@ public sealed class Recipe
 
     public DateTimeOffset UpdatedAt { get; set; }
 
+    /// <summary>Latest content-moderation outcome for this recipe.</summary>
+    public ModerationStatus ModerationStatus { get; set; } = ModerationStatus.NotModerated;
+
+    public DateTimeOffset? ModeratedAt { get; set; }
+
+    /// <summary>Compact category/severity summary from the last automated check.</summary>
+    public string? ModerationSummary { get; set; }
+
     public ICollection<Ingredient> Ingredients { get; set; } = new List<Ingredient>();
 
     public ICollection<InstructionStep> InstructionSteps { get; set; } = new List<InstructionStep>();

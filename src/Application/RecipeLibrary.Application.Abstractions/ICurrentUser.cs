@@ -12,4 +12,7 @@ public interface ICurrentUser
     string? UserName { get; }
 
     bool IsAuthenticated { get; }
+
+    /// <summary>True when the user is in the given ASP.NET Identity role.</summary>
+    bool IsInRole(string roleName);
 }
