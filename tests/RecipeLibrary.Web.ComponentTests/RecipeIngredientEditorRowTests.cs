@@ -1,5 +1,6 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Components.Molecules;
 using RecipeLibrary.Web.Models;
 using Xunit;
@@ -8,10 +9,14 @@ namespace RecipeLibrary.Web.ComponentTests;
 
 public sealed class RecipeIngredientEditorRowTests : ComponentTestContext
 {
+    public RecipeIngredientEditorRowTests()
+    {
+        Services.AddScoped<IngredientNameParser>();
+    }
+
     [Fact]
     public void RemoveButton_IsDisabled_WhenCannotRemove()
     {
-        Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri("http://localhost") });
         var item = new RecipeIngredientEditorItem { Name = "Gehakt", Quantity = 1, UnitName = "Gram" };
 
         var cut = RenderComponent<RecipeIngredientEditorRow>(parameters => parameters
@@ -26,7 +31,6 @@ public sealed class RecipeIngredientEditorRowTests : ComponentTestContext
     [Fact]
     public void PreparationInput_UpdatesBoundItem()
     {
-        Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri("http://localhost") });
         var item = new RecipeIngredientEditorItem { Name = "Gehakt", Quantity = 1, UnitName = "Gram" };
 
         var cut = RenderComponent<RecipeIngredientEditorRow>(parameters => parameters
@@ -42,7 +46,6 @@ public sealed class RecipeIngredientEditorRowTests : ComponentTestContext
     [Fact]
     public void RemoveButton_IsEnabled_WhenCanRemove()
     {
-        Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri("http://localhost") });
         var item = new RecipeIngredientEditorItem { Name = "Gehakt", Quantity = 1, UnitName = "Gram" };
         var removed = false;
 

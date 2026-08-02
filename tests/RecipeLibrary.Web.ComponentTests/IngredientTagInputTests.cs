@@ -1,5 +1,6 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Components.Molecules;
 using Xunit;
 
@@ -11,7 +12,7 @@ public sealed class IngredientTagInputTests : ComponentTestContext
     public async Task AddButton_AddsTagFromInput()
     {
         IReadOnlyList<string>? tags = [];
-        Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri("http://localhost") });
+        Services.AddScoped<IQueryBus, StubQueryBus>();
 
         var cut = RenderComponent<IngredientTagInput>(parameters => parameters
             .Add(p => p.Tags, tags)
@@ -21,5 +22,12 @@ public sealed class IngredientTagInputTests : ComponentTestContext
         cut.Find("[data-testid='tag-add']").Click();
 
         Assert.Contains("weekmenu", tags ?? []);
+    }
+
+    private sealed class StubQueryBus : IQueryBus
+    {
+        public Task<TResult> QueryAsync<TQuery, TResult>(TQuery query, CancellationToken ct = default)
+            where TQuery : IQuery<TResult>
+            => Task.FromResult(default(TResult)!);
     }
 }
