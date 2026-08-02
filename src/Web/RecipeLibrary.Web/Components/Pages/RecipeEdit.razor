@@ -18,7 +18,7 @@
     <div class="container mx-auto p-4 max-w-5xl">
         <RecipeOverviewHeader Title="@L["RecipeEdit.PageTitle"]" />
 
-        <EditForm Model="_vm" FormName="create-recipe" Enhance="false" OnValidSubmit="HandleValidSubmit">
+        <EditForm Model="_vm" FormName="create-recipe" Enhance="false" OnSubmit="HandleSubmit">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-red-600 text-sm mb-4" />
 
@@ -169,7 +169,7 @@
 
     private sealed class CreateRecipeVm
     {
-        [Required(ErrorMessageResourceType = typeof(SharedResources), ErrorMessageResourceName = "RecipeCreate.Title.Required")]
+        [Required]
         public string Title { get; set; } = string.Empty;
 
         public string? Description { get; set; }
@@ -196,7 +196,7 @@
     {
         public int StepNumber { get; set; }
 
-        [Required(ErrorMessageResourceType = typeof(SharedResources), ErrorMessageResourceName = "RecipeCreate.Step.Text.Required")]
+        [Required]
         public string Text { get; set; } = string.Empty;
     }
 
@@ -347,10 +347,34 @@
         StateHasChanged();
     }
 
-    private async Task HandleValidSubmit()
+    private async Task HandleSubmit(EditContext editContext)
     {
         _statusMessage = null;
         _saveSucceeded = false;
+
+        if (string.IsNullOrWhiteSpace(_vm.Title))
+        {
+            _statusMessage = L["RecipeCreate.Title.Required"];
+            return;
+        }
+
+        if (_vm.Ingredients.All(static i => string.IsNullOrWhiteSpace(i.Name)))
+        {
+            _statusMessage = L["RecipeCreate.Ingredient.Name.Required"];
+            return;
+        }
+
+        if (_vm.Steps.All(static s => string.IsNullOrWhiteSpace(s.Text)))
+        {
+            _statusMessage = L["RecipeCreate.Step.Text.Required"];
+            return;
+        }
+
+        if (!editContext.Validate())
+        {
+            return;
+        }
+
         await SaveRecipeAsync();
     }
 
@@ -383,7 +407,7 @@
             await RecipeIngredientEditorSupport.ApplyIngredientTagsAsync(CommandBus, _vm.Ingredients, _ingredientTags);
             _saveSucceeded = true;
             _statusMessage = L["RecipeEdit.Saved.Message"];
-            Navigation.NavigateTo($"/recipes/{RecipeId}");
+            Navigation.NavigateTo($"/recipes/{RecipeId}", forceLoad: true);
         }
         catch (ContentRejectedException)
         {

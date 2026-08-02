@@ -57,6 +57,7 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
         await page.GetByTestId(UiTestIds.RecipeSave).ClickAsync();
 
         await Assertions.Expect(page).ToHaveURLAsync(new Regex("/recipes/create"));
+        await Assertions.Expect(page.GetByText(new Regex("Titel is verplicht\\.|Title is required\\."))).ToBeVisibleAsync();
     }
 
     [Fact]
