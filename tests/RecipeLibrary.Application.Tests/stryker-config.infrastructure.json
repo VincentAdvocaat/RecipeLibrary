@@ -1,8 +1,8 @@
 {
   "stryker-config": {
-    "project": "RecipeLibrary.Application.Abstractions.csproj",
+    "project": "RecipeLibrary.Infrastructure.csproj",
     "mutate": [
-      "**/RecipeImportUrlSafety.cs"
+      "**/RecipeImport/RecipeImportUrlSafety.cs"
     ],
     "reporters": [
       "html",

@@ -15,7 +15,7 @@ public sealed class GetNextShoppingListNameQuery : IQuery<GetNextShoppingListNam
 {
     public string NameFormat { get; init; } = string.Empty;
 
-    /// <summary>When set, only list names in this group are considered; otherwise all lists.</summary>
+    /// <summary>When set, only list names in this accessible group are considered; otherwise the caller's owned group.</summary>
     public Guid? ScopeGroupId { get; init; }
 }
 

@@ -1,4 +1,3 @@
-using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.ShoppingLists;
@@ -17,9 +16,10 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
     public async Task HandleAsync_Throws_WhenNameEmpty()
     {
         var sut = new AddManualShoppingListItemCommandHandler(
-            new FakeShoppingListRepository(),
+            new RecordingShoppingListRepository(),
             new FixedCurrentUser("user-a"),
-            _merger, new NoOpUnitOfWork());
+            _merger,
+            new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new AddManualShoppingListItemCommand
@@ -35,7 +35,7 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
     public async Task HandleAsync_AddsManualItem_ToList()
     {
         var listId = Guid.NewGuid();
-        var repo = new FakeShoppingListRepository
+        var repo = new RecordingShoppingListRepository
         {
             List = new ShoppingList
             {
@@ -46,7 +46,8 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         var sut = new AddManualShoppingListItemCommandHandler(
             repo,
             new FixedCurrentUser("user-a"),
-            _merger, new NoOpUnitOfWork());
+            _merger,
+            new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new AddManualShoppingListItemCommand
         {
@@ -78,7 +79,7 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
             Unit = Unit.Piece,
             Sources = [],
         };
-        var repo = new FakeShoppingListRepository
+        var repo = new RecordingShoppingListRepository
         {
             List = new ShoppingList
             {
@@ -89,7 +90,8 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         var sut = new AddManualShoppingListItemCommandHandler(
             repo,
             new FixedCurrentUser("user-a"),
-            _merger, new NoOpUnitOfWork());
+            _merger,
+            new NoOpUnitOfWork());
 
         await sut.HandleAsync(new AddManualShoppingListItemCommand
         {
@@ -102,41 +104,5 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         Assert.Single(repo.LastReplacedItems!);
         Assert.Equal(existing.Id, repo.LastReplacedItems![0].Id);
         Assert.Equal(3, repo.LastReplacedItems[0].Quantity!.Value.Value);
-    }
-
-    private sealed class FakeShoppingListRepository : IShoppingListRepository
-    {
-        public ShoppingList? List { get; init; }
-        public Guid? LastReplacedListId { get; private set; }
-        public IReadOnlyList<ShoppingListItem>? LastReplacedItems { get; private set; }
-
-        public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) =>
-            Task.FromResult(List?.Id == listId ? List : null);
-
-        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default)
-        {
-            LastReplacedListId = shoppingListId;
-            LastReplacedItems = items;
-            return Task.CompletedTask;
-        }
-
-        public Task<ShoppingListGroup?> GetGroupWithListsAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingListGroup?>(null);
-        public Task<ShoppingListGroup?> GetGroupByOwnerUserIdAsync(string ownerUserId, CancellationToken ct = default) => Task.FromResult<ShoppingListGroup?>(null);
-        public Task<bool> IsGroupAccessibleAsync(Guid groupId, string? ownerUserId, CancellationToken ct = default) => Task.FromResult(true);
-        public Task<bool> IsListAccessibleAsync(Guid listId, string? ownerUserId, CancellationToken ct = default) => Task.FromResult(true);
-        public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, string? ownerUserId = null, CancellationToken ct = default) => throw new NotImplementedException();
-        public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
-        public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
-        public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task<ShoppingList> AddListToGroupAsync(Guid groupId, string name, int storeOrder, CancellationToken ct = default) => throw new NotImplementedException();
-        public Task<bool> ToggleItemCheckedAsync(Guid itemId, bool isChecked, CancellationToken ct = default) => Task.FromResult(false);
-        public Task<bool> RemoveItemAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult(false);
-        public Task<ShoppingListItem?> GetItemByIdAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult<ShoppingListItem?>(null);
-        public Task<bool> UpdateListNameAsync(Guid shoppingListId, string name, CancellationToken ct = default) => Task.FromResult(false);
-        public Task<IReadOnlyList<string>> GetListNamesAsync(Guid? groupId = null, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<string>>([]);
-        public Task<bool> UpdateItemQuantityAsync(Guid itemId, decimal quantity, CancellationToken ct = default) => Task.FromResult(false);
     }
 }

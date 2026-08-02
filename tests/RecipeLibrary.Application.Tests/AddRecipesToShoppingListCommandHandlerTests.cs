@@ -18,7 +18,7 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
     public async Task HandleAsync_Throws_WhenNoRecipeIds()
     {
         var sut = CreateSut(
-            new FakeShoppingListRepository(),
+            new RecordingShoppingListRepository(),
             new FakeRecipeRepository(new Recipe
             {
                 Id = Guid.NewGuid(),
@@ -55,7 +55,7 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
             ],
         };
 
-        var shoppingRepo = new FakeShoppingListRepository { List = list };
+        var shoppingRepo = new RecordingShoppingListRepository { List = list };
         var recipeRepo = new FakeRecipeRepository(recipe);
         var sut = CreateSut(shoppingRepo, recipeRepo);
 
@@ -67,8 +67,8 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
 
         Assert.Equal(1, result.RecipesAdded);
         Assert.Equal(1, result.IngredientsAdded);
-        Assert.NotNull(shoppingRepo.ReplacedItems);
-        Assert.Single(shoppingRepo.ReplacedItems!);
+        Assert.NotNull(shoppingRepo.LastReplacedItems);
+        Assert.Single(shoppingRepo.LastReplacedItems!);
     }
 
     [Fact]
@@ -105,15 +105,16 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
             ],
         };
 
-        var shoppingRepo = new FakeShoppingListRepository { List = list };
+        var shoppingRepo = new RecordingShoppingListRepository { List = list };
         var recipeRepo = new FakeRecipeRepository(recipe);
-        var pantryRepo = new FakePantryRepository
+        var pantryRepo = new RecordingPantryRepository
         {
             Items =
             [
                 new PantryItem
                 {
                     Id = Guid.NewGuid(),
+                    OwnerUserId = TestUserId,
                     DisplayName = "Zout",
                     CanonicalIngredientId = saltId,
                 },
@@ -128,19 +129,19 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
         });
 
         Assert.Equal(1, result.IngredientsAdded);
-        Assert.NotNull(shoppingRepo.ReplacedItems);
-        Assert.Single(shoppingRepo.ReplacedItems!);
-        Assert.Equal("Ui", shoppingRepo.ReplacedItems![0].DisplayName);
+        Assert.NotNull(shoppingRepo.LastReplacedItems);
+        Assert.Single(shoppingRepo.LastReplacedItems!);
+        Assert.Equal("Ui", shoppingRepo.LastReplacedItems![0].DisplayName);
     }
 
     private static AddRecipesToShoppingListCommandHandler CreateSut(
-        FakeShoppingListRepository shoppingRepo,
+        RecordingShoppingListRepository shoppingRepo,
         FakeRecipeRepository recipeRepo,
-        FakePantryRepository? pantryRepo = null) =>
+        RecordingPantryRepository? pantryRepo = null) =>
         new(
             recipeRepo,
             shoppingRepo,
-            pantryRepo ?? new FakePantryRepository(),
+            pantryRepo ?? new RecordingPantryRepository(),
             new FixedCurrentUser(TestUserId),
             new ShoppingListIngredientMerger(new IngredientTextNormalizer()),
             new PantryExclusionFilter(new PantryIngredientMerger(new IngredientTextNormalizer())),
@@ -184,57 +185,6 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
             string ownerUserId,
             string fileName,
             CancellationToken ct = default) =>
-            Task.FromResult(false);
-    }
-
-    private sealed class FakeShoppingListRepository : IShoppingListRepository
-    {
-        public ShoppingList? List { get; init; }
-        public IReadOnlyList<ShoppingListItem>? ReplacedItems { get; private set; }
-
-        public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) =>
-            Task.FromResult(List?.Id == listId ? List : null);
-
-        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default)
-        {
-            ReplacedItems = items;
-            return Task.CompletedTask;
-        }
-
-        public Task<ShoppingListGroup?> GetGroupWithListsAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingListGroup?>(null);
-        public Task<ShoppingListGroup?> GetGroupByOwnerUserIdAsync(string ownerUserId, CancellationToken ct = default) => Task.FromResult<ShoppingListGroup?>(null);
-        public Task<bool> IsGroupAccessibleAsync(Guid groupId, string? ownerUserId, CancellationToken ct = default) => Task.FromResult(true);
-        public Task<bool> IsListAccessibleAsync(Guid listId, string? ownerUserId, CancellationToken ct = default) => Task.FromResult(true);
-        public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, string? ownerUserId = null, CancellationToken ct = default) => throw new NotImplementedException();
-        public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
-        public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
-        public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task<ShoppingList> AddListToGroupAsync(Guid groupId, string name, int storeOrder, CancellationToken ct = default) => throw new NotImplementedException();
-        public Task<bool> ToggleItemCheckedAsync(Guid itemId, bool isChecked, CancellationToken ct = default) => Task.FromResult(false);
-        public Task<bool> RemoveItemAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult(false);
-        public Task<ShoppingListItem?> GetItemByIdAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult<ShoppingListItem?>(null);
-        public Task<bool> UpdateListNameAsync(Guid shoppingListId, string name, CancellationToken ct = default) => Task.FromResult(false);
-        public Task<IReadOnlyList<string>> GetListNamesAsync(Guid? groupId = null, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<string>>([]);
-        public Task<bool> UpdateItemQuantityAsync(Guid itemId, decimal quantity, CancellationToken ct = default) => Task.FromResult(false);
-    }
-
-    private sealed class FakePantryRepository : IPantryRepository
-    {
-        public IReadOnlyList<PantryItem> Items { get; init; } = [];
-
-        public Task<IReadOnlyList<PantryItem>> GetByOwnerKeyAsync(string ownerKey, CancellationToken ct = default) =>
-            Task.FromResult(Items);
-
-        public Task<PantryItem?> GetByIdForOwnerAsync(Guid itemId, string ownerKey, CancellationToken ct = default) =>
-            Task.FromResult<PantryItem?>(null);
-
-        public Task<PantryItem> UpsertAsync(PantryItem item, CancellationToken ct = default) =>
-            Task.FromResult(item);
-
-        public Task<bool> RemoveAsync(Guid itemId, string ownerKey, CancellationToken ct = default) =>
             Task.FromResult(false);
     }
 }

@@ -4,7 +4,7 @@ using RecipeLibrary.Domain.Entities;
 namespace RecipeLibrary.Application.Tests;
 
 /// <summary>
-/// Configurable shopping-list repository for unit tests.
+/// Shared shopping-list repository double for unit tests.
 /// When <see cref="AccessibleByDefault"/> is false, only ids in the allow sets are accessible.
 /// </summary>
 public sealed class RecordingShoppingListRepository : IShoppingListRepository
@@ -17,11 +17,16 @@ public sealed class RecordingShoppingListRepository : IShoppingListRepository
     public ShoppingListGroup? Group { get; init; }
     public ShoppingList? List { get; set; }
     public ShoppingListItem? Item { get; init; }
+    public Dictionary<Guid, ShoppingList> ListsById { get; } = new();
+    public Guid? SecondaryListId { get; init; }
+    public bool HasSecondList { get; init; }
     public int UncheckedItemCount { get; init; }
     public bool ToggleResult { get; init; } = true;
     public bool RemoveResult { get; init; } = true;
     public bool UpdateNameResult { get; init; } = true;
     public bool UpdateQuantityResult { get; init; } = true;
+
+    public IReadOnlyList<string> ListNames { get; init; } = [];
 
     public Guid? LastClearedListId { get; private set; }
     public Guid? LastDeletedListId { get; private set; }
@@ -33,8 +38,14 @@ public sealed class RecordingShoppingListRepository : IShoppingListRepository
     public string? LastUpdatedName { get; private set; }
     public Guid? LastReplacedListId { get; private set; }
     public IReadOnlyList<ShoppingListItem>? LastReplacedItems { get; private set; }
+    public Dictionary<Guid, IReadOnlyList<ShoppingListItem>> ReplacedItemsByListId { get; } = new();
     public Guid? LastQuantityItemId { get; private set; }
     public decimal? LastQuantity { get; private set; }
+    public string? LastAddedListName { get; private set; }
+    public int? LastAddedStoreOrder { get; private set; }
+    public ShoppingListGroup? CreatedGroup { get; init; }
+    public bool CreateGroupCalled { get; private set; }
+    public string? LastCreateOwnerUserId { get; private set; }
 
     public Task<bool> IsGroupAccessibleAsync(Guid groupId, string? ownerUserId, CancellationToken ct = default) =>
         Task.FromResult(AccessibleByDefault || AccessibleGroupIds.Contains(groupId));
@@ -42,8 +53,20 @@ public sealed class RecordingShoppingListRepository : IShoppingListRepository
     public Task<bool> IsListAccessibleAsync(Guid listId, string? ownerUserId, CancellationToken ct = default) =>
         Task.FromResult(AccessibleByDefault || AccessibleListIds.Contains(listId));
 
-    public Task<ShoppingListGroup?> GetGroupWithListsAsync(Guid groupId, CancellationToken ct = default) =>
-        Task.FromResult(Group?.Id == groupId ? Group : null);
+    public Task<ShoppingListGroup?> GetGroupWithListsAsync(Guid groupId, CancellationToken ct = default)
+    {
+        if (Group?.Id == groupId)
+        {
+            return Task.FromResult<ShoppingListGroup?>(Group);
+        }
+
+        if (CreatedGroup?.Id == groupId)
+        {
+            return Task.FromResult<ShoppingListGroup?>(CreatedGroup);
+        }
+
+        return Task.FromResult<ShoppingListGroup?>(null);
+    }
 
     public Task<ShoppingListGroup?> GetGroupByOwnerUserIdAsync(string ownerUserId, CancellationToken ct = default) =>
         Task.FromResult(
@@ -51,8 +74,15 @@ public sealed class RecordingShoppingListRepository : IShoppingListRepository
                 ? Group
                 : null);
 
-    public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) =>
-        Task.FromResult(List?.Id == listId ? List : null);
+    public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default)
+    {
+        if (ListsById.TryGetValue(listId, out var tracked))
+        {
+            return Task.FromResult<ShoppingList?>(tracked);
+        }
+
+        return Task.FromResult(List?.Id == listId ? List : null);
+    }
 
     public Task<ShoppingListItem?> GetItemByIdAsync(Guid itemId, CancellationToken ct = default) =>
         Task.FromResult(Item?.Id == itemId ? Item : null);
@@ -98,13 +128,23 @@ public sealed class RecordingShoppingListRepository : IShoppingListRepository
         return Task.FromResult(UpdateNameResult);
     }
 
-    public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default)
+    public Task ReplaceListItemsAsync(
+        Guid shoppingListId,
+        IReadOnlyList<ShoppingListItem> items,
+        DateTimeOffset? expectedUpdatedAt = null,
+        CancellationToken ct = default)
     {
         LastReplacedListId = shoppingListId;
         LastReplacedItems = items;
+        ReplacedItemsByListId[shoppingListId] = items;
         if (List?.Id == shoppingListId)
         {
             List.Items = items.ToList();
+        }
+
+        if (ListsById.TryGetValue(shoppingListId, out var tracked))
+        {
+            tracked.Items = items.ToList();
         }
 
         return Task.CompletedTask;
@@ -119,24 +159,50 @@ public sealed class RecordingShoppingListRepository : IShoppingListRepository
 
     public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
 
-    public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) =>
-        Task.FromResult(List?.GroupId == groupId ? List : null);
+    public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default)
+    {
+        if (List is not null && List.GroupId == groupId)
+        {
+            return Task.FromResult<ShoppingList?>(List);
+        }
 
-    public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
+        var match = ListsById.Values.FirstOrDefault(l => l.GroupId == groupId && l.StoreOrder == 1)
+            ?? ListsById.Values.FirstOrDefault(l => l.GroupId == groupId);
+        return Task.FromResult(match);
+    }
+
+    public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) =>
+        Task.FromResult(HasSecondList);
 
     public Task<IReadOnlyList<string>> GetListNamesAsync(Guid? groupId = null, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<string>>([]);
+        Task.FromResult(ListNames);
 
     public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(
         string primaryListName,
         string? ownerUserId = null,
-        CancellationToken ct = default) =>
-        throw new NotImplementedException();
+        CancellationToken ct = default)
+    {
+        CreateGroupCalled = true;
+        LastCreateOwnerUserId = ownerUserId;
+        return Task.FromResult(CreatedGroup ?? new ShoppingListGroup { Id = Guid.NewGuid(), OwnerUserId = ownerUserId });
+    }
 
     public Task<ShoppingList> AddListToGroupAsync(
         Guid groupId,
         string name,
         int storeOrder,
-        CancellationToken ct = default) =>
-        throw new NotImplementedException();
+        CancellationToken ct = default)
+    {
+        LastAddedListName = name;
+        LastAddedStoreOrder = storeOrder;
+        var list = new ShoppingList
+        {
+            Id = SecondaryListId ?? Guid.NewGuid(),
+            GroupId = groupId,
+            Name = name,
+            StoreOrder = storeOrder,
+        };
+        ListsById[list.Id] = list;
+        return Task.FromResult(list);
+    }
 }
