@@ -26,20 +26,18 @@ public sealed class RecordingShoppingListRepository : IShoppingListRepository
     public bool UpdateNameResult { get; init; } = true;
     public bool UpdateQuantityResult { get; init; } = true;
 
+    public IReadOnlyList<string> ListNames { get; init; } = [];
+
     public Guid? LastClearedListId { get; private set; }
-    public bool ClearWasCalled => LastClearedListId is not null;
     public Guid? LastDeletedListId { get; private set; }
-    public bool DeleteListCalled => LastDeletedListId is not null;
     public Guid? LastDeletedGroupId { get; private set; }
     public Guid? LastToggledItemId { get; private set; }
     public bool? LastToggleChecked { get; private set; }
     public Guid? LastRemovedItemId { get; private set; }
     public Guid? LastUpdatedNameListId { get; private set; }
-    public Guid? LastUpdatedListId => LastUpdatedNameListId;
     public string? LastUpdatedName { get; private set; }
     public Guid? LastReplacedListId { get; private set; }
     public IReadOnlyList<ShoppingListItem>? LastReplacedItems { get; private set; }
-    public IReadOnlyList<ShoppingListItem>? ReplacedItems => LastReplacedItems;
     public Dictionary<Guid, IReadOnlyList<ShoppingListItem>> ReplacedItemsByListId { get; } = new();
     public Guid? LastQuantityItemId { get; private set; }
     public decimal? LastQuantity { get; private set; }
@@ -177,7 +175,7 @@ public sealed class RecordingShoppingListRepository : IShoppingListRepository
         Task.FromResult(HasSecondList);
 
     public Task<IReadOnlyList<string>> GetListNamesAsync(Guid? groupId = null, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<string>>([]);
+        Task.FromResult(ListNames);
 
     public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(
         string primaryListName,

@@ -28,7 +28,7 @@ public sealed class UpdateShoppingListNameCommandHandlerTests
         var result = await sut.HandleAsync(new UpdateShoppingListNameCommand { ShoppingListId = listId, Name = "Store 2" });
 
         Assert.True(result.Updated);
-        Assert.Equal(listId, repo.LastUpdatedListId);
+        Assert.Equal(listId, repo.LastUpdatedNameListId);
         Assert.Equal("Store 2", repo.LastUpdatedName);
     }
 }

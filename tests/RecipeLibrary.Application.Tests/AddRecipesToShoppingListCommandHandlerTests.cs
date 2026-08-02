@@ -67,8 +67,8 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
 
         Assert.Equal(1, result.RecipesAdded);
         Assert.Equal(1, result.IngredientsAdded);
-        Assert.NotNull(shoppingRepo.ReplacedItems);
-        Assert.Single(shoppingRepo.ReplacedItems!);
+        Assert.NotNull(shoppingRepo.LastReplacedItems);
+        Assert.Single(shoppingRepo.LastReplacedItems!);
     }
 
     [Fact]
@@ -129,9 +129,9 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
         });
 
         Assert.Equal(1, result.IngredientsAdded);
-        Assert.NotNull(shoppingRepo.ReplacedItems);
-        Assert.Single(shoppingRepo.ReplacedItems!);
-        Assert.Equal("Ui", shoppingRepo.ReplacedItems![0].DisplayName);
+        Assert.NotNull(shoppingRepo.LastReplacedItems);
+        Assert.Single(shoppingRepo.LastReplacedItems!);
+        Assert.Equal("Ui", shoppingRepo.LastReplacedItems![0].DisplayName);
     }
 
     private static AddRecipesToShoppingListCommandHandler CreateSut(

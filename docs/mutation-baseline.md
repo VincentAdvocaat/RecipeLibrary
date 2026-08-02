@@ -22,7 +22,7 @@ Application score dipped slightly after fail-closed AccessGuard + expanded deny 
 - Parser: blank line, `sap of`, measure adjectives, confidence literals, list-index >20, unit+fraction
 - UrlSafety: `.local` / `.internal` hosts, IPv4-mapped / IPv6 ULA / link-local, CGNAT and `172.31` boundaries
 - Scorer: empty/exact short-circuits + `StringSimilarity` edges
-- AccessGuard: fail-closed authenticated deny suite (unit + SQL integration IDOR)
+- AccessGuard: fail-closed authenticated deny suite (unit + SQL integration IDOR for clear/remove/delete-group); GetNextShoppingListName scoped to owner
 
 ## Remaining survivors (accepted for now)
 

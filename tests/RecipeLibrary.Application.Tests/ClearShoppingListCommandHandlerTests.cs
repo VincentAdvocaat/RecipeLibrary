@@ -17,7 +17,7 @@ public sealed class ClearShoppingListCommandHandlerTests
         var result = await sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId });
 
         Assert.False(result.Cleared);
-        Assert.False(repo.ClearWasCalled);
+        Assert.Null(repo.LastClearedListId);
     }
 
     [Fact]
@@ -31,7 +31,6 @@ public sealed class ClearShoppingListCommandHandlerTests
         var result = await sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId });
 
         Assert.True(result.Cleared);
-        Assert.True(repo.ClearWasCalled);
         Assert.Equal(listId, repo.LastClearedListId);
     }
 }

@@ -4,7 +4,9 @@ using RecipeLibrary.Application.ShoppingLists;
 
 namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
-public sealed class GetNextShoppingListNameQueryHandler(IShoppingListRepository repository)
+public sealed class GetNextShoppingListNameQueryHandler(
+    IShoppingListRepository repository,
+    ICurrentUser userContext)
     : IQueryHandler<GetNextShoppingListNameQuery, GetNextShoppingListNameResult>
 {
     public async Task<GetNextShoppingListNameResult> HandleAsync(
@@ -17,7 +19,34 @@ public sealed class GetNextShoppingListNameQueryHandler(IShoppingListRepository 
             throw new ArgumentException("Name format is required.");
         }
 
-        var existingNames = await repository.GetListNamesAsync(query.ScopeGroupId, ct);
+        Guid scopeGroupId;
+        if (query.ScopeGroupId is Guid requested && requested != Guid.Empty)
+        {
+            await ShoppingListAccessGuard.EnsureGroupAccessAsync(
+                repository,
+                requested,
+                userContext.UserId,
+                ct);
+            scopeGroupId = requested;
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(userContext.UserId))
+            {
+                throw new UnauthorizedAccessException("Authentication is required to access shopping lists.");
+            }
+
+            var owned = await repository.GetGroupByOwnerUserIdAsync(userContext.UserId, ct);
+            if (owned is null)
+            {
+                return new GetNextShoppingListNameResult(
+                    ShoppingListDefaultNameBuilder.GetNextNumberedName(format, []));
+            }
+
+            scopeGroupId = owned.Id;
+        }
+
+        var existingNames = await repository.GetListNamesAsync(scopeGroupId, ct);
         var name = ShoppingListDefaultNameBuilder.GetNextNumberedName(format, existingNames);
         return new GetNextShoppingListNameResult(name);
     }

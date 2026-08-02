@@ -471,6 +471,122 @@ public sealed class ShoppingListAccessDenyTests
         Assert.Null(pantry.LastRemovedItemId);
     }
 
+    [Fact]
+    public async Task GetNextListName_Throws_WhenGroupNotAccessible()
+    {
+        var groupId = Guid.NewGuid();
+        var repo = new RecordingShoppingListRepository
+        {
+            AccessibleByDefault = false,
+            ListNames = ["Secret 1"],
+        };
+        var sut = new GetNextShoppingListNameQueryHandler(repo, new FixedCurrentUser(UserB));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new GetNextShoppingListNameQuery
+            {
+                NameFormat = "Shop {0}",
+                ScopeGroupId = groupId,
+            }));
+    }
+
+    [Fact]
+    public async Task AnonymousUser_Throws_WhenDeletingGroup()
+    {
+        var groupId = Guid.NewGuid();
+        var repo = new RecordingShoppingListRepository { AccessibleByDefault = false };
+        var sut = new DeleteShoppingListGroupCommandHandler(repo, new AnonymousCurrentUser(), new NoOpUnitOfWork());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new DeleteShoppingListGroupCommand { GroupId = groupId }));
+
+        Assert.Null(repo.LastDeletedGroupId);
+    }
+
+    [Fact]
+    public async Task AnonymousUser_Throws_WhenUpdatingListName()
+    {
+        var listId = Guid.NewGuid();
+        var repo = new RecordingShoppingListRepository { AccessibleByDefault = false };
+        var sut = new UpdateShoppingListNameCommandHandler(repo, new AnonymousCurrentUser(), new NoOpUnitOfWork());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new UpdateShoppingListNameCommand { ShoppingListId = listId, Name = "Other" }));
+
+        Assert.Null(repo.LastUpdatedNameListId);
+    }
+
+    [Fact]
+    public async Task AnonymousUser_Throws_WhenGettingNextListName()
+    {
+        var sut = new GetNextShoppingListNameQueryHandler(
+            new RecordingShoppingListRepository { ListNames = ["Shop 1"] },
+            new AnonymousCurrentUser());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new GetNextShoppingListNameQuery { NameFormat = "Shop {0}" }));
+    }
+
+    [Fact]
+    public async Task AnonymousUser_Throws_WhenMovingItemToPantry()
+    {
+        var itemId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        var shopping = new RecordingShoppingListRepository
+        {
+            AccessibleByDefault = false,
+            Item = new ShoppingListItem
+            {
+                Id = itemId,
+                ShoppingListId = listId,
+                DisplayName = "Zout",
+                Quantity = new Quantity(1),
+                Unit = Unit.Piece,
+            },
+        };
+        var pantry = new RecordingPantryRepository();
+        var sut = new MoveShoppingListItemToPantryCommandHandler(
+            shopping,
+            pantry,
+            new AnonymousCurrentUser(),
+            new NoOpUnitOfWork(),
+            new PantryIngredientMerger(new IngredientTextNormalizer()));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new MoveShoppingListItemToPantryCommand { ItemId = itemId }));
+
+        Assert.Null(shopping.LastRemovedItemId);
+        Assert.Null(pantry.UpsertedItem);
+    }
+
+    [Fact]
+    public async Task AnonymousUser_Throws_WhenAddingRecipes()
+    {
+        var listId = Guid.NewGuid();
+        var shopping = new RecordingShoppingListRepository
+        {
+            AccessibleByDefault = false,
+            List = new ShoppingList { Id = listId, GroupId = Guid.NewGuid(), Items = [] },
+        };
+        var sut = new AddRecipesToShoppingListCommandHandler(
+            new EmptyRecipeRepository(),
+            shopping,
+            new RecordingPantryRepository(),
+            new AnonymousCurrentUser(),
+            new ShoppingListIngredientMerger(new IngredientTextNormalizer()),
+            new PantryExclusionFilter(new PantryIngredientMerger(new IngredientTextNormalizer())),
+            new NoOpUnitOfWork());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new AddRecipesToShoppingListCommand
+            {
+                ShoppingListId = listId,
+                RecipeIds = [Guid.NewGuid()],
+            }));
+
+        Assert.Null(shopping.LastReplacedListId);
+    }
+
     private sealed class EmptyRecipeRepository : IRecipeRepository
     {
         public Task AddAsync(Recipe recipe, CancellationToken ct = default) =>

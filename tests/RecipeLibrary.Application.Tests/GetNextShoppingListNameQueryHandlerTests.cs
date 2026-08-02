@@ -1,4 +1,3 @@
-using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.UseCases.ShoppingLists;
 using RecipeLibrary.Domain.Entities;
@@ -9,10 +8,11 @@ namespace RecipeLibrary.Application.Tests;
 public sealed class GetNextShoppingListNameQueryHandlerTests
 {
     [Fact]
-    public async Task HandleAsync_ReturnsFirstName_WhenNoListsExist()
+    public async Task HandleAsync_ReturnsFirstName_WhenOwnerHasNoGroup()
     {
-        var repo = new NamesOnlyFakeShoppingListRepository([]);
-        var sut = new GetNextShoppingListNameQueryHandler(repo);
+        var sut = new GetNextShoppingListNameQueryHandler(
+            new RecordingShoppingListRepository(),
+            new FixedCurrentUser("user-a"));
 
         var result = await sut.HandleAsync(new GetNextShoppingListNameQuery { NameFormat = "Shop {0}" });
 
@@ -20,57 +20,50 @@ public sealed class GetNextShoppingListNameQueryHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ReturnsNextNumber_WhenNamesExist()
+    public async Task HandleAsync_ReturnsNextNumber_WhenOwnerGroupHasNames()
     {
-        var repo = new NamesOnlyFakeShoppingListRepository(["Shop 1", "Shop 2"]);
-        var sut = new GetNextShoppingListNameQueryHandler(repo);
+        var groupId = Guid.NewGuid();
+        var repo = new RecordingShoppingListRepository
+        {
+            Group = new ShoppingListGroup { Id = groupId, OwnerUserId = "user-a" },
+            ListNames = ["Shop 1", "Shop 2"],
+        };
+        var sut = new GetNextShoppingListNameQueryHandler(repo, new FixedCurrentUser("user-a"));
 
         var result = await sut.HandleAsync(new GetNextShoppingListNameQuery { NameFormat = "Shop {0}" });
 
         Assert.Equal("Shop 3", result.Name);
     }
 
-    private sealed class NamesOnlyFakeShoppingListRepository(IReadOnlyList<string> names) : IShoppingListRepository
+    [Fact]
+    public async Task HandleAsync_UsesScopedGroupNames_WhenScopeProvided()
     {
-        public Task<IReadOnlyList<string>> GetListNamesAsync(Guid? groupId = null, CancellationToken ct = default) =>
-            Task.FromResult(names);
+        var groupId = Guid.NewGuid();
+        var repo = new RecordingShoppingListRepository
+        {
+            AccessibleGroupIds = { groupId },
+            AccessibleByDefault = false,
+            ListNames = ["Shop 1"],
+        };
+        var sut = new GetNextShoppingListNameQueryHandler(repo, new FixedCurrentUser("user-a"));
 
-        public Task<ShoppingListGroup?> GetGroupWithListsAsync(Guid groupId, CancellationToken ct = default) =>
-            Task.FromResult<ShoppingListGroup?>(null);
+        var result = await sut.HandleAsync(new GetNextShoppingListNameQuery
+        {
+            NameFormat = "Shop {0}",
+            ScopeGroupId = groupId,
+        });
 
-        public Task<ShoppingListGroup?> GetGroupByOwnerUserIdAsync(string ownerUserId, CancellationToken ct = default) =>
-            Task.FromResult<ShoppingListGroup?>(null);
+        Assert.Equal("Shop 2", result.Name);
+    }
 
-        public Task<bool> IsGroupAccessibleAsync(Guid groupId, string? ownerUserId, CancellationToken ct = default) =>
-            Task.FromResult(true);
+    [Fact]
+    public async Task HandleAsync_Throws_WhenNameFormatMissing()
+    {
+        var sut = new GetNextShoppingListNameQueryHandler(
+            new RecordingShoppingListRepository(),
+            new FixedCurrentUser("user-a"));
 
-        public Task<bool> IsListAccessibleAsync(Guid listId, string? ownerUserId, CancellationToken ct = default) =>
-            Task.FromResult(true);
-
-        public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, string? ownerUserId = null, CancellationToken ct = default) =>
-            throw new NotImplementedException();
-
-        public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) =>
-            Task.FromResult<ShoppingList?>(null);
-
-        public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) =>
-            Task.FromResult<ShoppingList?>(null);
-
-        public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) =>
-            Task.FromResult(false);
-
-        public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) =>
-            Task.FromResult(0);
-
-        public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default) => Task.CompletedTask;
-        public Task<ShoppingList> AddListToGroupAsync(Guid groupId, string name, int storeOrder, CancellationToken ct = default) => throw new NotImplementedException();
-        public Task<bool> ToggleItemCheckedAsync(Guid itemId, bool isChecked, CancellationToken ct = default) => Task.FromResult(false);
-        public Task<bool> RemoveItemAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult(false);
-        public Task<ShoppingListItem?> GetItemByIdAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult<ShoppingListItem?>(null);
-        public Task<bool> UpdateListNameAsync(Guid shoppingListId, string name, CancellationToken ct = default) => Task.FromResult(false);
-        public Task<bool> UpdateItemQuantityAsync(Guid itemId, decimal quantity, CancellationToken ct = default) => Task.FromResult(false);
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.HandleAsync(new GetNextShoppingListNameQuery { NameFormat = "  " }));
     }
 }

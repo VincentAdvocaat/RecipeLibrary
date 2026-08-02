@@ -33,6 +33,6 @@ public sealed class DeleteShoppingListCommandHandlerTests
 
         Assert.True(result.Deleted);
         Assert.Equal(groupId, result.RemainingGroupId);
-        Assert.True(repo.DeleteListCalled);
+        Assert.Equal(listId, repo.LastDeletedListId);
     }
 }
