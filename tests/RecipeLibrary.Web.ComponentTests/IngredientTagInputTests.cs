@@ -28,6 +28,23 @@ public sealed class IngredientTagInputTests : ComponentTestContext
     {
         public Task<TResult> QueryAsync<TQuery, TResult>(TQuery query, CancellationToken ct = default)
             where TQuery : IQuery<TResult>
-            => Task.FromResult(default(TResult)!);
+        {
+            // Return empty sequences instead of null so components can call .ToList() safely.
+            if (typeof(TResult).IsGenericType)
+            {
+                var definition = typeof(TResult).GetGenericTypeDefinition();
+                if (definition == typeof(IReadOnlyList<>)
+                    || definition == typeof(IEnumerable<>)
+                    || definition == typeof(IList<>)
+                    || definition == typeof(List<>))
+                {
+                    var elementType = typeof(TResult).GetGenericArguments()[0];
+                    var empty = Array.CreateInstance(elementType, 0);
+                    return Task.FromResult((TResult)(object)empty);
+                }
+            }
+
+            return Task.FromResult(default(TResult)!);
+        }
     }
 }
