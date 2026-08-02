@@ -11,8 +11,8 @@ authenticate the same `AspNetUsers` store and the same `OwnerUserId` ownership m
 | `POST /connect/token` | Password + refresh token grants (`client_id=maui-app`) |
 | `POST /connect/revoke` | Refresh/access token revocation (OpenIddict built-in) |
 | `POST /api/v1/auth/register` | Create a local Identity user (then call token) |
-| `GET/POST/PUT/DELETE /api/v1/recipes` | Recipe API (Bearer or cookie) |
-| `POST/GET /api/v1/recipe-images` | Image upload/download (Bearer or cookie) |
+| `GET/POST/PUT/DELETE /api/v1/recipes` | Recipe API (Bearer with `api` scope, or cookie) |
+| `POST/GET /api/v1/recipe-images` | Image upload/download (Bearer with `api` scope, or cookie) |
 | `GET /openapi/v1.json` | OpenAPI document (Development / Testing) |
 
 Legacy browser routes (`/api/upload-recipe-image`, `/ingredients/*`, `/recipes/import*`) remain

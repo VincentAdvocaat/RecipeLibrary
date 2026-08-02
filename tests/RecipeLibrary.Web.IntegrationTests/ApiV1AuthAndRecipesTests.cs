@@ -110,6 +110,20 @@ public sealed class ApiV1AuthAndRecipesTests(SqlContainerFixture fixture)
         Assert.False(string.IsNullOrWhiteSpace(token));
     }
 
+    [Fact]
+    public async Task Recipes_WithTokenMissingApiScope_ReturnsForbidden()
+    {
+        await using var factory = new BearerAuthWebApplicationFactory(fixture.ConnectionString);
+        var client = factory.CreateClient();
+
+        var user = await CreateUserAsync(factory, "noscope", "noscope@example.com", Password);
+        var token = await RequestPasswordTokenAsync(client, user.UserName!, Password, scope: "offline_access");
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var list = await client.GetAsync("/api/v1/recipes");
+        Assert.Equal(HttpStatusCode.Forbidden, list.StatusCode);
+    }
+
     private static async Task<ApplicationUser> CreateUserAsync(
         BearerAuthWebApplicationFactory factory,
         string userName,
@@ -129,16 +143,21 @@ public sealed class ApiV1AuthAndRecipesTests(SqlContainerFixture fixture)
         return user;
     }
 
-    private static async Task<string> RequestPasswordTokenAsync(HttpClient client, string userName, string password)
+    private static async Task<string> RequestPasswordTokenAsync(
+        HttpClient client,
+        string userName,
+        string password,
+        string? scope = null)
     {
-        var (access, _) = await RequestPasswordTokenPairAsync(client, userName, password);
+        var (access, _) = await RequestPasswordTokenPairAsync(client, userName, password, scope);
         return access;
     }
 
     private static async Task<(string AccessToken, string? RefreshToken)> RequestPasswordTokenPairAsync(
         HttpClient client,
         string userName,
-        string password)
+        string password,
+        string? scope = null)
     {
         using var content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -146,7 +165,7 @@ public sealed class ApiV1AuthAndRecipesTests(SqlContainerFixture fixture)
             ["username"] = userName,
             ["password"] = password,
             ["client_id"] = OpenIddictAppConstants.MauiClientId,
-            ["scope"] = $"{OpenIddictAppConstants.ApiScope} offline_access",
+            ["scope"] = scope ?? $"{OpenIddictAppConstants.ApiScope} offline_access",
         });
 
         var response = await client.PostAsync("/connect/token", content);

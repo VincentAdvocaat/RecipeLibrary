@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Web.Auth;
 
 namespace RecipeLibrary.Web.Endpoints.V1;
 
@@ -10,7 +11,7 @@ public static class RecipesApiV1Endpoints
     public static RouteGroupBuilder MapRecipesApiV1(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/v1/recipes")
-            .RequireAuthorization()
+            .RequireAuthorization(OpenIddictAppConstants.ApiV1Policy)
             .WithTags("Recipes");
 
         group.MapGet("/", ListAsync)

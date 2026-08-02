@@ -18,6 +18,7 @@ using RecipeLibrary.Infrastructure.Identity;
 using RecipeLibrary.Infrastructure.Persistence;
 using RecipeLibrary.Infrastructure.RecipeImport;
 using RecipeLibrary.Application.Abstractions;
+using OpenIddict.Abstractions;
 using RecipeLibrary.Web.Auth;
 using RecipeLibrary.Web.Endpoints.V1;
 using RecipeLibrary.Web.Services;
@@ -126,6 +127,26 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
+
+    // Bearer JWTs carry OpenIddict scope claims and must include "api".
+    // Blazor cookie principals have no scope claims and remain allowed.
+    options.AddPolicy(OpenIddictAppConstants.ApiV1Policy, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(context =>
+        {
+            var hasScopeClaims = context.User.Claims.Any(static c =>
+                c.Type is OpenIddictConstants.Claims.Private.Scope
+                    or OpenIddictConstants.Claims.Scope);
+
+            if (!hasScopeClaims)
+            {
+                return true;
+            }
+
+            return context.User.HasScope(OpenIddictAppConstants.ApiScope);
+        });
+    });
 });
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.Configure<IdentitySeedUserOptions>(

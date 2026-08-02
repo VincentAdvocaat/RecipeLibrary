@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using System.Reflection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using RecipeLibrary.App.Services;
 
@@ -16,6 +17,15 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
+
+        // Prefer embedded appsettings.json (filesystem MauiAsset is often absent on device).
+        // Keep the stream open until Build() so the JSON provider can load it.
+        var embeddedSettings = Assembly.GetExecutingAssembly()
+            .GetManifestResourceStream("RecipeLibrary.App.appsettings.json");
+        if (embeddedSettings is not null)
+        {
+            builder.Configuration.AddJsonStream(embeddedSettings);
+        }
 
         builder.Configuration.AddJsonFile("appsettings.json", optional: true);
 
@@ -41,6 +51,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<RecipeApiClient>();
         builder.Services.AddTransient<MainPage>();
 
-        return builder.Build();
+        var app = builder.Build();
+        embeddedSettings?.Dispose();
+        return app;
     }
 }

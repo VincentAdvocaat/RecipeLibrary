@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Validation.AspNetCore;
@@ -58,20 +59,10 @@ public static class OpenIddictServiceCollectionExtensions
                 options.DefaultAuthenticateScheme = OpenIddictAppConstants.CookieOrBearerScheme;
                 options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
             })
-            .AddPolicyScheme(OpenIddictAppConstants.CookieOrBearerScheme, OpenIddictAppConstants.CookieOrBearerScheme, options =>
-            {
-                options.ForwardDefaultSelector = context =>
-                {
-                    var header = context.Request.Headers.Authorization.ToString();
-                    if (!string.IsNullOrEmpty(header)
-                        && header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
-                    }
-
-                    return IdentityConstants.ApplicationScheme;
-                };
-            });
+            .AddScheme<AuthenticationSchemeOptions, CookieOrBearerAuthenticationHandler>(
+                OpenIddictAppConstants.CookieOrBearerScheme,
+                displayName: null,
+                _ => { });
 
         services.AddHostedService<OpenIddictClientSeedHostedService>();
 
