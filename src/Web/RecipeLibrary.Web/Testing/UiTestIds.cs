@@ -48,6 +48,9 @@ public static class UiTestIds
     public const string AccountMenuSignOut = "account-menu-sign-out";
     public const string AccountMenuSignIn = "account-menu-sign-in";
 
+    public const string TermsPage = "terms-page";
+    public const string TermsLink = "terms-link";
+
     public const string LanguageSwitcher = "language-switcher";
     public const string LanguageEn = "language-en";
     public const string LanguageNl = "language-nl";

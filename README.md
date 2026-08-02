@@ -1,6 +1,18 @@
 # RecipeLibrary
 
-A personal recipe library built with **.NET** and **Blazor Server**, designed to run on Azure using **free-tier friendly** services and **password-less** authentication (Microsoft Entra ID).
+Personal recipe library built with **.NET 10** and **Blazor Server**. Local auth uses **ASP.NET Core Identity** (email/password). Azure hosting is free-tier friendly (Container Apps + Azure SQL).
+
+## Getting started (≈ 30 minutes)
+
+```powershell
+git clone https://github.com/VincentAdvocaat/RecipeLibrary.git
+cd RecipeLibrary
+./scripts/start-local.ps1
+```
+
+Then open `http://localhost:5197`. Full checklist (prerequisites, VS Code/Cursor F5, seed user): **[docs/getting-started.md](docs/getting-started.md)**.
+
+How we work (branches, PRs, conventions): **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 ## Architecture at a glance
 
@@ -93,9 +105,9 @@ See: `infra/README.md`
 ## Database & migrations (EF Core)
 
 - EF Core migrations are used for schema management (no `EnsureCreated`).
-- The app is intended to apply migrations in dev/test, with the same schema moving into Azure SQL.
+- The app applies migrations at startup in Development; same schema targets Azure SQL.
 
-See: `docs/azure/test-runbook.md`
+See: `docs/azure/test-runbook.md` and `.cursor/rules/ef-core-migrations.mdc`.
 
 ## Tailwind CSS (Web project)
 
@@ -103,11 +115,11 @@ The Blazor Web app uses **Tailwind CSS** for styling. **No Node.js or npm** is r
 
 - **NuGet**: `MarshalHayes.Tailwind.Standalone` downloads the Tailwind standalone CLI and runs it as part of `dotnet build`.
 - **Config**: `src/Web/RecipeLibrary.Web/tailwind.config.js` (content: `.razor`, `wwwroot`).
-- **Source CSS**: `src/Web/RecipeLibrary.Web/wwwroot/css/source.css` (Tailwind directives + app custom styles). Custom Blazor styles are also in `wwwroot/app.custom.css` for reference; they are inlined into the built `wwwroot/app.css`.
-
-When you build or run the web project (e.g. F5 in Visual Studio), Tailwind runs first and then the app.
+- **Source CSS**: `src/Web/RecipeLibrary.Web/wwwroot/css/source.css` (Tailwind directives + app custom styles).
 
 ## Local development
+
+**Quick start:** [docs/getting-started.md](docs/getting-started.md).
 
 **Local debug with Docker SQL** (app and DB on your machine):
 
@@ -115,7 +127,7 @@ When you build or run the web project (e.g. F5 in Visual Studio), Tailwind runs 
 - Copy `.env.example` to `.env` and set `MSSQL_SA_PASSWORD`
 - Run or debug the web project; the app uses a local connection string fallback in Development
 
-See: `docs/local-debug.md`. Voor verbinden met een SQL-client (SSMS, Azure Data Studio, enz.) en tooling: `docs/database-connection.md`.
+See: `docs/local-debug.md`. For SQL clients (SSMS, Azure Data Studio, etc.): `docs/database-connection.md`.
 
 **One-command local start** (after `./scripts/install-cli.ps1`):
 
@@ -123,7 +135,7 @@ See: `docs/local-debug.md`. Voor verbinden met een SQL-client (SSMS, Azure Data 
 rlstart
 ```
 
-**Against Azure SQL (password-less)**:
+**Against Azure SQL (password-less / Entra)**:
 
 - `az login`
 - Set `ConnectionStrings__RecipeDb` to a password-less Azure SQL connection string (Entra auth)
@@ -151,16 +163,18 @@ Policy reference: `.cursor/rules/worktrees-and-branches.mdc`
 
 ## Azure DevOps (boards & CI)
 
-Code staat op **GitHub**; backlog en pipelines in **Azure DevOps**. Geen aparte
-repo-sync nodig. Zie `docs/azure/ado-github-integration.md`.
+Code lives on **GitHub**; backlog and pipelines in **Azure DevOps**. See `docs/azure/ado-github-integration.md`.
 
 ## Docs index
 
-- `docs/ingredient-catalog.md` — curated ingredient catalog (sources, generation, language keys, seed intent)
+- `docs/getting-started.md` — clone and run in ≈ 30 minutes
+- `CONTRIBUTING.md` — branches, PRs, conventions
+- `docs/ingredient-catalog.md` — curated ingredient catalog
 - `docs/azure/ado-github-integration.md` — GitHub + Azure DevOps workflow
 - `docs/azure/subscription-bootstrap.md` — subscription, providers, service connection RBAC
 - `docs/local-debug.md` — local debug with Docker SQL
-- `docs/database-connection.md` — verbinden met de lokale Docker-database en tooling (SSMS, Azure Data Studio, VS Code)
+- `docs/database-connection.md` — local Docker database clients
+- `docs/testing.md` — unit, integration, E2E, mutation testing
 - `infra/README.md`
 - `docs/azure/test-runbook.md`
 - `docs/azure/sql-grants.sql`

@@ -58,6 +58,7 @@ nunit-*.xml
 .vscode/*
 !.vscode/launch.json
 !.vscode/tasks.json
+!.vscode/extensions.json
 .cursor/mcp.json
 
 # Git worktrees (local checkouts)

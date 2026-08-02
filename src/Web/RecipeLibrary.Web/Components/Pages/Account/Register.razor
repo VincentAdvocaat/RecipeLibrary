@@ -55,6 +55,11 @@
     </EditForm>
 
     <p class="text-sm text-gray-600">
+        @L["Auth.Register.TermsBefore"]
+        <a href="terms" class="font-medium text-gray-900 hover:underline" data-testid="@UiTestIds.TermsLink">@L["Terms.Link"]</a>@L["Auth.Register.TermsAfter"]
+    </p>
+
+    <p class="text-sm text-gray-600">
         @L["Auth.Register.HasAccount"]
         <a href="Account/Login" class="font-medium text-gray-900 hover:underline">@L["Auth.Login.Link"]</a>
     </p>

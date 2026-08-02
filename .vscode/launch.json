@@ -5,7 +5,7 @@
       "name": "Debug (local)",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "start-sql",
+      "preLaunchTask": "predebug-local",
       "program": "${workspaceFolder}/src/Web/RecipeLibrary.Web/bin/Debug/net10.0/RecipeLibrary.Web.dll",
       "args": [],
       "cwd": "${workspaceFolder}/src/Web/RecipeLibrary.Web",

@@ -1,0 +1,48 @@
+@page "/terms"
+@attribute [AllowAnonymous]
+@layout AuthLayout
+
+<PageTitle>@L["Terms.PageTitle"]</PageTitle>
+
+<article class="mx-auto max-w-2xl space-y-8" data-testid="@UiTestIds.TermsPage">
+    <header class="space-y-2">
+        <h1 class="text-2xl font-semibold text-gray-900">@L["Terms.Heading"]</h1>
+        <p class="text-sm text-gray-500">@L["Terms.LastUpdated"]</p>
+    </header>
+
+    <section class="space-y-3">
+        <h2 class="text-lg font-medium text-gray-900">@L["Terms.Service.Heading"]</h2>
+        <p class="text-gray-700 leading-relaxed">@L["Terms.Service.Body"]</p>
+    </section>
+
+    <section class="space-y-3">
+        <h2 class="text-lg font-medium text-gray-900">@L["Terms.ImportedContent.Heading"]</h2>
+        <p class="text-gray-700 leading-relaxed">@L["Terms.ImportedContent.Body"]</p>
+    </section>
+
+    <section class="space-y-3">
+        <h2 class="text-lg font-medium text-gray-900">@L["Terms.UserContent.Heading"]</h2>
+        <p class="text-gray-700 leading-relaxed">@L["Terms.UserContent.Body"]</p>
+    </section>
+
+    <section class="space-y-3">
+        <h2 class="text-lg font-medium text-gray-900">@L["Terms.Account.Heading"]</h2>
+        <p class="text-gray-700 leading-relaxed">@L["Terms.Account.Body"]</p>
+    </section>
+
+    <section class="space-y-3">
+        <h2 class="text-lg font-medium text-gray-900">@L["Terms.Availability.Heading"]</h2>
+        <p class="text-gray-700 leading-relaxed">@L["Terms.Availability.Body"]</p>
+    </section>
+
+    <section class="space-y-3">
+        <h2 class="text-lg font-medium text-gray-900">@L["Terms.Changes.Heading"]</h2>
+        <p class="text-gray-700 leading-relaxed">@L["Terms.Changes.Body"]</p>
+    </section>
+
+    <p class="text-sm text-gray-600">
+        <a href="Account/Login" class="font-medium text-gray-900 hover:underline">@L["Auth.Login.Link"]</a>
+        <span class="mx-2 text-gray-300" aria-hidden="true">·</span>
+        <a href="Account/Register" class="font-medium text-gray-900 hover:underline">@L["Auth.Register.Link"]</a>
+    </p>
+</article>
