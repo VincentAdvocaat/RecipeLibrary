@@ -10,19 +10,23 @@ namespace RecipeLibrary.Application.Tests;
 
 internal static class TestContentModeration
 {
-    public static RecipeContentModerationService Disabled(IUnitOfWork? unitOfWork = null) =>
-        Create(enabled: false, moderator: new NullContentModerator(), unitOfWork);
+    public static RecipeContentModerationService Disabled(
+        IUnitOfWork? unitOfWork = null,
+        FakeContentModerationStore? store = null) =>
+        Create(enabled: false, moderator: new NullContentModerator(), unitOfWork, store);
 
     public static RecipeContentModerationService WithModerator(
         IContentModerator moderator,
         bool enabled = true,
-        IUnitOfWork? unitOfWork = null) =>
-        Create(enabled, moderator, unitOfWork);
+        IUnitOfWork? unitOfWork = null,
+        FakeContentModerationStore? store = null) =>
+        Create(enabled, moderator, unitOfWork, store);
 
     private static RecipeContentModerationService Create(
         bool enabled,
         IContentModerator moderator,
-        IUnitOfWork? unitOfWork)
+        IUnitOfWork? unitOfWork,
+        FakeContentModerationStore? store)
     {
         var options = Options.Create(new ContentModerationOptions
         {
@@ -33,7 +37,7 @@ internal static class TestContentModeration
 
         return new RecipeContentModerationService(
             moderator,
-            new FakeContentModerationStore(),
+            store ?? new FakeContentModerationStore(),
             unitOfWork ?? new NoOpUnitOfWork(),
             options);
     }
@@ -72,6 +76,29 @@ internal static class TestContentModeration
 
         public Task<Recipe?> GetRecipeForAdminAsync(Guid recipeId, CancellationToken ct = default) =>
             Task.FromResult<Recipe?>(null);
+
+        public Task<ModerationStatus?> GetLatestImageDecisionAsync(string subjectKey, CancellationToken ct = default)
+        {
+            var match = Events
+                .Where(e => e.Kind == ContentModerationKind.Image
+                    && string.Equals(e.SubjectKey, subjectKey, StringComparison.Ordinal))
+                .OrderByDescending(e => e.CreatedAt)
+                .FirstOrDefault();
+            return Task.FromResult(match?.Decision);
+        }
+
+        public Task AttachImageEventsToRecipeAsync(string subjectKey, Guid recipeId, CancellationToken ct = default)
+        {
+            foreach (var e in Events.Where(e =>
+                         e.Kind == ContentModerationKind.Image
+                         && string.Equals(e.SubjectKey, subjectKey, StringComparison.Ordinal)
+                         && e.RecipeId is null))
+            {
+                e.RecipeId = recipeId;
+            }
+
+            return Task.CompletedTask;
+        }
     }
 
     internal sealed class FakeContentModerator(ContentModerationResult result) : IContentModerator

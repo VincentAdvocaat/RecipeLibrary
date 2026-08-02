@@ -12,7 +12,7 @@ using RecipeLibrary.Infrastructure.Persistence;
 namespace RecipeLibrary.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(RecipeDbContext))]
-    [Migration("20260802160629_AddContentModeration")]
+    [Migration("20260802162635_AddContentModeration")]
     partial class AddContentModeration
     {
         /// <inheritdoc />
@@ -211,11 +211,17 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("RecipeId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("SubjectKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("RecipeId");
+
+                    b.HasIndex("SubjectKey");
 
                     b.ToTable("ContentModerationEvents");
                 });
@@ -640,8 +646,10 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("ModerationStatus")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("nvarchar(32)")
+                        .HasDefaultValue("NotModerated");
 
                     b.Property<string>("ModerationSummary")
                         .HasMaxLength(1000)

@@ -19,20 +19,14 @@ public sealed class UploadRecipeImageCommandHandler(
         await command.Content.CopyToAsync(buffer, ct);
         buffer.Position = 0;
 
-        try
-        {
-            await contentModeration.EnsureImageAllowedAsync(buffer, command.ContentType, ct);
-        }
-        catch (ContentRejectedException)
-        {
-            await unitOfWork.SaveChangesAsync(ct);
-            throw;
-        }
-
-        await unitOfWork.SaveChangesAsync(ct);
+        var moderation = await contentModeration.EnsureImageAllowedAsync(buffer, command.ContentType, ct);
 
         buffer.Position = 0;
         var url = await storage.SaveAsync(buffer, command.FileName, command.ContentType, ct);
+
+        await contentModeration.RecordImageDecisionAsync(url, moderation, ct);
+        await unitOfWork.SaveChangesAsync(ct);
+
         return new UploadRecipeImageResult(url);
     }
 }

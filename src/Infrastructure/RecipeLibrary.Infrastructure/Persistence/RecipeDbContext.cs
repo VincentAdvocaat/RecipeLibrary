@@ -85,6 +85,7 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
             b.Property(x => x.ModerationStatus)
                 .HasConversion<string>()
                 .HasMaxLength(32)
+                .HasDefaultValue(ModerationStatus.NotModerated)
                 .IsRequired();
 
             b.Property(x => x.ModeratedAt);
@@ -110,9 +111,11 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
             b.HasKey(x => x.Id);
             b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16).IsRequired();
             b.Property(x => x.Decision).HasConversion<string>().HasMaxLength(32).IsRequired();
+            b.Property(x => x.SubjectKey).HasMaxLength(2000);
             b.Property(x => x.CategoriesSummary).HasMaxLength(1000);
             b.Property(x => x.CreatedAt).IsRequired();
             b.HasIndex(x => x.RecipeId);
+            b.HasIndex(x => x.SubjectKey);
             b.HasIndex(x => x.CreatedAt);
         });
 

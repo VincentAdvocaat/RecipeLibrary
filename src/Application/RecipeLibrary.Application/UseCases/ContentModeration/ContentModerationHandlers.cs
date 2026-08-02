@@ -4,14 +4,25 @@ using RecipeLibrary.Domain.ValueObjects;
 
 namespace RecipeLibrary.Application.UseCases.ContentModeration;
 
-public sealed class GetModerationQueueQueryHandler(IContentModerationStore store)
+public sealed class GetModerationQueueQueryHandler(IContentModerationStore store, ICurrentUser currentUser)
     : IQueryHandler<GetModerationQueueQuery, ModerationQueueResult>
 {
     public async Task<ModerationQueueResult> HandleAsync(GetModerationQueueQuery query, CancellationToken ct = default)
     {
+        RequireAdmin(currentUser);
+
         var needsReview = await store.ListNeedsReviewAsync(ct);
         var reports = await store.ListOpenReportsAsync(ct);
         return new ModerationQueueResult(needsReview, reports);
+    }
+
+    private static void RequireAdmin(ICurrentUser currentUser)
+    {
+        _ = currentUser.UserId ?? throw new UnauthorizedAccessException("Authentication is required.");
+        if (!currentUser.IsInRole(ContentModerationOptions.AdminRoleName))
+        {
+            throw new UnauthorizedAccessException("Admin role is required.");
+        }
     }
 }
 
@@ -26,6 +37,10 @@ public sealed class SetRecipeModerationDecisionCommandHandler(
         CancellationToken ct = default)
     {
         _ = currentUser.UserId ?? throw new UnauthorizedAccessException("Authentication is required.");
+        if (!currentUser.IsInRole(ContentModerationOptions.AdminRoleName))
+        {
+            throw new UnauthorizedAccessException("Admin role is required.");
+        }
 
         if (!Enum.TryParse<ModerationStatus>(command.Decision, ignoreCase: true, out var decision)
             || decision is not (ModerationStatus.Approved or ModerationStatus.Rejected))

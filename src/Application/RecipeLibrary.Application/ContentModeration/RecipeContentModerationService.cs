@@ -24,23 +24,40 @@ public sealed class RecipeContentModerationService(
         var settings = options.Value;
         if (!settings.Enabled)
         {
-            recipe.ModerationStatus = ModerationStatus.NotModerated;
-            recipe.ModeratedAt = null;
-            recipe.ModerationSummary = null;
+            // Leave existing status untouched (create defaults to NotModerated; update keeps prior flags).
             return;
         }
 
+        var previousStatus = recipe.ModerationStatus;
         var text = BuildRecipeText(shape);
         var result = await moderator.ModerateTextAsync(text, ct);
         await PersistDecisionAsync(recipe, ContentModerationKind.Text, result, ct);
+
+        // Manual (or prior) rejection must not be silently cleared by a low-severity edit.
+        if (previousStatus == ModerationStatus.Rejected
+            && recipe.ModerationStatus == ModerationStatus.Approved)
+        {
+            recipe.ModerationStatus = ModerationStatus.NeedsReview;
+            recipe.ModerationSummary = "re-review-after-edit";
+            recipe.ModeratedAt = DateTimeOffset.UtcNow;
+        }
+
+        await ApplyPendingImageDecisionAsync(recipe, ct);
     }
 
-    public async Task EnsureImageAllowedAsync(Stream content, string contentType, CancellationToken ct = default)
+    /// <summary>
+    /// Moderates an image stream. Blocks (throws) on Rejected; returns Approved/NeedsReview for the caller
+    /// to persist after storage with a subject key.
+    /// </summary>
+    public async Task<ContentModerationResult> EnsureImageAllowedAsync(
+        Stream content,
+        string contentType,
+        CancellationToken ct = default)
     {
         var settings = options.Value;
         if (!settings.Enabled)
         {
-            return;
+            return NullSkippedResult();
         }
 
         // Buffer so the caller can still read the stream after moderation.
@@ -55,6 +72,37 @@ public sealed class RecipeContentModerationService(
 
         if (result.Skipped)
         {
+            return result;
+        }
+
+        if (result.Decision == ModerationStatus.Rejected)
+        {
+            await store.AddEventAsync(
+                new ContentModerationEvent
+                {
+                    Id = Guid.NewGuid(),
+                    RecipeId = null,
+                    SubjectKey = null,
+                    Kind = ContentModerationKind.Image,
+                    Decision = result.Decision,
+                    CategoriesSummary = result.Summary,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                },
+                ct);
+            await unitOfWork.SaveChangesAsync(ct);
+            throw new ContentRejectedException();
+        }
+
+        return result;
+    }
+
+    public async Task RecordImageDecisionAsync(
+        string subjectKey,
+        ContentModerationResult result,
+        CancellationToken ct = default)
+    {
+        if (result.Skipped || string.IsNullOrWhiteSpace(subjectKey))
+        {
             return;
         }
 
@@ -63,17 +111,39 @@ public sealed class RecipeContentModerationService(
             {
                 Id = Guid.NewGuid(),
                 RecipeId = null,
+                SubjectKey = subjectKey.Trim(),
                 Kind = ContentModerationKind.Image,
                 Decision = result.Decision,
                 CategoriesSummary = result.Summary,
                 CreatedAt = DateTimeOffset.UtcNow,
             },
             ct);
+    }
 
-        if (result.Decision == ModerationStatus.Rejected)
+    private async Task ApplyPendingImageDecisionAsync(Recipe recipe, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(recipe.ImageUrl))
         {
-            await unitOfWork.SaveChangesAsync(ct);
-            throw new ContentRejectedException();
+            return;
+        }
+
+        var subjectKey = recipe.ImageUrl.Trim();
+        var imageDecision = await store.GetLatestImageDecisionAsync(subjectKey, ct);
+        if (imageDecision is null)
+        {
+            return;
+        }
+
+        await store.AttachImageEventsToRecipeAsync(subjectKey, recipe.Id, ct);
+
+        if (imageDecision == ModerationStatus.NeedsReview
+            && recipe.ModerationStatus == ModerationStatus.Approved)
+        {
+            recipe.ModerationStatus = ModerationStatus.NeedsReview;
+            recipe.ModerationSummary = string.IsNullOrWhiteSpace(recipe.ModerationSummary)
+                ? "image-needs-review"
+                : $"{recipe.ModerationSummary}; image-needs-review";
+            recipe.ModeratedAt = DateTimeOffset.UtcNow;
         }
     }
 
@@ -85,9 +155,6 @@ public sealed class RecipeContentModerationService(
     {
         if (result.Skipped)
         {
-            recipe.ModerationStatus = ModerationStatus.NotModerated;
-            recipe.ModeratedAt = null;
-            recipe.ModerationSummary = null;
             return;
         }
 
@@ -151,4 +218,7 @@ public sealed class RecipeContentModerationService(
             sb.AppendLine(value.Trim());
         }
     }
+
+    private static ContentModerationResult NullSkippedResult() =>
+        new(ModerationStatus.NotModerated, 0, [], "skipped", Skipped: true);
 }

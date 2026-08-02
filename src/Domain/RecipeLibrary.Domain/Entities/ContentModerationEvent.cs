@@ -10,6 +10,12 @@ public sealed class ContentModerationEvent
     /// <summary>Optional: set when the recipe already exists or was just created.</summary>
     public Guid? RecipeId { get; set; }
 
+    /// <summary>
+    /// Optional subject key for pre-recipe decisions (e.g. uploaded image URL)
+    /// so create/update can attach image NeedsReview to the recipe.
+    /// </summary>
+    public string? SubjectKey { get; set; }
+
     public ContentModerationKind Kind { get; set; }
 
     public ModerationStatus Decision { get; set; }

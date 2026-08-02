@@ -102,4 +102,35 @@ public sealed class EfContentModerationStore(RecipeDbContext dbContext) : IConte
         dbContext.Recipes
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == recipeId, ct);
+
+    public async Task<ModerationStatus?> GetLatestImageDecisionAsync(string subjectKey, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(subjectKey))
+        {
+            return null;
+        }
+
+        var key = subjectKey.Trim();
+        return await dbContext.ContentModerationEvents
+            .AsNoTracking()
+            .Where(e => e.Kind == ContentModerationKind.Image && e.SubjectKey == key)
+            .OrderByDescending(e => e.CreatedAt)
+            .Select(e => (ModerationStatus?)e.Decision)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task AttachImageEventsToRecipeAsync(string subjectKey, Guid recipeId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(subjectKey) || recipeId == Guid.Empty)
+        {
+            return;
+        }
+
+        var key = subjectKey.Trim();
+        await dbContext.ContentModerationEvents
+            .Where(e => e.Kind == ContentModerationKind.Image && e.SubjectKey == key && e.RecipeId == null)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(e => e.RecipeId, recipeId),
+                ct);
+    }
 }

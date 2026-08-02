@@ -19,10 +19,15 @@ public static class ContentModerationServiceRegistration
         var endpoint = configuration[$"{ContentModerationOptions.SectionName}:Endpoint"];
         var apiKey = configuration[$"{ContentModerationOptions.SectionName}:ApiKey"];
 
-        if (enabled
-            && !string.IsNullOrWhiteSpace(endpoint)
-            && !string.IsNullOrWhiteSpace(apiKey))
+        if (enabled)
         {
+            if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
+            {
+                throw new InvalidOperationException(
+                    "ContentModeration:Enabled is true but Endpoint and/or ApiKey are missing. " +
+                    "Provide credentials or set ContentModeration:Enabled to false.");
+            }
+
             services.AddSingleton(_ =>
                 new ContentSafetyClient(new Uri(endpoint), new AzureKeyCredential(apiKey)));
             services.AddScoped<IContentModerator, AzureContentModerator>();

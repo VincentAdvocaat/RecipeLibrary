@@ -23,7 +23,7 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                 type: "nvarchar(32)",
                 maxLength: 32,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "NotModerated");
 
             migrationBuilder.AddColumn<string>(
                 name: "ModerationSummary",
@@ -38,6 +38,7 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     RecipeId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    SubjectKey = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
                     Kind = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
                     Decision = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
                     CategoriesSummary = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
@@ -79,6 +80,11 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                 name: "IX_ContentModerationEvents_RecipeId",
                 table: "ContentModerationEvents",
                 column: "RecipeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ContentModerationEvents_SubjectKey",
+                table: "ContentModerationEvents",
+                column: "SubjectKey");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ContentReports_Handled_CreatedAt",
