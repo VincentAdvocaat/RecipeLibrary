@@ -15,6 +15,32 @@
       }
     },
     {
+      "label": "build-web",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "predebug-local",
+      "dependsOn": [
+        "start-sql",
+        "build-web"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
       "label": "test-all",
       "type": "shell",
       "command": "dotnet test RecipeLibrary.slnx",

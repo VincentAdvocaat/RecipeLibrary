@@ -2,6 +2,8 @@
 
 When you run the web app on your machine (F5 / "Debug (local)"), it connects to a **local** SQL Server running in Docker. This doc describes how to start the database and verify the setup.
 
+**New here?** Start with the short path in [getting-started.md](getting-started.md).
+
 ## 1. Start the SQL container
 
 From the repository root:
