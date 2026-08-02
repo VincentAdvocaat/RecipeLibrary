@@ -18,11 +18,14 @@ public static class PersistenceServiceRegistration
         services.AddSingleton<IPersistenceReadiness, PersistenceReadiness>();
 
         services.AddDbContext<RecipeDbContext>(options =>
+        {
             options.UseSqlServer(connectionString, sql =>
             {
                 // Helpful defaults for transient Azure SQL failures.
                 sql.EnableRetryOnFailure();
-            }));
+            });
+            options.UseOpenIddict();
+        });
 
         services.AddScoped<IRecipeRepository, EfRecipeRepository>();
         services.AddScoped<IIngredientRepository, EfIngredientRepository>();

@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="RecipeLibrary.App.MainPage"
+             Title="Recipe Library">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="12">
+            <Label Text="API login stub" FontAttributes="Bold" FontSize="22" />
+            <Label Text="Uses OpenIddict password grant + GET /api/v1/recipes." />
+
+            <Entry x:Name="UserNameEntry" Placeholder="Username" Text=""/>
+            <Entry x:Name="PasswordEntry" Placeholder="Password" IsPassword="True" Text=""/>
+
+            <Button Text="Sign in and load recipes" Clicked="OnLoginClicked" />
+
+            <Label x:Name="StatusLabel" />
+            <CollectionView x:Name="RecipesList">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Label Text="{Binding Title}" Margin="0,4" />
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

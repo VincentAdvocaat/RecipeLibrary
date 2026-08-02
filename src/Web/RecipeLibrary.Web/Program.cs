@@ -17,6 +17,8 @@ using RecipeLibrary.Infrastructure.Identity;
 using RecipeLibrary.Infrastructure.Persistence;
 using RecipeLibrary.Infrastructure.RecipeImport;
 using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Web.Auth;
+using RecipeLibrary.Web.Endpoints.V1;
 using RecipeLibrary.Web.Services;
 using RecipeLibrary.Web.Middleware;
 
@@ -115,6 +117,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
+builder.Services.AddRecipeLibraryOpenIddict(builder.Configuration, builder.Environment);
+
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthorization(options =>
 {
@@ -130,6 +134,7 @@ builder.Services.AddHostedService<IdentitySeedUserHostedService>();
 builder.Services.AddHostedService<PersistenceWarmupHostedService>();
 builder.Services.AddRecipeImport(builder.Configuration);
 builder.Services.AddApplication();
+builder.Services.AddOpenApi();
 
 var ocrOptions = builder.Configuration.GetSection($"{RecipeImportOptions.SectionName}:Ocr").Get<RecipeImportOcrOptions>()
     ?? new RecipeImportOcrOptions();
@@ -246,8 +251,18 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+{
+    app.MapOpenApi().AllowAnonymous();
+}
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapOpenIddictTokenEndpoints();
+app.MapAuthApiV1();
+app.MapRecipesApiV1();
+app.MapRecipeImagesApiV1();
 
 // Liveness: process is up (no database dependency). /health is a backward-compatible alias.
 static IResult LiveHealth() => Results.Ok(new { status = "Healthy" });

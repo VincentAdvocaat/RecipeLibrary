@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using OpenIddict.Abstractions;
 using RecipeLibrary.Application.Abstractions;
 
 namespace RecipeLibrary.Web.Services;
@@ -15,7 +16,9 @@ public sealed class HttpCurrentUser(IHttpContextAccessor httpContextAccessor) : 
                 return null;
             }
 
-            return user.FindFirstValue(ClaimTypes.NameIdentifier);
+            return user.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? user.FindFirstValue(OpenIddictConstants.Claims.Subject)
+                ?? user.GetClaim(OpenIddictConstants.Claims.Subject);
         }
     }
 
@@ -29,7 +32,9 @@ public sealed class HttpCurrentUser(IHttpContextAccessor httpContextAccessor) : 
                 return null;
             }
 
-            return user.Identity?.Name;
+            return user.Identity?.Name
+                ?? user.FindFirstValue(OpenIddictConstants.Claims.Name)
+                ?? user.GetClaim(OpenIddictConstants.Claims.Name);
         }
     }
 

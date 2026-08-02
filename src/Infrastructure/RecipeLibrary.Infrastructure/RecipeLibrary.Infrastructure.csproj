@@ -16,18 +16,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.10" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.24.0" />
     <PackageReference Include="Azure.Identity" Version="1.14.2" />
+    <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="7.6.0" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
   </ItemGroup>
 
@@ -38,12 +39,8 @@
 
   <ItemGroup>
     <!-- Source of truth lives in data/ingredients/; embed for runtime seeding after Migrate(). -->
-    <EmbeddedResource Include="..\..\..\data\ingredients\curated-ingredients.json"
-                      Link="SeedData\curated-ingredients.json"
-                      LogicalName="RecipeLibrary.Infrastructure.SeedData.curated-ingredients.json" />
-    <EmbeddedResource Include="..\..\..\data\ingredients\unit-conversions.json"
-                      Link="SeedData\unit-conversions.json"
-                      LogicalName="RecipeLibrary.Infrastructure.SeedData.unit-conversions.json" />
+    <EmbeddedResource Include="..\..\..\data\ingredients\curated-ingredients.json" Link="SeedData\curated-ingredients.json" LogicalName="RecipeLibrary.Infrastructure.SeedData.curated-ingredients.json" />
+    <EmbeddedResource Include="..\..\..\data\ingredients\unit-conversions.json" Link="SeedData\unit-conversions.json" LogicalName="RecipeLibrary.Infrastructure.SeedData.unit-conversions.json" />
   </ItemGroup>
 
 </Project>

@@ -36,10 +36,22 @@ stages:
         packageType: sdk
         version: 10.x
 
-    - script: dotnet restore RecipeLibrary.slnx
+    - script: |
+        set -euo pipefail
+        # MAUI mobile project is in the solution for local/dev but skipped in CI
+        # (requires platform workloads; iOS needs macOS). Build the web host instead.
+        dotnet restore src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj
+        dotnet restore tests/RecipeLibrary.Application.Tests/RecipeLibrary.Application.Tests.csproj
+        dotnet restore tests/RecipeLibrary.Web.ComponentTests/RecipeLibrary.Web.ComponentTests.csproj
+        dotnet restore tests/RecipeLibrary.Web.IntegrationTests/RecipeLibrary.Web.IntegrationTests.csproj
       displayName: Restore
 
-    - script: dotnet build RecipeLibrary.slnx --configuration $(buildConfiguration) --no-restore
+    - script: |
+        set -euo pipefail
+        dotnet build src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj --configuration $(buildConfiguration) --no-restore
+        dotnet build tests/RecipeLibrary.Application.Tests/RecipeLibrary.Application.Tests.csproj --configuration $(buildConfiguration) --no-restore
+        dotnet build tests/RecipeLibrary.Web.ComponentTests/RecipeLibrary.Web.ComponentTests.csproj --configuration $(buildConfiguration) --no-restore
+        dotnet build tests/RecipeLibrary.Web.IntegrationTests/RecipeLibrary.Web.IntegrationTests.csproj --configuration $(buildConfiguration) --no-restore
       displayName: Build
 
     - script: dotnet test tests/RecipeLibrary.Application.Tests --configuration $(buildConfiguration) --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory $(Agent.TempDirectory)/TestResults/Coverage --settings tests/coverlet.runsettings
