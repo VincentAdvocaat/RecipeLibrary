@@ -1,6 +1,6 @@
 # Mutation testing baseline (E17.F2)
 
-Recorded with Stryker.NET **4.16.0** on the E17 closeout branch (post E16.F3: `RecipeImportUrlSafety` lives in Infrastructure).
+Recorded with Stryker.NET **4.16.0** on `bugfix/stryker-survivor-cleanup` (behavior-boundary tests after pipeline run 116).
 
 ```powershell
 ./scripts/run-stryker.ps1
@@ -10,10 +10,18 @@ Recorded with Stryker.NET **4.16.0** on the E17 closeout branch (post E16.F3: `R
 
 | Target | Mutation score | Killed | Survived | Timeout | Previous |
 |--------|----------------|--------|----------|---------|----------|
-| Application (pilot files) | **69.51%** | 307 | 113 | 3 | 70.71% |
-| Infrastructure (`RecipeImportUrlSafety`) | **86.15%** | 52 | 5 | 0 | 81.54% (as Abstractions) |
+| Application (pilot files) | **71.30%** | 313 | 105 | 5 | 69.51% (run 116: 69.06%) |
+| Infrastructure (`RecipeImportUrlSafety`) | **90.77%** | 56 | 3 | 3 | 86.15% (run 116: 84.62%) |
 
-Application score dipped slightly after fail-closed AccessGuard + expanded deny coverage (more string/auth mutants). No new AccessGuard *behavior* survivors were introduced beyond accepted string literals. UrlSafety improved after the Infrastructure retarget.
+## What raised the score (this pass)
+
+Behavior-boundary unit tests (no production changes):
+
+- AccessGuard: whitespace-only `ownerUserId` denied (`IsNullOrWhiteSpace`)
+- UrlSafety: `IPAddress.IPv6Any` + ULA `fd00::1` blocked
+- Parser: list-index qty **20**, juice qty **0** fall-through, complex-line length **exactly 100** not capped
+- Matcher: prefix search at normalized length **3**, suggestions at score **0.45** (`>= SuggestionMinScore`)
+- Merger: append `SortOrder == max + 1` on non-empty list
 
 ## What raised the score (historical)
 
@@ -32,7 +40,7 @@ Application score dipped slightly after fail-closed AccessGuard + expanded deny 
 | Scorer boost `Add(0.72/0.78)` statements | Dominated by exact token `StringSimilarity == 1` — dead for Max |
 | Levenshtein / Jaro arithmetic noise | Low product risk; revisit when changing algorithms |
 | Parser equality/edge on index/`\|\|` | Partial coverage; incremental |
-| UrlSafety `ThrowIfNull` + Safe Mode on resolve | Tool / null-path noise |
+| UrlSafety `ThrowIfNull` + empty-host / Safe Mode on resolve | Tool / null-path noise (empty `Uri.Host` is not constructible on modern .NET) |
 
 ## CI / gate decision
 
@@ -40,7 +48,7 @@ Application score dipped slightly after fail-closed AccessGuard + expanded deny 
 |------|----------|
 | Every PR | **No** |
 | Opt-in pipeline (`runStryker`) | **Yes** — separate `Stryker` stage, report only (`thresholds.break = 0`); does not gate Deploy |
-| Hard gate | **Deferred** — UrlSafety already >80%; Application pilot still climbing |
+| Hard gate | **Deferred** — UrlSafety now >90%; Application pilot still climbing |
 | Scheduled nightly | **Deferred** — opt-in is enough for E17 closeout |
 
 ## Refresh

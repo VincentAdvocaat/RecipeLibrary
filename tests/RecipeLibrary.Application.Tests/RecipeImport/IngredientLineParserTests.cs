@@ -190,6 +190,17 @@ public sealed class IngredientLineParserTests
     }
 
     [Fact]
+    public void Parse_SkipsListIndex_WhenLeadingQuantityIsExactly20()
+    {
+        // Boundary of quantity is >= 1 and <= 20 — 20 must still be treated as list index.
+        var result = _sut.Parse("20 8 sneetjes stokbrood");
+
+        Assert.Equal(8, result.Quantity);
+        Assert.Equal(nameof(Unit.Slice), result.Unit);
+        Assert.Equal("stokbrood", result.Name);
+    }
+
+    [Fact]
     public void Parse_ParsesCloveUnit()
     {
         var result = _sut.Parse("1 teen knoflook");
@@ -286,6 +297,19 @@ public sealed class IngredientLineParserTests
     }
 
     [Fact]
+    public void Parse_DoesNotTakeJuiceOfPath_WhenQuantityIsZero()
+    {
+        // quantity > 0 is required — zero must fall through (not Piece/juice @ 0.85).
+        var result = _sut.Parse("Juice of 0 lime");
+
+        Assert.False(
+            result.Quantity == 0m
+            && result.Unit == nameof(Unit.Piece)
+            && result.Preparation == "juice"
+            && result.Confidence == 0.85m);
+    }
+
+    [Fact]
     public void Parse_ParsesCanUnit()
     {
         var result = _sut.Parse("1 can chickpeas");
@@ -377,5 +401,18 @@ public sealed class IngredientLineParserTests
         var result = _sut.Parse($"100 g {longName}");
 
         Assert.Equal(0.65m, result.Confidence);
+    }
+
+    [Fact]
+    public void Parse_DoesNotCapConfidence_WhenNormalizedLengthIsExactly100()
+    {
+        // LooksLikeComplexIngredientLine uses Length > 100 (strict).
+        var name = new string('a', 94); // "100 g " (6) + 94 = 100
+        var line = $"100 g {name}";
+        Assert.Equal(100, line.Length);
+
+        var result = _sut.Parse(line);
+
+        Assert.True(result.Confidence > 0.65m);
     }
 }
