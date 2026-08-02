@@ -6,7 +6,7 @@ namespace RecipeLibrary.Application.UseCases.Recipes;
 public sealed class DeleteRecipeCommandHandler(
     IRecipeRepository recipeRepository,
     ICurrentUser currentUser,
-    IUnitOfWork? unitOfWork = null)
+    IUnitOfWork unitOfWork)
     : ICommandHandler<DeleteRecipeCommand, DeleteRecipeResult>
 {
     public async Task<DeleteRecipeResult> HandleAsync(DeleteRecipeCommand command, CancellationToken ct = default)
@@ -21,7 +21,7 @@ public sealed class DeleteRecipeCommandHandler(
         }
 
         await recipeRepository.DeleteAsync(ownerUserId, command.RecipeId, ct);
-        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
+        await unitOfWork.SaveChangesAsync(ct);
         return new DeleteRecipeResult(true);
     }
 }

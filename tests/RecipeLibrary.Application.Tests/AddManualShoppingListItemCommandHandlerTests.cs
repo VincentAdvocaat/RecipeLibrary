@@ -19,7 +19,7 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         var sut = new AddManualShoppingListItemCommandHandler(
             new FakeShoppingListRepository(),
             new FixedCurrentUser("user-a"),
-            _merger);
+            _merger, new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new AddManualShoppingListItemCommand
@@ -46,7 +46,7 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         var sut = new AddManualShoppingListItemCommandHandler(
             repo,
             new FixedCurrentUser("user-a"),
-            _merger);
+            _merger, new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new AddManualShoppingListItemCommand
         {
@@ -89,7 +89,7 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         var sut = new AddManualShoppingListItemCommandHandler(
             repo,
             new FixedCurrentUser("user-a"),
-            _merger);
+            _merger, new NoOpUnitOfWork());
 
         await sut.HandleAsync(new AddManualShoppingListItemCommand
         {

@@ -13,7 +13,7 @@ public sealed class ClearShoppingListCommandHandlerTests
     {
         var listId = Guid.NewGuid();
         var repo = new FakeShoppingListRepository(list: null);
-        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"));
+        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId });
 
@@ -27,7 +27,7 @@ public sealed class ClearShoppingListCommandHandlerTests
         var listId = Guid.NewGuid();
         var list = new ShoppingList { Id = listId, GroupId = Guid.NewGuid(), Name = "Main" };
         var repo = new FakeShoppingListRepository(list);
-        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"));
+        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId });
 

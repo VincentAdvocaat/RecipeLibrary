@@ -6,7 +6,7 @@ namespace RecipeLibrary.Application.UseCases.Ingredients;
 public sealed class AddIngredientTagsCommandHandler(
     IIngredientRepository ingredientRepository,
     IIngredientTextNormalizer normalizer,
-    IUnitOfWork? unitOfWork = null)
+    IUnitOfWork unitOfWork)
     : ICommandHandler<AddIngredientTagsCommand, AddIngredientTagsResult>
 {
     public async Task<AddIngredientTagsResult> HandleAsync(AddIngredientTagsCommand command, CancellationToken ct = default)
@@ -18,7 +18,7 @@ public sealed class AddIngredientTagsCommandHandler(
             .ToList();
 
         await ingredientRepository.AddTagsAsync(command.IngredientId, cleaned, ct);
-        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
+        await unitOfWork.SaveChangesAsync(ct);
         return new AddIngredientTagsResult(cleaned.Count);
     }
 }

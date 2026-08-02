@@ -9,7 +9,7 @@ public sealed class RemovePantryItemCommandHandler(
     IPantryRepository repository,
     IShoppingListRepository shoppingListRepository,
     ICurrentUser userContext,
-    IUnitOfWork? unitOfWork = null)
+    IUnitOfWork unitOfWork)
     : ICommandHandler<RemovePantryItemCommand, RemovePantryItemResult>
 {
     public async Task<RemovePantryItemResult> HandleAsync(
@@ -24,7 +24,7 @@ public sealed class RemovePantryItemCommandHandler(
 
         var ownerKey = PantryOwnerKey.Resolve(userContext.UserId, command.ShoppingListGroupId);
         var removed = await repository.RemoveAsync(command.ItemId, ownerKey, ct);
-        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
+        await unitOfWork.SaveChangesAsync(ct);
         return new RemovePantryItemResult(removed);
     }
 }

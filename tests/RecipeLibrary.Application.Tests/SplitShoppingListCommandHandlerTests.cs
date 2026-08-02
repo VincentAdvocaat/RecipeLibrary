@@ -33,7 +33,7 @@ public sealed class SplitShoppingListCommandHandlerTests
         };
 
         var repo = new FakeShoppingListRepository(primary, secondaryId);
-        var sut = new SplitShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"), new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+        var sut = new SplitShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"), new ShoppingListIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new SplitShoppingListCommand
         {
@@ -56,7 +56,7 @@ public sealed class SplitShoppingListCommandHandlerTests
         var sut = new SplitShoppingListCommandHandler(
             new FakeShoppingListRepository(null!, Guid.Empty),
             new FixedCurrentUser("user-a"),
-            new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+            new ShoppingListIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new SplitShoppingListCommand { GroupId = Guid.NewGuid(), NewListName = "", ItemIds = [Guid.NewGuid()] }));

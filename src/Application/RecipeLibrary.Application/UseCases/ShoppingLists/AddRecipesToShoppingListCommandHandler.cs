@@ -12,7 +12,7 @@ public sealed class AddRecipesToShoppingListCommandHandler(
     ICurrentUser userContext,
     ShoppingListIngredientMerger merger,
     PantryExclusionFilter pantryExclusionFilter,
-    IUnitOfWork? unitOfWork = null)
+    IUnitOfWork unitOfWork)
     : ICommandHandler<AddRecipesToShoppingListCommand, AddRecipesToShoppingListResult>
 {
     public async Task<AddRecipesToShoppingListResult> HandleAsync(
@@ -65,7 +65,7 @@ public sealed class AddRecipesToShoppingListCommandHandler(
 
         var merged = merger.MergeIntoList(list.Items.ToList(), lines, list.Id);
         await shoppingListRepository.ReplaceListItemsAsync(list.Id, merged, list.UpdatedAt, ct);
-        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return new AddRecipesToShoppingListResult(recipes.Count, lines.Count);
     }

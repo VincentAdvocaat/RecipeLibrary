@@ -9,7 +9,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 public sealed class UpdateShoppingListItemQuantityCommandHandler(
     IShoppingListRepository repository,
     ICurrentUser userContext,
-    IUnitOfWork? unitOfWork = null)
+    IUnitOfWork unitOfWork)
     : ICommandHandler<UpdateShoppingListItemQuantityCommand, UpdateShoppingListItemQuantityResult>
 {
     public async Task<UpdateShoppingListItemQuantityResult> HandleAsync(
@@ -34,7 +34,7 @@ public sealed class UpdateShoppingListItemQuantityCommandHandler(
 
         var normalized = IngredientQuantityFormatter.Normalize(command.Quantity, item.Unit.Value);
         var updated = await repository.UpdateItemQuantityAsync(command.ItemId, normalized, ct);
-        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
+        await unitOfWork.SaveChangesAsync(ct);
         return new UpdateShoppingListItemQuantityResult(updated, normalized);
     }
 }

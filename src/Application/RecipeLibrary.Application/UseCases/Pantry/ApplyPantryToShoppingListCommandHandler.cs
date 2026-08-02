@@ -10,7 +10,7 @@ public sealed class ApplyPantryToShoppingListCommandHandler(
     IPantryRepository pantryRepository,
     ICurrentUser userContext,
     PantryExclusionFilter exclusionFilter,
-    IUnitOfWork? unitOfWork = null)
+    IUnitOfWork unitOfWork)
     : ICommandHandler<ApplyPantryToShoppingListCommand, ApplyPantryToShoppingListResult>
 {
     public async Task<ApplyPantryToShoppingListResult> HandleAsync(
@@ -38,7 +38,7 @@ public sealed class ApplyPantryToShoppingListCommandHandler(
         var removed = originalCount - remaining.Count;
 
         await shoppingListRepository.ReplaceListItemsAsync(list.Id, remaining, list.UpdatedAt, ct);
-        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return new ApplyPantryToShoppingListResult(removed);
     }

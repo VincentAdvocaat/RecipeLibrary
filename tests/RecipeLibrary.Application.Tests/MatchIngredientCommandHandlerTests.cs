@@ -16,7 +16,7 @@ public sealed class MatchIngredientCommandHandlerTests
         var repo = new FakeIngredientRepository(IngredientTestFactory.Create("Gehakt", id: gehaktId));
 
         var matcher = new IngredientMatcher(repo, new IngredientTextNormalizer(), new IngredientSimilarityScorer());
-        var sut = new MatchIngredientCommandHandler(matcher, repo);
+        var sut = new MatchIngredientCommandHandler(matcher, repo, new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new MatchIngredientCommand { Input = "Gehakt" });
 
@@ -45,7 +45,7 @@ public sealed class MatchIngredientCommandHandlerTests
         var repo = new FakeIngredientRepository(tomato);
 
         var matcher = new IngredientMatcher(repo, new IngredientTextNormalizer(), new IngredientSimilarityScorer());
-        var sut = new MatchIngredientCommandHandler(matcher, repo);
+        var sut = new MatchIngredientCommandHandler(matcher, repo, new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new MatchIngredientCommand { Input = "tomato", CultureName = "en-US" });
 

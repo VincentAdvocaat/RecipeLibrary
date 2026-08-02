@@ -10,7 +10,7 @@ namespace RecipeLibrary.Application.UseCases.Ingredients;
 public sealed class MatchIngredientCommandHandler(
     IngredientMatcher matcher,
     IIngredientRepository ingredientRepository,
-    IUnitOfWork? unitOfWork = null)
+    IUnitOfWork unitOfWork)
     : ICommandHandler<MatchIngredientCommand, MatchIngredientResult>
 {
     public async Task<MatchIngredientResult> HandleAsync(MatchIngredientCommand command, CancellationToken ct = default)
@@ -31,7 +31,7 @@ public sealed class MatchIngredientCommandHandler(
             Confidence = result.Confidence,
             CreatedAt = DateTimeOffset.UtcNow
         }, ct);
-        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return new MatchIngredientResult
         {

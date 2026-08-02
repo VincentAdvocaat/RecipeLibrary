@@ -14,7 +14,7 @@ public sealed class CreateRecipeCommandHandler(
     IngredientMatcher matcher,
     IngredientLineResolver lineResolver,
     ICurrentUser currentUser,
-    IUnitOfWork? unitOfWork = null)
+    IUnitOfWork unitOfWork)
     : ICommandHandler<CreateRecipeCommand, CreateRecipeResult>
 {
     public async Task<CreateRecipeResult> HandleAsync(CreateRecipeCommand command, CancellationToken ct = default)
@@ -72,7 +72,7 @@ public sealed class CreateRecipeCommandHandler(
         }
 
         await recipeRepository.AddAsync(recipe, ct);
-        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
+        await unitOfWork.SaveChangesAsync(ct);
         return new CreateRecipeResult(recipeId);
     }
 

@@ -143,7 +143,8 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
             pantryRepo ?? new FakePantryRepository(),
             new FixedCurrentUser(TestUserId),
             new ShoppingListIngredientMerger(new IngredientTextNormalizer()),
-            new PantryExclusionFilter(new PantryIngredientMerger(new IngredientTextNormalizer())));
+            new PantryExclusionFilter(new PantryIngredientMerger(new IngredientTextNormalizer())),
+            new NoOpUnitOfWork());
 
     private sealed class FakeRecipeRepository(Recipe recipe) : IRecipeRepository
     {

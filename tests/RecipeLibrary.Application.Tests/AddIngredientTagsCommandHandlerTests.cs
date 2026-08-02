@@ -14,7 +14,7 @@ public sealed class AddIngredientTagsCommandHandlerTests
     {
         var ingredientId = Guid.NewGuid();
         var repo = new FakeIngredientRepository();
-        var sut = new AddIngredientTagsCommandHandler(repo, new IngredientTextNormalizer());
+        var sut = new AddIngredientTagsCommandHandler(repo, new IngredientTextNormalizer(), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new AddIngredientTagsCommand
         {

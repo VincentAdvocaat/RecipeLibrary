@@ -31,7 +31,7 @@ public sealed class MoveShoppingListItemCommandHandlerTests
         var sourceList = new ShoppingList { Id = sourceListId, GroupId = groupId, Items = [item] };
         var targetList = new ShoppingList { Id = targetListId, GroupId = groupId, Items = [] };
         var repo = new FakeShoppingListRepository(item, sourceList, targetList);
-        var sut = new MoveShoppingListItemCommandHandler(repo, new FixedCurrentUser("user-a"), new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+        var sut = new MoveShoppingListItemCommandHandler(repo, new FixedCurrentUser("user-a"), new ShoppingListIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new MoveShoppingListItemCommand
         {
@@ -54,7 +54,7 @@ public sealed class MoveShoppingListItemCommandHandlerTests
         var item = new ShoppingListItem { Id = itemId, ShoppingListId = listId, DisplayName = "Gehakt" };
         var list = new ShoppingList { Id = listId, GroupId = Guid.NewGuid(), Items = [item] };
         var repo = new FakeShoppingListRepository(item, list, list);
-        var sut = new MoveShoppingListItemCommandHandler(repo, new FixedCurrentUser("user-a"), new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+        var sut = new MoveShoppingListItemCommandHandler(repo, new FixedCurrentUser("user-a"), new ShoppingListIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new MoveShoppingListItemCommand { ItemId = itemId, TargetShoppingListId = listId });
 

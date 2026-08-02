@@ -6,7 +6,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class EnsureShoppingListGroupCommandHandler(
     IShoppingListRepository repository,
-    IUnitOfWork? unitOfWork = null)
+    IUnitOfWork unitOfWork)
     : ICommandHandler<EnsureShoppingListGroupCommand, EnsureShoppingListGroupResult>
 {
     public async Task<EnsureShoppingListGroupResult> HandleAsync(
@@ -33,7 +33,7 @@ public sealed class EnsureShoppingListGroupCommandHandler(
         var existingNames = await repository.GetListNamesAsync(groupId: null, ct);
         var defaultName = ShoppingListDefaultNameBuilder.GetNextNumberedName(nameFormat, existingNames);
         var created = await repository.CreateGroupWithPrimaryListAsync(defaultName, command.OwnerUserId, ct);
-        await (unitOfWork?.SaveChangesAsync(ct) ?? Task.CompletedTask);
+        await unitOfWork.SaveChangesAsync(ct);
         var loaded = await repository.GetGroupWithListsAsync(created.Id, ct)
             ?? throw new InvalidOperationException("Failed to load created shopping list group.");
 

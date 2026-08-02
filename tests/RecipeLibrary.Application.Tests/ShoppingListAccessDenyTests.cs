@@ -26,7 +26,7 @@ public sealed class ShoppingListAccessDenyTests
             AccessibleByDefault = false,
             List = new ShoppingList { Id = listId, GroupId = Guid.NewGuid() },
         };
-        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser(UserB));
+        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser(UserB), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId }));
@@ -51,7 +51,7 @@ public sealed class ShoppingListAccessDenyTests
                 Unit = Unit.Piece,
             },
         };
-        var sut = new ToggleShoppingListItemCommandHandler(repo, new FixedCurrentUser(UserB));
+        var sut = new ToggleShoppingListItemCommandHandler(repo, new FixedCurrentUser(UserB), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true }));
@@ -76,7 +76,7 @@ public sealed class ShoppingListAccessDenyTests
                 Unit = Unit.Piece,
             },
         };
-        var sut = new RemoveShoppingListItemCommandHandler(repo, new FixedCurrentUser(UserB));
+        var sut = new RemoveShoppingListItemCommandHandler(repo, new FixedCurrentUser(UserB), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new RemoveShoppingListItemCommand { ItemId = itemId }));
@@ -89,7 +89,7 @@ public sealed class ShoppingListAccessDenyTests
     {
         var groupId = Guid.NewGuid();
         var repo = new RecordingShoppingListRepository { AccessibleByDefault = false };
-        var sut = new DeleteShoppingListGroupCommandHandler(repo, new FixedCurrentUser(UserB));
+        var sut = new DeleteShoppingListGroupCommandHandler(repo, new FixedCurrentUser(UserB), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new DeleteShoppingListGroupCommand { GroupId = groupId }));
@@ -136,7 +136,7 @@ public sealed class ShoppingListAccessDenyTests
             pantry,
             shopping,
             new FixedCurrentUser(UserB),
-            new PantryIngredientMerger(new IngredientTextNormalizer()));
+            new PantryIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new UpsertPantryItemCommand
@@ -157,7 +157,7 @@ public sealed class ShoppingListAccessDenyTests
             AccessibleByDefault = false,
             List = new ShoppingList { Id = listId, GroupId = Guid.NewGuid() },
         };
-        var sut = new ClearShoppingListCommandHandler(repo, new AnonymousCurrentUser());
+        var sut = new ClearShoppingListCommandHandler(repo, new AnonymousCurrentUser(), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId }));
@@ -197,7 +197,7 @@ public sealed class ShoppingListAccessDenyTests
                 Unit = Unit.Piece,
             },
         };
-        var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousCurrentUser());
+        var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousCurrentUser(), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true }));
@@ -217,7 +217,7 @@ public sealed class ShoppingListAccessDenyTests
         var sut = new AddManualShoppingListItemCommandHandler(
             repo,
             new FixedCurrentUser(UserB),
-            new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+            new ShoppingListIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new AddManualShoppingListItemCommand
@@ -248,7 +248,7 @@ public sealed class ShoppingListAccessDenyTests
                 Unit = Unit.Piece,
             },
         };
-        var sut = new UpdateShoppingListItemQuantityCommandHandler(repo, new FixedCurrentUser(UserB));
+        var sut = new UpdateShoppingListItemQuantityCommandHandler(repo, new FixedCurrentUser(UserB), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new UpdateShoppingListItemQuantityCommand { ItemId = itemId, Quantity = 3 }));
@@ -261,7 +261,7 @@ public sealed class ShoppingListAccessDenyTests
     {
         var itemId = Guid.NewGuid();
         var repo = new RecordingShoppingListRepository { AccessibleByDefault = false };
-        var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousCurrentUser());
+        var sut = new ToggleShoppingListItemCommandHandler(repo, new AnonymousCurrentUser(), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true }));
@@ -273,7 +273,7 @@ public sealed class ShoppingListAccessDenyTests
     public async Task ToggleItem_Throws_WhenItemMissing_ForAuthenticatedUser()
     {
         var repo = new RecordingShoppingListRepository { AccessibleByDefault = false };
-        var sut = new ToggleShoppingListItemCommandHandler(repo, new FixedCurrentUser(UserB));
+        var sut = new ToggleShoppingListItemCommandHandler(repo, new FixedCurrentUser(UserB), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             sut.HandleAsync(new ToggleShoppingListItemCommand { ItemId = Guid.NewGuid(), IsChecked = true }));

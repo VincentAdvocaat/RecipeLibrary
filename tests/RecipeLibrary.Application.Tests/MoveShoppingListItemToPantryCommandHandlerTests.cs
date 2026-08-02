@@ -31,7 +31,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
             RemoveResult = true,
         };
         var pantryRepo = new FakePantryRepository();
-        var unitOfWork = new FakeUnitOfWork();
+        var unitOfWork = new NoOpUnitOfWork();
         var sut = new MoveShoppingListItemToPantryCommandHandler(
             shoppingRepo,
             pantryRepo,
@@ -86,7 +86,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
             shoppingRepo,
             pantryRepo,
             new FixedCurrentUser(ownerKey),
-            new FakeUnitOfWork(),
+            new NoOpUnitOfWork(),
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
         var result = await sut.HandleAsync(new MoveShoppingListItemToPantryCommand { ItemId = itemId });
@@ -119,25 +119,12 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
             shoppingRepo,
             pantryRepo,
             new FixedCurrentUser("user-42"),
-            new FakeUnitOfWork(),
+            new NoOpUnitOfWork(),
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
         await sut.HandleAsync(new MoveShoppingListItemToPantryCommand { ItemId = itemId });
 
         Assert.Equal("user-42", pantryRepo.UpsertedItem!.OwnerUserId);
-    }
-
-    private sealed class FakeUnitOfWork : IUnitOfWork
-    {
-        public bool Executed { get; private set; }
-
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
-
-        public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> action, CancellationToken ct = default)
-        {
-            Executed = true;
-            await action(ct);
-        }
     }
 
     private sealed class FakeShoppingListRepository : IShoppingListRepository
