@@ -143,7 +143,8 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
             pantryRepo ?? new FakePantryRepository(),
             new FixedCurrentUser(TestUserId),
             new ShoppingListIngredientMerger(new IngredientTextNormalizer()),
-            new PantryExclusionFilter(new PantryIngredientMerger(new IngredientTextNormalizer())));
+            new PantryExclusionFilter(new PantryIngredientMerger(new IngredientTextNormalizer())),
+            new NoOpUnitOfWork());
 
     private sealed class FakeRecipeRepository(Recipe recipe) : IRecipeRepository
     {
@@ -194,7 +195,7 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
         public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) =>
             Task.FromResult(List?.Id == listId ? List : null);
 
-        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, CancellationToken ct = default)
+        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default)
         {
             ReplacedItems = items;
             return Task.CompletedTask;
@@ -208,7 +209,6 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;

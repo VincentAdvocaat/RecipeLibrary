@@ -36,6 +36,8 @@ public static class CreateRecipeCommandValidator
             throw new ArgumentException("Servings cannot exceed 100.", nameof(command));
         }
 
+        ValidateImageUrl(command.ImageUrl);
+
         if (!Enum.IsDefined(typeof(Difficulty), command.Difficulty))
         {
             throw new ArgumentException("Difficulty is not a valid value.", nameof(command));
@@ -113,5 +115,40 @@ public static class CreateRecipeCommandValidator
                 throw new ArgumentException("Instruction step text is required.", nameof(command));
             }
         }
+    }
+
+    /// <summary>
+    /// Image URLs must be empty or an app-relative path from recipe image storage
+    /// (<c>/api/recipe-images/{fileName}</c>). Rejects javascript:, absolute, and protocol-relative URLs.
+    /// </summary>
+    internal static void ValidateImageUrl(string? imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+        {
+            return;
+        }
+
+        var value = imageUrl.Trim();
+        if (value.StartsWith("/api/recipe-images/", StringComparison.OrdinalIgnoreCase)
+            && value.Length > "/api/recipe-images/".Length
+            && !value.Contains("..", StringComparison.Ordinal)
+            && !value.Contains('\\', StringComparison.Ordinal)
+            && !value.Contains('?', StringComparison.Ordinal)
+            && !value.Contains('#', StringComparison.Ordinal)
+            && Uri.TryCreate(value, UriKind.Relative, out _))
+        {
+            var fileName = value["/api/recipe-images/".Length..];
+            if (fileName.Length > 0
+                && fileName.IndexOfAny(['/', '\\']) < 0
+                && !fileName.Equals(".", StringComparison.Ordinal)
+                && !fileName.Equals("..", StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+
+        throw new ArgumentException(
+            "ImageUrl must be empty or an app-relative /api/recipe-images/ path.",
+            nameof(CreateRecipeCommand.ImageUrl));
     }
 }

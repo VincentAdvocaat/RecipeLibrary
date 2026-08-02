@@ -61,12 +61,12 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
             return FallbackUnmeasured(raw, normalized, 0.35m);
         }
 
-        if (UnitAliasMap.IsHandfulWord(tokens[0]))
+        if (UnitAliases.IsHandfulWord(tokens[0]))
         {
             return ParseHandful(raw, tokens);
         }
 
-        if (UnitAliasMap.IsVagueQuantityWord(tokens[0]))
+        if (UnitAliases.IsVagueQuantityWord(tokens[0]))
         {
             return ParseVagueQuantity(raw, tokens);
         }
@@ -94,7 +94,7 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
             && TryParseQuantityToken(tokens[index], out var secondQuantity, out _)
             && IsWholeNumberQuantity(secondQuantity)
             && index + 1 < tokens.Count
-            && UnitAliasMap.TryResolve(tokens[index + 1], out var peekUnit)
+            && UnitAliases.TryResolveMatch(tokens[index + 1], out var peekUnit)
             && UnitRules.IsCountUnit(peekUnit.Unit)
             && peekUnit.Unit != Unit.Piece)
         {
@@ -121,7 +121,7 @@ public sealed class IngredientLineParser(IngredientLineResolver lineResolver)
         decimal unitMultiplier = 1m;
         var hasExplicitUnit = false;
 
-        if (index < tokens.Count && UnitAliasMap.TryResolve(tokens[index], out var unitMatch))
+        if (index < tokens.Count && UnitAliases.TryResolveMatch(tokens[index], out var unitMatch))
         {
             unit = unitMatch.Unit;
             unitMultiplier = unitMatch.Multiplier;

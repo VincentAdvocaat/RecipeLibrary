@@ -33,7 +33,7 @@ public sealed class SplitShoppingListCommandHandlerTests
         };
 
         var repo = new FakeShoppingListRepository(primary, secondaryId);
-        var sut = new SplitShoppingListCommandHandler(repo, new AnonymousUserContext(), new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+        var sut = new SplitShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"), new ShoppingListIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new SplitShoppingListCommand
         {
@@ -53,17 +53,13 @@ public sealed class SplitShoppingListCommandHandlerTests
     [Fact]
     public async Task HandleAsync_Throws_WhenNameEmpty()
     {
-        var sut = new SplitShoppingListCommandHandler(new FakeShoppingListRepository(null!, Guid.Empty), new AnonymousUserContext(), new ShoppingListIngredientMerger(new IngredientTextNormalizer()));
+        var sut = new SplitShoppingListCommandHandler(
+            new FakeShoppingListRepository(null!, Guid.Empty),
+            new FixedCurrentUser("user-a"),
+            new ShoppingListIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new SplitShoppingListCommand { GroupId = Guid.NewGuid(), NewListName = "", ItemIds = [Guid.NewGuid()] }));
-    }
-
-    private sealed class AnonymousUserContext : ICurrentUser
-    {
-        public string? UserId => null;
-        public string? UserName => null;
-        public bool IsAuthenticated => false;
     }
 
     private sealed class FakeShoppingListRepository(ShoppingList primary, Guid secondaryId) : IShoppingListRepository
@@ -79,7 +75,7 @@ public sealed class SplitShoppingListCommandHandlerTests
         public Task<ShoppingList> AddListToGroupAsync(Guid groupId, string name, int storeOrder, CancellationToken ct = default) =>
             Task.FromResult(new ShoppingList { Id = secondaryId, GroupId = groupId, Name = name, StoreOrder = storeOrder });
 
-        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, CancellationToken ct = default)
+        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default)
         {
             if (shoppingListId == primary.Id)
             {
@@ -100,7 +96,6 @@ public sealed class SplitShoppingListCommandHandlerTests
         public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, string? ownerUserId = null, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;

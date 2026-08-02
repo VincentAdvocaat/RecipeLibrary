@@ -1,10 +1,9 @@
-using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Domain.ValueObjects;
 using Xunit;
 
 namespace RecipeLibrary.Application.Tests.RecipeImport;
 
-public sealed class UnitAliasMapTests
+public sealed class UnitAliasesTests
 {
     [Theory]
     [InlineData("g", Unit.Gram, 1)]
@@ -24,9 +23,9 @@ public sealed class UnitAliasMapTests
     [InlineData("can", Unit.Can, 1)]
     [InlineData("blikje", Unit.Can, 1)]
     [InlineData("cloves", Unit.Clove, 1)]
-    public void TryResolve_MapsAliases(string alias, Unit expectedUnit, decimal expectedMultiplier)
+    public void TryResolveMatch_MapsAliases(string alias, Unit expectedUnit, decimal expectedMultiplier)
     {
-        var success = UnitAliasMap.TryResolve(alias, out var match);
+        var success = UnitAliases.TryResolveMatch(alias, out var match);
 
         Assert.True(success);
         Assert.Equal(expectedUnit, match.Unit);

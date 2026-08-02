@@ -138,7 +138,7 @@ public sealed class ImportedIngredientLine
 
     public ImportParseMethod ParseMethod { get; init; }
 
-    public string? MatchType { get; init; }
+    public IngredientMatchType? MatchType { get; init; }
 }
 
 public sealed class ImportedInstructionStep

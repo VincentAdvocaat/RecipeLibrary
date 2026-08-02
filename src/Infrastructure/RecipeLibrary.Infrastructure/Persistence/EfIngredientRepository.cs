@@ -1,3 +1,4 @@
+using RecipeLibrary.Domain.Ingredients;
 using Microsoft.EntityFrameworkCore;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Domain.Entities;
@@ -225,7 +226,6 @@ public sealed class EfIngredientRepository(RecipeDbContext dbContext) : IIngredi
     public async Task AddMatchLogAsync(IngredientMatchLog log, CancellationToken ct = default)
     {
         await dbContext.IngredientMatchLogs.AddAsync(log, ct);
-        await dbContext.SaveChangesAsync(ct);
     }
 
     public async Task<IReadOnlyList<Tag>> SearchTagsAsync(string normalizedQuery, int take, CancellationToken ct = default)
@@ -272,7 +272,6 @@ public sealed class EfIngredientRepository(RecipeDbContext dbContext) : IIngredi
             }
         }
 
-        await dbContext.SaveChangesAsync(ct);
     }
 
     private Task<CanonicalIngredient?> LoadIngredientAsync(Guid ingredientId, CancellationToken ct) =>

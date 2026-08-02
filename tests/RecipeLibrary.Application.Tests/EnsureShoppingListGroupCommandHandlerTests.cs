@@ -1,4 +1,4 @@
-﻿using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.UseCases.ShoppingLists;
 using RecipeLibrary.Domain.Entities;
@@ -6,16 +6,18 @@ using Xunit;
 
 namespace RecipeLibrary.Application.Tests;
 
-public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
+public sealed class EnsureShoppingListGroupCommandHandlerTests
 {
     [Fact]
-    public async Task HandleAsync_ReturnsExistingGroup_WhenGroupIdProvided()
+    public async Task HandleAsync_ReturnsExistingGroup_WhenOwnerHasGroup()
     {
+        const string ownerUserId = "user-a";
         var groupId = Guid.NewGuid();
         var listId = Guid.NewGuid();
         var group = new ShoppingListGroup
         {
             Id = groupId,
+            OwnerUserId = ownerUserId,
             Lists =
             [
                 new ShoppingList { Id = listId, GroupId = groupId, Name = "List 1", StoreOrder = 1 },
@@ -23,22 +25,24 @@ public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
         };
 
         var repo = new FakeShoppingListRepository { ExistingGroup = group };
-        var sut = new GetOrCreateShoppingListGroupQueryHandler(repo);
+        var sut = new EnsureShoppingListGroupCommandHandler(repo, new NoOpUnitOfWork());
 
-        var result = await sut.HandleAsync(new GetOrCreateShoppingListGroupQuery
+        var result = await sut.HandleAsync(new EnsureShoppingListGroupCommand
         {
-            GroupId = groupId,
+            OwnerUserId = ownerUserId,
             DefaultListNameFormat = "List {0}",
         });
 
         Assert.Equal(groupId, result.GroupId);
         Assert.Single(result.Lists);
         Assert.Equal("List 1", result.Lists[0].Name);
+        Assert.False(repo.CreateGroupCalled);
     }
 
     [Fact]
     public async Task HandleAsync_CreatesGroup_WhenNoGroupExists()
     {
+        const string ownerUserId = "user-a";
         var createdGroupId = Guid.NewGuid();
         var listId = Guid.NewGuid();
         var repo = new FakeShoppingListRepository
@@ -46,25 +50,48 @@ public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
             CreatedGroup = new ShoppingListGroup
             {
                 Id = createdGroupId,
+                OwnerUserId = ownerUserId,
                 Lists = [new ShoppingList { Id = listId, GroupId = createdGroupId, Name = "List 1", StoreOrder = 1 }],
             },
         };
 
-        var sut = new GetOrCreateShoppingListGroupQueryHandler(repo);
+        var sut = new EnsureShoppingListGroupCommandHandler(repo, new NoOpUnitOfWork());
 
-        var result = await sut.HandleAsync(new GetOrCreateShoppingListGroupQuery { DefaultListNameFormat = "List {0}" });
+        var result = await sut.HandleAsync(new EnsureShoppingListGroupCommand
+        {
+            OwnerUserId = ownerUserId,
+            DefaultListNameFormat = "List {0}",
+        });
 
         Assert.Equal(createdGroupId, result.GroupId);
         Assert.True(repo.CreateGroupCalled);
+        Assert.Equal(ownerUserId, repo.LastCreateOwnerUserId);
+    }
+
+    [Fact]
+    public async Task HandleAsync_Throws_WhenOwnerUserIdMissing()
+    {
+        var sut = new EnsureShoppingListGroupCommandHandler(new FakeShoppingListRepository(), new NoOpUnitOfWork());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sut.HandleAsync(new EnsureShoppingListGroupCommand
+            {
+                OwnerUserId = null,
+                DefaultListNameFormat = "List {0}",
+            }));
     }
 
     [Fact]
     public async Task HandleAsync_Throws_WhenNameFormatMissing()
     {
-        var sut = new GetOrCreateShoppingListGroupQueryHandler(new FakeShoppingListRepository());
+        var sut = new EnsureShoppingListGroupCommandHandler(new FakeShoppingListRepository(), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            sut.HandleAsync(new GetOrCreateShoppingListGroupQuery { DefaultListNameFormat = "  " }));
+            sut.HandleAsync(new EnsureShoppingListGroupCommand
+            {
+                OwnerUserId = "user-a",
+                DefaultListNameFormat = "  ",
+            }));
     }
 
     private sealed class FakeShoppingListRepository : IShoppingListRepository
@@ -72,6 +99,7 @@ public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
         public ShoppingListGroup? ExistingGroup { get; init; }
         public ShoppingListGroup? CreatedGroup { get; init; }
         public bool CreateGroupCalled { get; private set; }
+        public string? LastCreateOwnerUserId { get; private set; }
 
         public Task<ShoppingListGroup?> GetGroupWithListsAsync(Guid groupId, CancellationToken ct = default)
         {
@@ -97,21 +125,27 @@ public sealed class GetOrCreateShoppingListGroupQueryHandlerTests
         public Task<ShoppingListGroup> CreateGroupWithPrimaryListAsync(string primaryListName, string? ownerUserId = null, CancellationToken ct = default)
         {
             CreateGroupCalled = true;
+            LastCreateOwnerUserId = ownerUserId;
             return Task.FromResult(CreatedGroup ?? new ShoppingListGroup { Id = Guid.NewGuid() });
         }
 
-        public Task<ShoppingListGroup?> GetGroupByOwnerUserIdAsync(string ownerUserId, CancellationToken ct = default) => Task.FromResult<ShoppingListGroup?>(null);
+        public Task<ShoppingListGroup?> GetGroupByOwnerUserIdAsync(string ownerUserId, CancellationToken ct = default) =>
+            Task.FromResult(
+                ExistingGroup is not null
+                && string.Equals(ExistingGroup.OwnerUserId, ownerUserId, StringComparison.Ordinal)
+                    ? ExistingGroup
+                    : null);
+
         public Task<bool> IsGroupAccessibleAsync(Guid groupId, string? ownerUserId, CancellationToken ct = default) => Task.FromResult(true);
         public Task<bool> IsListAccessibleAsync(Guid listId, string? ownerUserId, CancellationToken ct = default) => Task.FromResult(true);
         public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, CancellationToken ct = default) => Task.CompletedTask;
+        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default) => Task.CompletedTask;
         public Task<ShoppingList> AddListToGroupAsync(Guid groupId, string name, int storeOrder, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<bool> ToggleItemCheckedAsync(Guid itemId, bool isChecked, CancellationToken ct = default) => Task.FromResult(false);
         public Task<bool> RemoveItemAsync(Guid itemId, CancellationToken ct = default) => Task.FromResult(false);

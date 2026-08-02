@@ -9,7 +9,8 @@ public sealed class UpsertPantryItemCommandHandler(
     IPantryRepository repository,
     IShoppingListRepository shoppingListRepository,
     ICurrentUser userContext,
-    PantryIngredientMerger merger)
+    PantryIngredientMerger merger,
+    IUnitOfWork unitOfWork)
     : ICommandHandler<UpsertPantryItemCommand, UpsertPantryItemResult>
 {
     public async Task<UpsertPantryItemResult> HandleAsync(
@@ -38,6 +39,7 @@ public sealed class UpsertPantryItemCommandHandler(
             ownerKey);
 
         await repository.UpsertAsync(item, ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return new UpsertPantryItemResult(true, item.Id);
     }

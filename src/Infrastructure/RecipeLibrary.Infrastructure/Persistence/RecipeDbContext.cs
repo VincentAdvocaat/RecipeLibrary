@@ -413,6 +413,11 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
             b.Property(x => x.CreatedAt).IsRequired();
             b.Property(x => x.UpdatedAt).IsRequired();
 
+            // One owned group per Identity user; null-owner legacy cookie groups remain allowed.
+            b.HasIndex(x => x.OwnerUserId)
+                .IsUnique()
+                .HasFilter("[OwnerUserId] IS NOT NULL");
+
             b.HasMany(x => x.Lists)
                 .WithOne(x => x.Group)
                 .HasForeignKey(x => x.GroupId)
@@ -429,7 +434,9 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
 
             b.Property(x => x.StoreOrder).IsRequired();
             b.Property(x => x.CreatedAt).IsRequired();
-            b.Property(x => x.UpdatedAt).IsRequired();
+            b.Property(x => x.UpdatedAt)
+                .IsRequired()
+                .IsConcurrencyToken();
 
             b.HasIndex(x => new { x.GroupId, x.StoreOrder })
                 .IsUnique();

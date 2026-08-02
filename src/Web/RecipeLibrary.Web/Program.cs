@@ -111,6 +111,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LogoutPath = "/Account/Logout";
     options.AccessDeniedPath = "/Account/Login";
     options.SlidingExpiration = true;
+    // SameAsRequest: Secure on HTTPS (incl. forwarded proto); allows HTTP localhost in Development.
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
 builder.Services.AddCascadingAuthenticationState();
@@ -285,7 +287,7 @@ app.MapPost("/api/upload-recipe-image", async (IFormFile file, ICommandBus comma
     };
     var result = await commandBus.SendAsync<UploadRecipeImageCommand, UploadRecipeImageResult>(command, ct);
     return Results.Ok(new { url = result.Url });
-}).DisableAntiforgery().RequireAuthorization();
+}).DisableAntiforgery().RequireAuthorization(); // E16.F2.T5: browser FormData upload; antiforgery deferred (SameSite Lax + auth)
 
 app.MapGet("/api/recipe-images/{fileName}", async (
     string fileName,
@@ -310,13 +312,13 @@ app.MapGet("/api/recipe-images/{fileName}", async (
         return Results.NotFound();
 
     return Results.File(result.Stream, result.ContentType);
-}).DisableAntiforgery().RequireAuthorization();
+}).RequireAuthorization(); // GET: antiforgery N/A
 
 app.MapPost("/ingredients/match", async (MatchIngredientCommand command, ICommandBus commandBus, CancellationToken ct) =>
 {
     var result = await commandBus.SendAsync<MatchIngredientCommand, MatchIngredientResult>(command, ct);
     return Results.Ok(result);
-}).DisableAntiforgery().RequireAuthorization();
+}).DisableAntiforgery().RequireAuthorization(); // E16.F2.T5: Blazor loopback HttpClient; migrate to ICommandBus
 
 app.MapPost("/ingredients/parse-line", (ParseIngredientLineRequest request, IngredientNameParser parser) =>
 {
@@ -326,7 +328,7 @@ app.MapPost("/ingredients/parse-line", (ParseIngredientLineRequest request, Ingr
         Name = parsed.Name,
         Preparation = parsed.Preparation,
     });
-}).DisableAntiforgery().RequireAuthorization();
+}).DisableAntiforgery().RequireAuthorization(); // E16.F2.T5: Blazor loopback; migrate to in-process parser/bus
 
 app.MapPost("/recipes/import", async (ImportRecipeContentQuery query, IQueryBus queryBus, CancellationToken ct) =>
 {
@@ -339,11 +341,12 @@ app.MapPost("/recipes/import", async (ImportRecipeContentQuery query, IQueryBus 
     {
         return Results.BadRequest(ex.Message);
     }
-    catch (InvalidOperationException ex)
+    catch (InvalidOperationException)
     {
-        return Results.BadRequest(ex.Message);
+        // Do not leak AI/provider response bodies to clients.
+        return Results.BadRequest("Import failed.");
     }
-}).DisableAntiforgery().RequireAuthorization();
+}).DisableAntiforgery().RequireAuthorization(); // E16.F2.T5: Blazor/loopback JSON; CSRF mitigated by SameSite + auth. Prefer IQueryBus from Blazor.
 
 app.MapPost("/recipes/import-url", async (ImportRecipeFromUrlQuery query, IQueryBus queryBus, CancellationToken ct) =>
 {
@@ -356,11 +359,11 @@ app.MapPost("/recipes/import-url", async (ImportRecipeFromUrlQuery query, IQuery
     {
         return Results.BadRequest(ex.Message);
     }
-    catch (InvalidOperationException ex)
+    catch (InvalidOperationException)
     {
-        return Results.BadRequest(ex.Message);
+        return Results.BadRequest("Import failed.");
     }
-}).DisableAntiforgery().RequireAuthorization();
+}).DisableAntiforgery().RequireAuthorization(); // E16.F2.T5: same as /recipes/import
 
 app.MapPost("/recipes/import-image", async (
     HttpRequest request,
@@ -441,11 +444,11 @@ app.MapPost("/recipes/import-image", async (
     {
         return Results.BadRequest(ex.Message);
     }
-    catch (InvalidOperationException ex)
+    catch (InvalidOperationException)
     {
-        return Results.BadRequest(ex.Message);
+        return Results.BadRequest("Import failed.");
     }
-}).DisableAntiforgery().RequireAuthorization();
+}).DisableAntiforgery().RequireAuthorization(); // E16.F2.T5: browser multipart from photoUploadZone.js; SameSite + auth
 
 app.MapGet("/ingredients/search", async (string q, string? culture, IQueryBus queryBus, CancellationToken ct) =>
 {
@@ -453,7 +456,7 @@ app.MapGet("/ingredients/search", async (string q, string? culture, IQueryBus qu
         new SearchIngredientsQuery { Query = q, CultureName = culture },
         ct);
     return Results.Ok(result);
-}).DisableAntiforgery().RequireAuthorization();
+}).RequireAuthorization(); // GET: antiforgery N/A; Blazor loopback search
 
 app.MapGet("/tags/search", async (string q, IQueryBus queryBus, CancellationToken ct) =>
 {
@@ -461,7 +464,7 @@ app.MapGet("/tags/search", async (string q, IQueryBus queryBus, CancellationToke
         new SearchTagsQuery { Query = q },
         ct);
     return Results.Ok(result);
-}).DisableAntiforgery().RequireAuthorization();
+}).RequireAuthorization(); // GET: antiforgery N/A
 
 app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext httpContext) =>
 {
@@ -513,8 +516,8 @@ app.MapGet("/shopping-list/session/set", async (
         return Results.BadRequest();
     }
 
-    if (userContext.UserId is not null
-        && !await shoppingListRepository.IsGroupAccessibleAsync(groupId, userContext.UserId, ct))
+    if (string.IsNullOrWhiteSpace(userContext.UserId)
+        || !await shoppingListRepository.IsGroupAccessibleAsync(groupId, userContext.UserId, ct))
     {
         return Results.Forbid();
     }
@@ -522,7 +525,7 @@ app.MapGet("/shopping-list/session/set", async (
     httpContext.Response.Cookies.Append(
         ShoppingListSessionService.GroupIdCookieName,
         groupId.ToString(),
-        ShoppingListSessionService.CreateGroupCookieOptions());
+        ShoppingListSessionService.CreateGroupCookieOptions(secure: httpContext.Request.IsHttps));
 
     return Results.Redirect(ShoppingListSessionService.NormalizeRedirect(redirectUri));
 }).RequireAuthorization();
@@ -535,6 +538,7 @@ app.MapGet("/shopping-list/session/clear", (string? redirectUri, HttpContext htt
         {
             SameSite = SameSiteMode.Lax,
             HttpOnly = true,
+            Secure = httpContext.Request.IsHttps,
             Path = "/",
         });
 
@@ -545,7 +549,7 @@ app.MapPost("/Account/Logout", async (SignInManager<ApplicationUser> signInManag
 {
     await signInManager.SignOutAsync();
     return Results.LocalRedirect("/Account/Login");
-}).AllowAnonymous().DisableAntiforgery();
+}).AllowAnonymous().DisableAntiforgery(); // E16.F2.T5: logout link/button without antiforgery token by design
 
 app.MapPost("/ingredients/{id:guid}/tags", async (Guid id, AddIngredientTagsRequest request, ICommandBus commandBus, CancellationToken ct) =>
 {
@@ -557,7 +561,7 @@ app.MapPost("/ingredients/{id:guid}/tags", async (Guid id, AddIngredientTagsRequ
         },
         ct);
     return Results.Ok(result);
-}).DisableAntiforgery().RequireAuthorization();
+}).DisableAntiforgery().RequireAuthorization(); // E16.F2.T5: Blazor loopback; SameSite + auth
 
 app.Run();
 

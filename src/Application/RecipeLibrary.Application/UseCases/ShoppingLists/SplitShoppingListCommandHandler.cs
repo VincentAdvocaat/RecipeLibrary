@@ -8,7 +8,8 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 public sealed class SplitShoppingListCommandHandler(
     IShoppingListRepository repository,
     ICurrentUser userContext,
-    ShoppingListIngredientMerger merger)
+    ShoppingListIngredientMerger merger,
+    IUnitOfWork unitOfWork)
     : ICommandHandler<SplitShoppingListCommand, SplitShoppingListResult>
 {
     public async Task<SplitShoppingListResult> HandleAsync(
@@ -51,6 +52,8 @@ public sealed class SplitShoppingListCommandHandler(
         var remaining = primary.Items.Where(i => !selectedIds.Contains(i.Id)).ToList();
 
         var secondary = await repository.AddListToGroupAsync(command.GroupId, name, storeOrder: 2, ct);
+        // ReplaceListItemsAsync queries by id and runs its own transaction; persist the new list first.
+        await unitOfWork.SaveChangesAsync(ct);
 
         var secondaryItems = new List<ShoppingListItem>();
         foreach (var item in selected)
@@ -58,8 +61,8 @@ public sealed class SplitShoppingListCommandHandler(
             secondaryItems = merger.MergeItemIntoList(secondaryItems, item, secondary.Id).ToList();
         }
 
-        await repository.ReplaceListItemsAsync(secondary.Id, secondaryItems, ct);
-        await repository.ReplaceListItemsAsync(primary.Id, remaining, ct);
+        await repository.ReplaceListItemsAsync(secondary.Id, secondaryItems, secondary.UpdatedAt, ct);
+        await repository.ReplaceListItemsAsync(primary.Id, remaining, primary.UpdatedAt, ct);
 
         return new SplitShoppingListResult(secondary.Id, selected.Count);
     }

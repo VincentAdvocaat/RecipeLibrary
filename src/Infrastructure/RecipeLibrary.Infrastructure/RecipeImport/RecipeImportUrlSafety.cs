@@ -1,7 +1,8 @@
+using RecipeLibrary.Application.Abstractions;
 using System.Net;
 using System.Net.Sockets;
 
-namespace RecipeLibrary.Application.Abstractions;
+namespace RecipeLibrary.Infrastructure.RecipeImport;
 
 /// <summary>
 /// Blocks SSRF-prone URL import targets (loopback, private, link-local, metadata hosts).

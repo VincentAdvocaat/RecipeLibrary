@@ -608,6 +608,7 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("Id");
@@ -635,6 +636,10 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId")
+                        .IsUnique()
+                        .HasFilter("[OwnerUserId] IS NOT NULL");
 
                     b.ToTable("ShoppingListGroups");
                 });

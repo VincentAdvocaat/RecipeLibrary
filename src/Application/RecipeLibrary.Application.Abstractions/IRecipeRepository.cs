@@ -5,6 +5,7 @@ namespace RecipeLibrary.Application.Abstractions;
 
 public interface IRecipeRepository
 {
+    /// <summary>Tracks a new recipe; caller must <see cref="IUnitOfWork.SaveChangesAsync"/>.</summary>
     Task AddAsync(Recipe recipe, CancellationToken ct = default);
 
     Task<IReadOnlyList<Recipe>> GetListAsync(
@@ -22,8 +23,15 @@ public interface IRecipeRepository
 
     Task<Recipe?> GetByIdForUpdateAsync(string ownerUserId, Guid id, CancellationToken ct = default);
 
+    /// <summary>
+    /// Replaces the recipe header and children atomically (self-contained transaction).
+    /// Does not require a subsequent <see cref="IUnitOfWork.SaveChangesAsync"/>.
+    /// </summary>
     Task UpdateAsync(string ownerUserId, Recipe recipe, CancellationToken ct = default);
 
+    /// <summary>
+    /// Deletes the recipe and its children atomically (self-contained transaction).
+    /// </summary>
     Task DeleteAsync(string ownerUserId, Guid id, CancellationToken ct = default);
 
     Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(

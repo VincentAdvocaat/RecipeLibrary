@@ -1,5 +1,7 @@
+using RecipeLibrary.Domain.Ingredients;
 using System.Globalization;
 using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Domain.Entities;
 
 namespace RecipeLibrary.Application.Ingredients;
@@ -103,7 +105,7 @@ public sealed record ScoredIngredientSuggestion(
     IngredientDisplay Display);
 
 public sealed record IngredientMatchResult(
-    string MatchType,
+    IngredientMatchType MatchType,
     CanonicalIngredient? Ingredient,
     decimal Confidence,
     string NormalizedInput,
@@ -115,13 +117,13 @@ public sealed record IngredientMatchResult(
         string normalizedInput,
         IReadOnlyList<string> languageChain,
         CanonicalIngredient ingredient) =>
-        new("exact", ingredient, 1m, normalizedInput, languageChain, [], false);
+        new(IngredientMatchType.Exact, ingredient, 1m, normalizedInput, languageChain, [], false);
 
     public static IngredientMatchResult Alias(
         string normalizedInput,
         IReadOnlyList<string> languageChain,
         CanonicalIngredient ingredient) =>
-        new("alias", ingredient, 0.95m, normalizedInput, languageChain, [], false);
+        new(IngredientMatchType.Alias, ingredient, 0.95m, normalizedInput, languageChain, [], false);
 
     public static IngredientMatchResult Fuzzy(
         string normalizedInput,
@@ -129,11 +131,11 @@ public sealed record IngredientMatchResult(
         CanonicalIngredient ingredient,
         decimal confidence,
         IReadOnlyList<ScoredIngredientSuggestion> suggestions) =>
-        new("fuzzy", ingredient, confidence, normalizedInput, languageChain, suggestions, suggestions.Count > 0);
+        new(IngredientMatchType.Fuzzy, ingredient, confidence, normalizedInput, languageChain, suggestions, suggestions.Count > 0);
 
     public static IngredientMatchResult None(
         string normalizedInput,
         IReadOnlyList<string> languageChain,
         IReadOnlyList<ScoredIngredientSuggestion> suggestions) =>
-        new("none", null, 0m, normalizedInput, languageChain, suggestions, suggestions.Count > 0);
+        new(IngredientMatchType.None, null, 0m, normalizedInput, languageChain, suggestions, suggestions.Count > 0);
 }

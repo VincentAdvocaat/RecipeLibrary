@@ -1,7 +1,9 @@
 using System.Globalization;
 using RecipeLibrary.Domain.Entities;
 
-namespace RecipeLibrary.Application.Abstractions;
+namespace RecipeLibrary.Domain.Ingredients;
+
+using RecipeLibrary.Domain.Entities;
 
 /// <summary>
 /// Builds the BCP-47 language fallback chain used for matching and display resolution.

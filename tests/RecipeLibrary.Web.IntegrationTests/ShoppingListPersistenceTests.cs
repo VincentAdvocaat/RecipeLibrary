@@ -25,10 +25,11 @@ public sealed class ShoppingListPersistenceTests(SqlContainerFixture fixture)
         Assert.Equal(1, add.RecipesAdded);
         Assert.True(add.IngredientsAdded > 0);
 
-        var group = await queryBus.QueryAsync<GetOrCreateShoppingListGroupQuery, GetOrCreateShoppingListGroupResult>(
-            new GetOrCreateShoppingListGroupQuery
+        var group = await bus.SendAsync<EnsureShoppingListGroupCommand, EnsureShoppingListGroupResult>(
+            new EnsureShoppingListGroupCommand
             {
                 GroupId = fixture.Seed.ShoppingListGroupId,
+                OwnerUserId = TestDataSeeder.TestOwnerUserId,
                 DefaultListNameFormat = "List {0}",
             });
 
@@ -39,10 +40,11 @@ public sealed class ShoppingListPersistenceTests(SqlContainerFixture fixture)
         await bus.SendAsync<ToggleShoppingListItemCommand, ToggleShoppingListItemResult>(
             new ToggleShoppingListItemCommand { ItemId = itemId, IsChecked = true });
 
-        group = await queryBus.QueryAsync<GetOrCreateShoppingListGroupQuery, GetOrCreateShoppingListGroupResult>(
-            new GetOrCreateShoppingListGroupQuery
+        group = await bus.SendAsync<EnsureShoppingListGroupCommand, EnsureShoppingListGroupResult>(
+            new EnsureShoppingListGroupCommand
             {
                 GroupId = fixture.Seed.ShoppingListGroupId,
+                OwnerUserId = TestDataSeeder.TestOwnerUserId,
                 DefaultListNameFormat = "List {0}",
             });
 
@@ -64,10 +66,11 @@ public sealed class ShoppingListPersistenceTests(SqlContainerFixture fixture)
                 RecipeIds = [fixture.Seed.RecipeId],
             });
 
-        var group = await queryBus.QueryAsync<GetOrCreateShoppingListGroupQuery, GetOrCreateShoppingListGroupResult>(
-            new GetOrCreateShoppingListGroupQuery
+        var group = await bus.SendAsync<EnsureShoppingListGroupCommand, EnsureShoppingListGroupResult>(
+            new EnsureShoppingListGroupCommand
             {
                 GroupId = fixture.Seed.ShoppingListGroupId,
+                OwnerUserId = TestDataSeeder.TestOwnerUserId,
                 DefaultListNameFormat = "List {0}",
             });
 
@@ -85,10 +88,11 @@ public sealed class ShoppingListPersistenceTests(SqlContainerFixture fixture)
         Assert.NotEqual(Guid.Empty, split.NewListId);
         Assert.Equal(1, split.ItemsMoved);
 
-        group = await queryBus.QueryAsync<GetOrCreateShoppingListGroupQuery, GetOrCreateShoppingListGroupResult>(
-            new GetOrCreateShoppingListGroupQuery
+        group = await bus.SendAsync<EnsureShoppingListGroupCommand, EnsureShoppingListGroupResult>(
+            new EnsureShoppingListGroupCommand
             {
                 GroupId = fixture.Seed.ShoppingListGroupId,
+                OwnerUserId = TestDataSeeder.TestOwnerUserId,
                 DefaultListNameFormat = "List {0}",
             });
 

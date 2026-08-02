@@ -40,6 +40,7 @@ public static class RecipeImportServiceRegistration
         services.AddScoped<IRecipeImportContentFetcher, RecipeImportContentFetcher>();
         services.AddScoped<IRecipeSocialCaptionFetcher, RecipeSocialCaptionFetcher>();
         services.AddScoped<IRecipeImageTextExtractor, TesseractRecipeImageTextExtractor>();
+        services.AddScoped<IRecipeImportUrlGuard, RecipeImportUrlGuard>();
 
         var aiEnabled = configuration.GetValue<bool>($"{RecipeImportOptions.SectionName}:Ai:Enabled");
         var apiKey = configuration[$"{RecipeImportOptions.SectionName}:Ai:ApiKey"];

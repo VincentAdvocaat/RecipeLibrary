@@ -21,6 +21,7 @@ public sealed class ShoppingListSessionService(
     IHttpContextAccessor httpContextAccessor,
 
     IQueryBus queryBus,
+    ICommandBus commandBus,
 
     ICurrentUser userContext,
 
@@ -79,22 +80,15 @@ public sealed class ShoppingListSessionService(
 
 
 
-    public static CookieOptions CreateGroupCookieOptions() =>
-
+    public static CookieOptions CreateGroupCookieOptions(bool secure) =>
         new()
-
         {
-
             Expires = DateTimeOffset.UtcNow.AddYears(1),
-
             IsEssential = true,
-
             SameSite = SameSiteMode.Lax,
-
             HttpOnly = true,
-
+            Secure = secure,
             Path = "/",
-
         };
 
 
@@ -115,7 +109,7 @@ public sealed class ShoppingListSessionService(
 
 
 
-        context.Response.Cookies.Append(GroupIdCookieName, groupId.ToString(), CreateGroupCookieOptions());
+        context.Response.Cookies.Append(GroupIdCookieName, groupId.ToString(), CreateGroupCookieOptions(context.Request.IsHttps));
 
         return true;
 
@@ -135,15 +129,15 @@ public sealed class ShoppingListSessionService(
 
 
 
-    public async Task<GetOrCreateShoppingListGroupResult> GetOrCreateGroupAsync(CancellationToken ct = default)
+    public async Task<EnsureShoppingListGroupResult> GetOrCreateGroupAsync(CancellationToken ct = default)
 
     {
 
         var groupId = GetGroupIdFromCookie();
 
-        var result = await queryBus.QueryAsync<GetOrCreateShoppingListGroupQuery, GetOrCreateShoppingListGroupResult>(
+        var result = await commandBus.SendAsync<EnsureShoppingListGroupCommand, EnsureShoppingListGroupResult>(
 
-            new GetOrCreateShoppingListGroupQuery
+            new EnsureShoppingListGroupCommand
 
             {
 

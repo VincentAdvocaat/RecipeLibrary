@@ -1,6 +1,6 @@
 namespace RecipeLibrary.Application.Contracts;
 
-public sealed class GetOrCreateShoppingListGroupQuery : IQuery<GetOrCreateShoppingListGroupResult>
+public sealed class EnsureShoppingListGroupCommand : ICommand<EnsureShoppingListGroupResult>
 {
     public Guid? GroupId { get; init; }
 
@@ -21,7 +21,7 @@ public sealed class GetNextShoppingListNameQuery : IQuery<GetNextShoppingListNam
 
 public sealed record GetNextShoppingListNameResult(string Name);
 
-public sealed class GetOrCreateShoppingListGroupResult
+public sealed class EnsureShoppingListGroupResult
 {
     public Guid GroupId { get; init; }
 

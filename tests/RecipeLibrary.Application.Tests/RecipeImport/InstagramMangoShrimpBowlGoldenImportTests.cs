@@ -1,7 +1,8 @@
+using RecipeLibrary.Application.RecipeImport;
+using RecipeLibrary.Application.Tests.RecipeImport;
 using System.Text.Json;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
-using RecipeLibrary.Application.RecipeImport;
 using RecipeLibrary.Application.UseCases.RecipeImport;
 using RecipeLibrary.Application.Validators;
 using Xunit;
@@ -47,7 +48,7 @@ public sealed class InstagramMangoShrimpBowlGoldenImportTests
         var url = ReadFixture("url.txt").Trim();
         var htmlFetcher = new FakeContentFetcher("<html><body>unused</body></html>");
         var social = new FakeSocialCaptionFetcher(caption);
-        var sut = new ImportRecipeFromUrlQueryHandler(htmlFetcher, social, CreateImportService());
+        var sut = new ImportRecipeFromUrlQueryHandler(htmlFetcher, social, new AllowAllUrlGuard(), CreateImportService());
 
         var result = await sut.HandleAsync(new ImportRecipeFromUrlQuery
         {
@@ -131,5 +132,10 @@ public sealed class InstagramMangoShrimpBowlGoldenImportTests
             LastUrl = url;
             return Task.FromResult<string?>(caption);
         }
+    }
+
+    private sealed class AllowAllUrlGuard : IRecipeImportUrlGuard
+    {
+        public Task EnsurePublicHttpUrlAsync(string url, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

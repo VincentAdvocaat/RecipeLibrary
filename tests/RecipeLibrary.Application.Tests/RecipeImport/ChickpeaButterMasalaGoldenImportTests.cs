@@ -1,8 +1,9 @@
+using RecipeLibrary.Application.RecipeImport;
+using RecipeLibrary.Application.Tests.RecipeImport;
 using System.Net;
 using System.Text.Json;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
-using RecipeLibrary.Application.RecipeImport;
 using RecipeLibrary.Application.UseCases.RecipeImport;
 using RecipeLibrary.Application.UseCases.Recipes;
 using RecipeLibrary.Application.Validators;
@@ -95,7 +96,7 @@ public sealed class ChickpeaButterMasalaGoldenImportTests
         var html = WrapTextAsHtml(ReadFixture("entire-web-page.txt"));
         var url = ReadFixture("url.txt").Trim();
         var fetcher = new FakeContentFetcher(html);
-        var sut = new ImportRecipeFromUrlQueryHandler(fetcher, new NullSocialCaptionFetcher(), CreateImportService());
+        var sut = new ImportRecipeFromUrlQueryHandler(fetcher, new NullSocialCaptionFetcher(), new AllowAllUrlGuard(), CreateImportService());
 
         var result = await sut.HandleAsync(new ImportRecipeFromUrlQuery
         {
@@ -183,5 +184,10 @@ public sealed class ChickpeaButterMasalaGoldenImportTests
     {
         public Task<string?> TryFetchCaptionAsync(string url, CancellationToken ct = default) =>
             Task.FromResult<string?>(null);
+    }
+
+    private sealed class AllowAllUrlGuard : IRecipeImportUrlGuard
+    {
+        public Task EnsurePublicHttpUrlAsync(string url, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

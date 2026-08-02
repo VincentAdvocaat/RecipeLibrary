@@ -24,12 +24,49 @@ public sealed class CreateRecipeCommandValidatorTests
         CreateRecipeCommandValidator.ValidateAndThrow(command);
     }
 
-    private static CreateRecipeCommand ValidCommand(string title = "Test Recipe", string? preparation = null) => new()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Validate_AcceptsNullOrEmptyImageUrl(string? imageUrl)
+    {
+        var command = ValidCommand(imageUrl: imageUrl);
+
+        CreateRecipeCommandValidator.ValidateAndThrow(command);
+    }
+
+    [Fact]
+    public void Validate_AcceptsAppRelativeRecipeImagePath()
+    {
+        var fileName = $"{Guid.NewGuid():D}.jpg";
+        var command = ValidCommand(imageUrl: $"/api/recipe-images/{fileName}");
+
+        CreateRecipeCommandValidator.ValidateAndThrow(command);
+    }
+
+    [Theory]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("https://evil.com/x.png")]
+    [InlineData("//evil.com/x")]
+    [InlineData("/api/other/x")]
+    public void Validate_RejectsUnsafeOrNonRecipeImageUrls(string imageUrl)
+    {
+        var command = ValidCommand(imageUrl: imageUrl);
+
+        var ex = Assert.Throws<ArgumentException>(() => CreateRecipeCommandValidator.ValidateAndThrow(command));
+        Assert.Equal(nameof(CreateRecipeCommand.ImageUrl), ex.ParamName);
+    }
+
+    private static CreateRecipeCommand ValidCommand(
+        string title = "Test Recipe",
+        string? preparation = null,
+        string? imageUrl = null) => new()
     {
         Title = title,
         Category = 2,
         PreparationTimeMinutes = 10,
         CookingTimeMinutes = 20,
+        ImageUrl = imageUrl,
         Ingredients =
         [
             new CreateRecipeIngredientDto

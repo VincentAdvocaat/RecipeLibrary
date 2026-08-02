@@ -4,12 +4,14 @@ namespace RecipeLibrary.Domain.Entities;
 
 /// <summary>
 /// Aggregate root representing a recipe with its ingredients and instruction steps.
+/// Product decision (E14 / E16.F2.T7): each recipe belongs to exactly one Identity user
+/// (<see cref="OwnerUserId"/>). Libraries are private per user — no shared recipe edit.
 /// </summary>
 public sealed class Recipe
 {
     public Guid Id { get; set; }
 
-    /// <summary>ASP.NET Core Identity user id of the recipe owner.</summary>
+    /// <summary>ASP.NET Core Identity user id of the recipe owner (private library).</summary>
     public string OwnerUserId { get; set; } = string.Empty;
 
     public RecipeTitle Title { get; set; }

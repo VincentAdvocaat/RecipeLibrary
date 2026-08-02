@@ -19,7 +19,7 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         var sut = new AddManualShoppingListItemCommandHandler(
             new FakeShoppingListRepository(),
             new FixedCurrentUser("user-a"),
-            _merger);
+            _merger, new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new AddManualShoppingListItemCommand
@@ -46,7 +46,7 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         var sut = new AddManualShoppingListItemCommandHandler(
             repo,
             new FixedCurrentUser("user-a"),
-            _merger);
+            _merger, new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new AddManualShoppingListItemCommand
         {
@@ -89,7 +89,7 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         var sut = new AddManualShoppingListItemCommandHandler(
             repo,
             new FixedCurrentUser("user-a"),
-            _merger);
+            _merger, new NoOpUnitOfWork());
 
         await sut.HandleAsync(new AddManualShoppingListItemCommand
         {
@@ -113,7 +113,7 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         public Task<ShoppingList?> GetListByIdAsync(Guid listId, CancellationToken ct = default) =>
             Task.FromResult(List?.Id == listId ? List : null);
 
-        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, CancellationToken ct = default)
+        public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default)
         {
             LastReplacedListId = shoppingListId;
             LastReplacedItems = items;
@@ -128,7 +128,6 @@ public sealed class AddManualShoppingListItemCommandHandlerTests
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;

@@ -5,6 +5,7 @@
 @using RecipeLibrary.Domain.ValueObjects
 @using RecipeLibrary.Resources
 @using RecipeLibrary.Web.Models
+@using RecipeLibrary.Web.Services
 @using RecipeCategory = RecipeLibrary.Domain.ValueObjects.RecipeCategory
 @using RecipeDifficulty = RecipeLibrary.Domain.ValueObjects.Difficulty
 @inject ICommandBus CommandBus
@@ -379,7 +380,7 @@
             };
 
             _ = await CommandBus.SendAsync<UpdateRecipeCommand, UpdateRecipeResult>(command);
-            await ApplyIngredientTagsAsync();
+            await RecipeIngredientEditorSupport.ApplyIngredientTagsAsync(CommandBus, _vm.Ingredients, _ingredientTags);
             _saveSucceeded = true;
             _statusMessage = L["RecipeEdit.Saved.Message"];
             Navigation.NavigateTo($"/recipes/{RecipeId}");
@@ -394,37 +395,6 @@
         {
             _isSaving = false;
             StateHasChanged();
-        }
-    }
-
-    private async Task ApplyIngredientTagsAsync()
-    {
-        if (_ingredientTags.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var ingredient in _vm.Ingredients)
-        {
-            var input = ingredient.Name.Trim();
-            if (input.Length == 0)
-            {
-                continue;
-            }
-
-            var payload = await CommandBus.SendAsync<MatchIngredientCommand, MatchIngredientResult>(
-                IngredientApi.MatchCommand(input));
-            if (payload.Ingredient?.Id is not Guid ingredientId)
-            {
-                continue;
-            }
-
-            await CommandBus.SendAsync<AddIngredientTagsCommand, AddIngredientTagsResult>(
-                new AddIngredientTagsCommand
-                {
-                    IngredientId = ingredientId,
-                    Tags = _ingredientTags,
-                });
         }
     }
 }

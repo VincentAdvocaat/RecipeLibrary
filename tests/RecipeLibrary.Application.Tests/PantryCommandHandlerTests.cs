@@ -11,10 +11,10 @@ namespace RecipeLibrary.Application.Tests;
 public sealed class PantryCommandHandlerTests
 {
     [Fact]
-    public async Task GetPantryItems_ReturnsMappedItems_ForGroupOwnerKey()
+    public async Task GetPantryItems_ReturnsMappedItems_ForOwnerKey()
     {
         var groupId = Guid.NewGuid();
-        var ownerKey = $"group:{groupId:D}";
+        const string ownerKey = "user-a";
         var pantry = new RecordingPantryRepository
         {
             Items =
@@ -36,7 +36,7 @@ public sealed class PantryCommandHandlerTests
         var sut = new GetPantryItemsQueryHandler(
             pantry,
             new RecordingShoppingListRepository(),
-            new AnonymousCurrentUser());
+            new FixedCurrentUser(ownerKey));
 
         var result = await sut.HandleAsync(new GetPantryItemsQuery { ShoppingListGroupId = groupId });
 
@@ -84,8 +84,8 @@ public sealed class PantryCommandHandlerTests
         var sut = new UpsertPantryItemCommandHandler(
             pantry,
             new RecordingShoppingListRepository(),
-            new AnonymousCurrentUser(),
-            new PantryIngredientMerger(new IngredientTextNormalizer()));
+            new FixedCurrentUser("user-a"),
+            new PantryIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new UpsertPantryItemCommand
         {
@@ -97,7 +97,7 @@ public sealed class PantryCommandHandlerTests
         Assert.NotEqual(Guid.Empty, result.ItemId);
         Assert.NotNull(pantry.UpsertedItem);
         Assert.Equal("Peper", pantry.UpsertedItem!.DisplayName);
-        Assert.Equal($"group:{groupId:D}", pantry.UpsertedItem.OwnerUserId);
+        Assert.Equal("user-a", pantry.UpsertedItem.OwnerUserId);
     }
 
     [Fact]
@@ -106,8 +106,8 @@ public sealed class PantryCommandHandlerTests
         var sut = new UpsertPantryItemCommandHandler(
             new RecordingPantryRepository(),
             new RecordingShoppingListRepository(),
-            new AnonymousCurrentUser(),
-            new PantryIngredientMerger(new IngredientTextNormalizer()));
+            new FixedCurrentUser("user-a"),
+            new PantryIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new UpsertPantryItemCommand
@@ -122,7 +122,7 @@ public sealed class PantryCommandHandlerTests
     {
         var groupId = Guid.NewGuid();
         var existingId = Guid.NewGuid();
-        var ownerKey = $"group:{groupId:D}";
+        const string ownerKey = "user-a";
         var pantry = new RecordingPantryRepository
         {
             Items =
@@ -138,8 +138,8 @@ public sealed class PantryCommandHandlerTests
         var sut = new UpsertPantryItemCommandHandler(
             pantry,
             new RecordingShoppingListRepository(),
-            new AnonymousCurrentUser(),
-            new PantryIngredientMerger(new IngredientTextNormalizer()));
+            new FixedCurrentUser(ownerKey),
+            new PantryIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new UpsertPantryItemCommand
         {
@@ -155,7 +155,7 @@ public sealed class PantryCommandHandlerTests
     {
         var groupId = Guid.NewGuid();
         var itemId = Guid.NewGuid();
-        var ownerKey = $"group:{groupId:D}";
+        const string ownerKey = "user-a";
         var pantry = new RecordingPantryRepository
         {
             Items =
@@ -171,7 +171,7 @@ public sealed class PantryCommandHandlerTests
         var sut = new RemovePantryItemCommandHandler(
             pantry,
             new RecordingShoppingListRepository(),
-            new AnonymousCurrentUser());
+            new FixedCurrentUser(ownerKey), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new RemovePantryItemCommand
         {
@@ -190,7 +190,7 @@ public sealed class PantryCommandHandlerTests
     {
         var listId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
-        var ownerKey = $"group:{groupId:D}";
+        const string ownerKey = "user-a";
         var keepId = Guid.NewGuid();
         var removeId = Guid.NewGuid();
         var shopping = new RecordingShoppingListRepository
@@ -236,8 +236,8 @@ public sealed class PantryCommandHandlerTests
         var sut = new ApplyPantryToShoppingListCommandHandler(
             shopping,
             pantry,
-            new AnonymousCurrentUser(),
-            new PantryExclusionFilter(merger));
+            new FixedCurrentUser(ownerKey),
+            new PantryExclusionFilter(merger), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new ApplyPantryToShoppingListCommand { ShoppingListId = listId });
 
@@ -275,8 +275,8 @@ public sealed class PantryCommandHandlerTests
         var sut = new ApplyPantryToShoppingListCommandHandler(
             shopping,
             new RecordingPantryRepository(),
-            new AnonymousCurrentUser(),
-            new PantryExclusionFilter(merger));
+            new FixedCurrentUser("user-a"),
+            new PantryExclusionFilter(merger), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new ApplyPantryToShoppingListCommand { ShoppingListId = listId });
 
