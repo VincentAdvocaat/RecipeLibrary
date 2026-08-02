@@ -59,6 +59,13 @@
                         <AppNavLink Href="/pantry"
                                     CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
                                     data-testid="@UiTestIds.NavPantry">@L["Nav.Pantry"]</AppNavLink>
+                        <AuthorizeView Roles="@ContentModerationOptions.AdminRoleName">
+                            <Authorized>
+                                <AppNavLink Href="/admin/moderation"
+                                            CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
+                                            data-testid="@UiTestIds.NavModeration">@L["Nav.Moderation"]</AppNavLink>
+                            </Authorized>
+                        </AuthorizeView>
                     </nav>
                 }
             </div>

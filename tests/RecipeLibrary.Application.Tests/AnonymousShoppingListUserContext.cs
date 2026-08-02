@@ -9,4 +9,6 @@ internal sealed class AnonymousCurrentUser : ICurrentUser
     public string? UserName => null;
 
     public bool IsAuthenticated => false;
+
+    public bool IsInRole(string roleName) => false;
 }

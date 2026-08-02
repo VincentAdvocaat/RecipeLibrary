@@ -338,4 +338,19 @@
   <data name="Nav.Terms" xml:space="preserve"><value>Terms of service</value></data>
   <data name="Auth.Register.TermsBefore" xml:space="preserve"><value>By creating an account you agree to the </value></data>
   <data name="Auth.Register.TermsAfter" xml:space="preserve"><value>.</value></data>
+  <data name="ContentModeration.Rejected" xml:space="preserve"><value>This content could not be saved because it did not pass our safety checks. Please revise the text or image and try again.</value></data>
+  <data name="Moderation.PageTitle" xml:space="preserve"><value>Content moderation</value></data>
+  <data name="Moderation.Loading" xml:space="preserve"><value>Loading moderation queue…</value></data>
+  <data name="Moderation.NeedsReview.Heading" xml:space="preserve"><value>Needs review</value></data>
+  <data name="Moderation.NeedsReview.Empty" xml:space="preserve"><value>No recipes waiting for review.</value></data>
+  <data name="Moderation.Reports.Heading" xml:space="preserve"><value>Open reports</value></data>
+  <data name="Moderation.Reports.Empty" xml:space="preserve"><value>No open reports.</value></data>
+  <data name="Moderation.Reports.NoReason" xml:space="preserve"><value>No reason provided</value></data>
+  <data name="Moderation.ApproveButton" xml:space="preserve"><value>Approve</value></data>
+  <data name="Moderation.RejectButton" xml:space="preserve"><value>Reject</value></data>
+  <data name="Moderation.DecisionSaved" xml:space="preserve"><value>Decision saved.</value></data>
+  <data name="Nav.Moderation" xml:space="preserve"><value>Moderation</value></data>
+  <data name="RecipeDetail.ReportButton" xml:space="preserve"><value>Report</value></data>
+  <data name="RecipeDetail.Report.Submitted" xml:space="preserve"><value>Thanks — your report was submitted for review.</value></data>
+  <data name="RecipeDetail.Report.Failed" xml:space="preserve"><value>Could not submit the report. Please try again.</value></data>
 </root>

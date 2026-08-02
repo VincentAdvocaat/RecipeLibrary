@@ -25,7 +25,9 @@ public sealed class CreateRecipeCommandHandlerTests
             normalizer,
             matcher,
             new IngredientLineResolver(new IngredientNameParser()),
-            new FixedCurrentUser(TestUserId), new NoOpUnitOfWork());
+            new FixedCurrentUser(TestUserId),
+            new NoOpUnitOfWork(),
+            TestContentModeration.Disabled());
 
         var result = await sut.HandleAsync(new CreateRecipeCommand
         {

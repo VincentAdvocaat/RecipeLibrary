@@ -1,11 +1,12 @@
 window.RecipeLibrary = window.RecipeLibrary || {};
 
 window.RecipeLibrary.photoUploadZone = {
-  init: function (elementRef, dotNetRef, uploadFailedMessage) {
+  init: function (elementRef, dotNetRef, uploadFailedMessage, contentRejectedMessage) {
     const el = elementRef;
     if (!el) return;
 
     const failedMsg = uploadFailedMessage || 'Upload failed.';
+    const rejectedMsg = contentRejectedMessage || failedMsg;
 
     function prevent(e) {
       e.preventDefault();
@@ -22,12 +23,24 @@ window.RecipeLibrary.photoUploadZone = {
         method: 'POST',
         body: formData
       })
-        .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('Upload failed')); })
+        .then(async function (r) {
+          if (r.ok) return r.json();
+          let code = null;
+          try {
+            const body = await r.json();
+            code = body && body.error;
+          } catch (_) { /* ignore */ }
+          if (code === 'content_rejected') {
+            return Promise.reject(Object.assign(new Error('content_rejected'), { code: 'content_rejected' }));
+          }
+          return Promise.reject(new Error('Upload failed'));
+        })
         .then(function (data) {
           if (data && data.url) dotNetRef.invokeMethodAsync('SetImageUrlFromDrop', data.url);
         })
-        .catch(function () {
-          dotNetRef.invokeMethodAsync('SetUploadError', failedMsg);
+        .catch(function (err) {
+          const msg = err && err.code === 'content_rejected' ? rejectedMsg : failedMsg;
+          dotNetRef.invokeMethodAsync('SetUploadError', msg);
         });
     }
 

@@ -338,4 +338,19 @@
   <data name="Nav.Terms" xml:space="preserve"><value>Gebruiksvoorwaarden</value></data>
   <data name="Auth.Register.TermsBefore" xml:space="preserve"><value>Door een account aan te maken ga je akkoord met de </value></data>
   <data name="Auth.Register.TermsAfter" xml:space="preserve"><value>.</value></data>
+  <data name="ContentModeration.Rejected" xml:space="preserve"><value>Deze inhoud kon niet worden opgeslagen omdat die onze veiligheidscontrole niet heeft doorstaan. Pas de tekst of afbeelding aan en probeer het opnieuw.</value></data>
+  <data name="Moderation.PageTitle" xml:space="preserve"><value>Contentmoderatie</value></data>
+  <data name="Moderation.Loading" xml:space="preserve"><value>Moderatiewachtrij laden…</value></data>
+  <data name="Moderation.NeedsReview.Heading" xml:space="preserve"><value>Te beoordelen</value></data>
+  <data name="Moderation.NeedsReview.Empty" xml:space="preserve"><value>Geen recepten in de wachtrij.</value></data>
+  <data name="Moderation.Reports.Heading" xml:space="preserve"><value>Open meldingen</value></data>
+  <data name="Moderation.Reports.Empty" xml:space="preserve"><value>Geen open meldingen.</value></data>
+  <data name="Moderation.Reports.NoReason" xml:space="preserve"><value>Geen reden opgegeven</value></data>
+  <data name="Moderation.ApproveButton" xml:space="preserve"><value>Goedkeuren</value></data>
+  <data name="Moderation.RejectButton" xml:space="preserve"><value>Afwijzen</value></data>
+  <data name="Moderation.DecisionSaved" xml:space="preserve"><value>Beslissing opgeslagen.</value></data>
+  <data name="Nav.Moderation" xml:space="preserve"><value>Moderatie</value></data>
+  <data name="RecipeDetail.ReportButton" xml:space="preserve"><value>Melden</value></data>
+  <data name="RecipeDetail.Report.Submitted" xml:space="preserve"><value>Bedankt — je melding is ingediend voor beoordeling.</value></data>
+  <data name="RecipeDetail.Report.Failed" xml:space="preserve"><value>De melding kon niet worden verstuurd. Probeer het opnieuw.</value></data>
 </root>

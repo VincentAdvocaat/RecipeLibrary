@@ -66,7 +66,9 @@ public sealed class UpdateRecipeCommandHandlerTests
             normalizer,
             new IngredientMatcher(ingredientRepo, normalizer, new IngredientSimilarityScorer()),
             new IngredientLineResolver(new IngredientNameParser()),
-            new FixedCurrentUser(TestUserId), new NoOpUnitOfWork());
+            new FixedCurrentUser(TestUserId),
+            new NoOpUnitOfWork(),
+            TestContentModeration.Disabled());
     }
 
     private sealed class FakeRecipeRepository(Recipe? existing) : IRecipeRepository
