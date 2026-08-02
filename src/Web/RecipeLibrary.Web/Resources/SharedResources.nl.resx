@@ -319,4 +319,23 @@
   <data name="RecipeOverview.AddedToShoppingList.Message" xml:space="preserve"><value>{0} recepten toegevoegd aan boodschappenlijst.</value></data>
   <data name="ShoppingList.Confirm.Yes" xml:space="preserve"><value>Ja</value></data>
   <data name="ShoppingList.Confirm.No" xml:space="preserve"><value>Nee</value></data>
+  <data name="Terms.PageTitle" xml:space="preserve"><value>Gebruiksvoorwaarden</value></data>
+  <data name="Terms.Heading" xml:space="preserve"><value>Gebruiksvoorwaarden</value></data>
+  <data name="Terms.LastUpdated" xml:space="preserve"><value>Laatst bijgewerkt: augustus 2026</value></data>
+  <data name="Terms.Service.Heading" xml:space="preserve"><value>Over Recipe Library</value></data>
+  <data name="Terms.Service.Body" xml:space="preserve"><value>Recipe Library laat je recepten, boodschappenlijsten en voorraad bijhouden voor persoonlijk gebruik. Door een account aan te maken of de dienst te gebruiken, ga je akkoord met deze voorwaarden.</value></data>
+  <data name="Terms.ImportedContent.Heading" xml:space="preserve"><value>Geïmporteerde en geüploade content</value></data>
+  <data name="Terms.ImportedContent.Body" xml:space="preserve"><value>Jij bent verantwoordelijk voor alle content die je importeert of uploadt, inclusief foto's, tekst van websites of documenten, en overig materiaal dat je aan Recipe Library toevoegt. Importeer alleen content waarvan je eigenaar bent of waarvoor je toestemming hebt. Upload of importeer geen illegale, inbreukmakende of schadelijke content. Recipe Library controleert geïmporteerde content niet op legaliteit en is niet aansprakelijk voor content die jij toevoegt.</value></data>
+  <data name="Terms.UserContent.Heading" xml:space="preserve"><value>Jouw recepten en gegevens</value></data>
+  <data name="Terms.UserContent.Body" xml:space="preserve"><value>Recepten en bijbehorende gegevens in je account zijn privé voor jou. Jij blijft verantwoordelijk voor hoe je die content buiten de dienst deelt of hergebruikt.</value></data>
+  <data name="Terms.Account.Heading" xml:space="preserve"><value>Jouw account</value></data>
+  <data name="Terms.Account.Body" xml:space="preserve"><value>Houd je inloggegevens veilig. Jij bent verantwoordelijk voor activiteit onder jouw account. We kunnen accounts opschorten of verwijderen die de dienst misbruiken of deze voorwaarden schenden.</value></data>
+  <data name="Terms.Availability.Heading" xml:space="preserve"><value>Beschikbaarheid</value></data>
+  <data name="Terms.Availability.Body" xml:space="preserve"><value>We streven ernaar Recipe Library beschikbaar te houden, maar garanderen geen ononderbroken toegang. Functies kunnen wijzigen naarmate het product zich ontwikkelt.</value></data>
+  <data name="Terms.Changes.Heading" xml:space="preserve"><value>Wijzigingen van deze voorwaarden</value></data>
+  <data name="Terms.Changes.Body" xml:space="preserve"><value>We kunnen deze voorwaarden van tijd tot tijd bijwerken. Door Recipe Library te blijven gebruiken na wijzigingen, ga je akkoord met de bijgewerkte voorwaarden. De datum hierboven geeft aan wanneer deze pagina voor het laatst is herzien.</value></data>
+  <data name="Terms.Link" xml:space="preserve"><value>gebruiksvoorwaarden</value></data>
+  <data name="Nav.Terms" xml:space="preserve"><value>Gebruiksvoorwaarden</value></data>
+  <data name="Auth.Register.TermsBefore" xml:space="preserve"><value>Door een account aan te maken ga je akkoord met de </value></data>
+  <data name="Auth.Register.TermsAfter" xml:space="preserve"><value>.</value></data>
 </root>

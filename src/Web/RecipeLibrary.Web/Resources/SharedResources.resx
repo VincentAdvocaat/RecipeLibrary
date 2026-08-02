@@ -319,4 +319,23 @@
   <data name="RecipeOverview.AddedToShoppingList.Message" xml:space="preserve"><value>{0} recipes added to shopping list.</value></data>
   <data name="ShoppingList.Confirm.Yes" xml:space="preserve"><value>Yes</value></data>
   <data name="ShoppingList.Confirm.No" xml:space="preserve"><value>No</value></data>
+  <data name="Terms.PageTitle" xml:space="preserve"><value>Terms of service</value></data>
+  <data name="Terms.Heading" xml:space="preserve"><value>Terms of service</value></data>
+  <data name="Terms.LastUpdated" xml:space="preserve"><value>Last updated: August 2026</value></data>
+  <data name="Terms.Service.Heading" xml:space="preserve"><value>About Recipe Library</value></data>
+  <data name="Terms.Service.Body" xml:space="preserve"><value>Recipe Library lets you store recipes, shopping lists, and pantry items for personal use. By creating an account or using the service, you agree to these terms.</value></data>
+  <data name="Terms.ImportedContent.Heading" xml:space="preserve"><value>Imported and uploaded content</value></data>
+  <data name="Terms.ImportedContent.Body" xml:space="preserve"><value>You are responsible for all content you import or upload, including photos, text from websites or documents, and any other material you add to Recipe Library. You must only import content that you own or have permission to use. Do not upload or import illegal, infringing, or harmful material. Recipe Library does not verify the legality of imported content and is not liable for content you choose to add.</value></data>
+  <data name="Terms.UserContent.Heading" xml:space="preserve"><value>Your recipes and data</value></data>
+  <data name="Terms.UserContent.Body" xml:space="preserve"><value>Recipes and related data in your account are private to you. You remain responsible for how you share or reuse that content outside the service.</value></data>
+  <data name="Terms.Account.Heading" xml:space="preserve"><value>Your account</value></data>
+  <data name="Terms.Account.Body" xml:space="preserve"><value>Keep your login details secure. You are responsible for activity under your account. We may suspend or remove accounts that misuse the service or violate these terms.</value></data>
+  <data name="Terms.Availability.Heading" xml:space="preserve"><value>Availability</value></data>
+  <data name="Terms.Availability.Body" xml:space="preserve"><value>We aim to keep Recipe Library available, but we do not guarantee uninterrupted access. Features may change as the product evolves.</value></data>
+  <data name="Terms.Changes.Heading" xml:space="preserve"><value>Changes to these terms</value></data>
+  <data name="Terms.Changes.Body" xml:space="preserve"><value>We may update these terms from time to time. Continued use of Recipe Library after changes means you accept the updated terms. The date above shows when this page was last revised.</value></data>
+  <data name="Terms.Link" xml:space="preserve"><value>Terms of service</value></data>
+  <data name="Nav.Terms" xml:space="preserve"><value>Terms of service</value></data>
+  <data name="Auth.Register.TermsBefore" xml:space="preserve"><value>By creating an account you agree to the </value></data>
+  <data name="Auth.Register.TermsAfter" xml:space="preserve"><value>.</value></data>
 </root>
