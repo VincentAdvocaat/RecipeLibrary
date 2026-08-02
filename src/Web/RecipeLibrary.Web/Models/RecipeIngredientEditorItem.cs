@@ -1,11 +1,9 @@
-using System.ComponentModel.DataAnnotations;
 using RecipeLibrary.Domain.ValueObjects;
 
 namespace RecipeLibrary.Web.Models;
 
 public sealed class RecipeIngredientEditorItem
 {
-    [Required]
     public string Name { get; set; } = string.Empty;
 
     public string? Preparation { get; set; }

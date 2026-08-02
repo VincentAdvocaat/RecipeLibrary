@@ -169,7 +169,6 @@
 
     private sealed class CreateRecipeVm
     {
-        [Required]
         public string Title { get; set; } = string.Empty;
 
         public string? Description { get; set; }
@@ -196,7 +195,6 @@
     {
         public int StepNumber { get; set; }
 
-        [Required]
         public string Text { get; set; } = string.Empty;
     }
 
@@ -352,25 +350,21 @@
         _statusMessage = null;
         _saveSucceeded = false;
 
-        if (string.IsNullOrWhiteSpace(_vm.Title))
+        // Always Validate() so ValidationSummary refreshes and cannot keep stale Range errors
+        // after a localized early-return. Required fields use L[...] (not [Required]+SharedResources).
+        var annotationsValid = editContext.Validate();
+
+        _statusMessage = RecipeEditorValidation.GetRequiredFieldError(
+            L,
+            _vm.Title,
+            _vm.Ingredients,
+            _vm.Steps.Select(static s => s.Text));
+        if (_statusMessage is not null)
         {
-            _statusMessage = L["RecipeCreate.Title.Required"];
             return;
         }
 
-        if (_vm.Ingredients.All(static i => string.IsNullOrWhiteSpace(i.Name)))
-        {
-            _statusMessage = L["RecipeCreate.Ingredient.Name.Required"];
-            return;
-        }
-
-        if (_vm.Steps.All(static s => string.IsNullOrWhiteSpace(s.Text)))
-        {
-            _statusMessage = L["RecipeCreate.Step.Text.Required"];
-            return;
-        }
-
-        if (!editContext.Validate())
+        if (!annotationsValid)
         {
             return;
         }
@@ -396,11 +390,13 @@
                 Difficulty = _vm.DifficultyLevel,
                 Category = _vm.Category,
                 Ingredients = RecipeIngredientSaveHelper.ToIngredientDtos(_vm.Ingredients),
-                InstructionSteps = _vm.Steps.Select(x => new CreateRecipeInstructionStepDto
-                {
-                    StepNumber = x.StepNumber,
-                    Text = x.Text,
-                }).ToList(),
+                InstructionSteps = _vm.Steps
+                    .Where(static x => !string.IsNullOrWhiteSpace(x.Text))
+                    .Select((x, index) => new CreateRecipeInstructionStepDto
+                    {
+                        StepNumber = index + 1,
+                        Text = x.Text.Trim(),
+                    }).ToList(),
             };
 
             _ = await CommandBus.SendAsync<UpdateRecipeCommand, UpdateRecipeResult>(command);
