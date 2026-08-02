@@ -143,7 +143,8 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
             pantryRepo ?? new FakePantryRepository(),
             new FixedCurrentUser(TestUserId),
             new ShoppingListIngredientMerger(new IngredientTextNormalizer()),
-            new PantryExclusionFilter(new PantryIngredientMerger(new IngredientTextNormalizer())));
+            new PantryExclusionFilter(new PantryIngredientMerger(new IngredientTextNormalizer())),
+            new NoOpUnitOfWork());
 
     private sealed class FakeRecipeRepository(Recipe recipe) : IRecipeRepository
     {
@@ -208,7 +209,6 @@ public sealed class AddRecipesToShoppingListCommandHandlerTests
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;

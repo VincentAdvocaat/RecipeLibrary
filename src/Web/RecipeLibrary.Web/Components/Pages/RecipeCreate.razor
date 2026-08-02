@@ -656,17 +656,17 @@
         for (var i = 0; i < draft.Ingredients.Count; i++)
         {
             var matchType = draft.Ingredients[i].MatchType;
-            if (string.IsNullOrWhiteSpace(matchType))
+            if (matchType is null)
             {
                 continue;
             }
 
             _ingredientMatchMessages[i] = matchType switch
             {
-                "exact" => L["RecipeCreate.Ingredient.Match.Exact"],
-                "alias" => L["RecipeCreate.Ingredient.Match.Alias"],
-                "fuzzy" => L["RecipeCreate.Ingredient.Match.Fuzzy", draft.Ingredients[i].Name, "—"],
-                "none" => L["RecipeCreate.Ingredient.Match.None"],
+                IngredientMatchType.Exact => L["RecipeCreate.Ingredient.Match.Exact"],
+                IngredientMatchType.Alias => L["RecipeCreate.Ingredient.Match.Alias"],
+                IngredientMatchType.Fuzzy => L["RecipeCreate.Ingredient.Match.Fuzzy", draft.Ingredients[i].Name, "—"],
+                IngredientMatchType.None => L["RecipeCreate.Ingredient.Match.None"],
                 _ => string.Empty,
             };
         }
@@ -809,7 +809,7 @@
             };
 
             var result = await CommandBus.SendAsync<CreateRecipeCommand, CreateRecipeResult>(command);
-            await ApplyIngredientTagsAsync();
+            await RecipeIngredientEditorSupport.ApplyIngredientTagsAsync(CommandBus, _vm.Ingredients, _ingredientTags);
             _saveSucceeded = true;
             _statusMessage = L["RecipeCreate.Saved.Message"];
             Navigation.NavigateTo($"/recipes/{result.RecipeId}");
@@ -824,37 +824,6 @@
         {
             _isSaving = false;
             StateHasChanged();
-        }
-    }
-
-    private async Task ApplyIngredientTagsAsync()
-    {
-        if (_ingredientTags.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var ingredient in _vm.Ingredients)
-        {
-            var input = ingredient.Name.Trim();
-            if (input.Length == 0)
-            {
-                continue;
-            }
-
-            var payload = await CommandBus.SendAsync<MatchIngredientCommand, MatchIngredientResult>(
-                IngredientApi.MatchCommand(input));
-            if (payload.Ingredient?.Id is not Guid ingredientId)
-            {
-                continue;
-            }
-
-            await CommandBus.SendAsync<AddIngredientTagsCommand, AddIngredientTagsResult>(
-                new AddIngredientTagsCommand
-                {
-                    IngredientId = ingredientId,
-                    Tags = _ingredientTags,
-                });
         }
     }
 }

@@ -48,7 +48,7 @@ public sealed class YouTubePanangCurryGoldenImportTests
         var url = ReadFixture("url.txt").Trim();
         var htmlFetcher = new FakeContentFetcher("<html><body>unused</body></html>");
         var social = new FakeSocialCaptionFetcher(caption);
-        var sut = new ImportRecipeFromUrlQueryHandler(htmlFetcher, social, CreateImportService());
+        var sut = new ImportRecipeFromUrlQueryHandler(htmlFetcher, social, new AllowAllUrlGuard(), CreateImportService());
 
         var result = await sut.HandleAsync(new ImportRecipeFromUrlQuery
         {
@@ -132,5 +132,10 @@ public sealed class YouTubePanangCurryGoldenImportTests
             LastUrl = url;
             return Task.FromResult<string?>(caption);
         }
+    }
+
+    private sealed class AllowAllUrlGuard : IRecipeImportUrlGuard
+    {
+        public Task EnsurePublicHttpUrlAsync(string url, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

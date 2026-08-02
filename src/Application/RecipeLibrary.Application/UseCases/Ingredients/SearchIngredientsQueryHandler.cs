@@ -1,3 +1,4 @@
+using RecipeLibrary.Domain.Ingredients;
 using System.Globalization;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;

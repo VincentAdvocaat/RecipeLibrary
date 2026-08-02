@@ -13,7 +13,6 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
         ArgumentException.ThrowIfNullOrWhiteSpace(recipe.OwnerUserId);
 
         await dbContext.Recipes.AddAsync(recipe, ct);
-        await dbContext.SaveChangesAsync(ct);
     }
 
     public async Task<IReadOnlyList<Recipe>> GetListAsync(
@@ -100,43 +99,58 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
             return;
         }
 
-        await dbContext.RecipeIngredients
-            .Where(x => x.RecipeId == recipe.Id)
-            .ExecuteDeleteAsync(ct);
-
-        await dbContext.InstructionSteps
-            .Where(x => x.RecipeId == recipe.Id)
-            .ExecuteDeleteAsync(ct);
-
-        if (recipe.Ingredients.Count > 0)
+        // Self-contained write: ExecuteDelete/Update + AddRange must commit together so a
+        // failed flush cannot leave a recipe with an updated header and zero children.
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            await dbContext.RecipeIngredients.AddRangeAsync(recipe.Ingredients, ct);
-        }
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            try
+            {
+                await dbContext.RecipeIngredients
+                    .Where(x => x.RecipeId == recipe.Id)
+                    .ExecuteDeleteAsync(ct);
 
-        if (recipe.InstructionSteps.Count > 0)
-        {
-            await dbContext.InstructionSteps.AddRangeAsync(recipe.InstructionSteps, ct);
-        }
+                await dbContext.InstructionSteps
+                    .Where(x => x.RecipeId == recipe.Id)
+                    .ExecuteDeleteAsync(ct);
 
-        if (recipe.Ingredients.Count > 0 || recipe.InstructionSteps.Count > 0)
-        {
-            await dbContext.SaveChangesAsync(ct);
-        }
+                if (recipe.Ingredients.Count > 0)
+                {
+                    await dbContext.RecipeIngredients.AddRangeAsync(recipe.Ingredients, ct);
+                }
 
-        await OwnedRecipes(ownerUserId)
-            .Where(r => r.Id == recipe.Id)
-            .ExecuteUpdateAsync(
-                setters => setters
-                    .SetProperty(r => r.Title, recipe.Title)
-                    .SetProperty(r => r.Description, recipe.Description)
-                    .SetProperty(r => r.ImageUrl, recipe.ImageUrl)
-                    .SetProperty(r => r.PreparationMinutes, recipe.PreparationMinutes)
-                    .SetProperty(r => r.CookingMinutes, recipe.CookingMinutes)
-                    .SetProperty(r => r.Category, recipe.Category)
-                    .SetProperty(r => r.Servings, recipe.Servings)
-                    .SetProperty(r => r.Difficulty, recipe.Difficulty)
-                    .SetProperty(r => r.UpdatedAt, recipe.UpdatedAt),
-                ct);
+                if (recipe.InstructionSteps.Count > 0)
+                {
+                    await dbContext.InstructionSteps.AddRangeAsync(recipe.InstructionSteps, ct);
+                }
+
+                await OwnedRecipes(ownerUserId)
+                    .Where(r => r.Id == recipe.Id)
+                    .ExecuteUpdateAsync(
+                        setters => setters
+                            .SetProperty(r => r.Title, recipe.Title)
+                            .SetProperty(r => r.Description, recipe.Description)
+                            .SetProperty(r => r.ImageUrl, recipe.ImageUrl)
+                            .SetProperty(r => r.PreparationMinutes, recipe.PreparationMinutes)
+                            .SetProperty(r => r.CookingMinutes, recipe.CookingMinutes)
+                            .SetProperty(r => r.Category, recipe.Category)
+                            .SetProperty(r => r.Servings, recipe.Servings)
+                            .SetProperty(r => r.Difficulty, recipe.Difficulty)
+                            .SetProperty(r => r.UpdatedAt, recipe.UpdatedAt),
+                        ct);
+
+                await dbContext.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+                dbContext.ChangeTracker.Clear();
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                dbContext.ChangeTracker.Clear();
+                throw;
+            }
+        });
     }
 
     public async Task DeleteAsync(string ownerUserId, Guid id, CancellationToken ct = default)
@@ -151,17 +165,32 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
             return;
         }
 
-        await dbContext.InstructionSteps
-            .Where(s => s.RecipeId == id)
-            .ExecuteDeleteAsync(ct);
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            try
+            {
+                await dbContext.InstructionSteps
+                    .Where(s => s.RecipeId == id)
+                    .ExecuteDeleteAsync(ct);
 
-        await dbContext.RecipeIngredients
-            .Where(i => i.RecipeId == id)
-            .ExecuteDeleteAsync(ct);
+                await dbContext.RecipeIngredients
+                    .Where(i => i.RecipeId == id)
+                    .ExecuteDeleteAsync(ct);
 
-        await OwnedRecipes(ownerUserId)
-            .Where(r => r.Id == id)
-            .ExecuteDeleteAsync(ct);
+                await OwnedRecipes(ownerUserId)
+                    .Where(r => r.Id == id)
+                    .ExecuteDeleteAsync(ct);
+
+                await transaction.CommitAsync(ct);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+        });
     }
 
     public async Task<IReadOnlyList<string>> GetIngredientTagNamesForRecipeAsync(

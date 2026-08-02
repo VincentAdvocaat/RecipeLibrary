@@ -9,7 +9,7 @@ namespace RecipeLibrary.Application.ShoppingLists;
 internal static class ShoppingListAccessGuard
 {
     public static async Task EnsureGroupAccessAsync(
-        IShoppingListRepository repository,
+        IShoppingListAccess repository,
         Guid groupId,
         string? ownerUserId,
         CancellationToken ct)
@@ -23,7 +23,7 @@ internal static class ShoppingListAccessGuard
     }
 
     public static async Task EnsureListAccessAsync(
-        IShoppingListRepository repository,
+        IShoppingListAccess repository,
         Guid listId,
         string? ownerUserId,
         CancellationToken ct)
@@ -37,7 +37,7 @@ internal static class ShoppingListAccessGuard
     }
 
     public static async Task EnsureItemAccessAsync(
-        IShoppingListRepository repository,
+        IShoppingListAccess repository,
         Guid itemId,
         string? ownerUserId,
         CancellationToken ct)

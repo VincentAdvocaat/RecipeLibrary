@@ -7,7 +7,8 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 public sealed class MoveShoppingListItemCommandHandler(
     IShoppingListRepository repository,
     ICurrentUser userContext,
-    ShoppingListIngredientMerger merger)
+    ShoppingListIngredientMerger merger,
+    IUnitOfWork unitOfWork)
     : ICommandHandler<MoveShoppingListItemCommand, MoveShoppingListItemResult>
 {
     public async Task<MoveShoppingListItemResult> HandleAsync(
@@ -47,6 +48,7 @@ public sealed class MoveShoppingListItemCommandHandler(
 
         await repository.ReplaceListItemsAsync(sourceList.Id, sourceItems, sourceList.UpdatedAt, ct);
         await repository.ReplaceListItemsAsync(targetList.Id, targetItems, targetList.UpdatedAt, ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return new MoveShoppingListItemResult(true);
     }

@@ -85,7 +85,7 @@ public sealed class PantryCommandHandlerTests
             pantry,
             new RecordingShoppingListRepository(),
             new FixedCurrentUser("user-a"),
-            new PantryIngredientMerger(new IngredientTextNormalizer()));
+            new PantryIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new UpsertPantryItemCommand
         {
@@ -107,7 +107,7 @@ public sealed class PantryCommandHandlerTests
             new RecordingPantryRepository(),
             new RecordingShoppingListRepository(),
             new FixedCurrentUser("user-a"),
-            new PantryIngredientMerger(new IngredientTextNormalizer()));
+            new PantryIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new UpsertPantryItemCommand
@@ -139,7 +139,7 @@ public sealed class PantryCommandHandlerTests
             pantry,
             new RecordingShoppingListRepository(),
             new FixedCurrentUser(ownerKey),
-            new PantryIngredientMerger(new IngredientTextNormalizer()));
+            new PantryIngredientMerger(new IngredientTextNormalizer()), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new UpsertPantryItemCommand
         {
@@ -171,7 +171,7 @@ public sealed class PantryCommandHandlerTests
         var sut = new RemovePantryItemCommandHandler(
             pantry,
             new RecordingShoppingListRepository(),
-            new FixedCurrentUser(ownerKey));
+            new FixedCurrentUser(ownerKey), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new RemovePantryItemCommand
         {
@@ -237,7 +237,7 @@ public sealed class PantryCommandHandlerTests
             shopping,
             pantry,
             new FixedCurrentUser(ownerKey),
-            new PantryExclusionFilter(merger));
+            new PantryExclusionFilter(merger), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new ApplyPantryToShoppingListCommand { ShoppingListId = listId });
 
@@ -276,7 +276,7 @@ public sealed class PantryCommandHandlerTests
             shopping,
             new RecordingPantryRepository(),
             new FixedCurrentUser("user-a"),
-            new PantryExclusionFilter(merger));
+            new PantryExclusionFilter(merger), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new ApplyPantryToShoppingListCommand { ShoppingListId = listId });
 

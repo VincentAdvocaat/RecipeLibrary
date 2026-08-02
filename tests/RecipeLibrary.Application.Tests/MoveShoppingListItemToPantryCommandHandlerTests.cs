@@ -31,7 +31,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
             RemoveResult = true,
         };
         var pantryRepo = new FakePantryRepository();
-        var unitOfWork = new FakeUnitOfWork();
+        var unitOfWork = new NoOpUnitOfWork();
         var sut = new MoveShoppingListItemToPantryCommandHandler(
             shoppingRepo,
             pantryRepo,
@@ -86,7 +86,7 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
             shoppingRepo,
             pantryRepo,
             new FixedCurrentUser(ownerKey),
-            new FakeUnitOfWork(),
+            new NoOpUnitOfWork(),
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
         var result = await sut.HandleAsync(new MoveShoppingListItemToPantryCommand { ItemId = itemId });
@@ -119,23 +119,12 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
             shoppingRepo,
             pantryRepo,
             new FixedCurrentUser("user-42"),
-            new FakeUnitOfWork(),
+            new NoOpUnitOfWork(),
             new PantryIngredientMerger(new IngredientTextNormalizer()));
 
         await sut.HandleAsync(new MoveShoppingListItemToPantryCommand { ItemId = itemId });
 
         Assert.Equal("user-42", pantryRepo.UpsertedItem!.OwnerUserId);
-    }
-
-    private sealed class FakeUnitOfWork : IUnitOfWork
-    {
-        public bool Executed { get; private set; }
-
-        public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> action, CancellationToken ct = default)
-        {
-            Executed = true;
-            await action(ct);
-        }
     }
 
     private sealed class FakeShoppingListRepository : IShoppingListRepository
@@ -165,7 +154,6 @@ public sealed class MoveShoppingListItemToPantryCommandHandlerTests
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;

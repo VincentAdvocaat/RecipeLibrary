@@ -15,7 +15,7 @@ public sealed class DeleteRecipeCommandHandlerTests
     public async Task HandleAsync_ReturnsFalse_WhenRecipeDoesNotExist()
     {
         var repo = new FakeRecipeRepository(exists: false);
-        var sut = new DeleteRecipeCommandHandler(repo, new FixedCurrentUser(TestUserId));
+        var sut = new DeleteRecipeCommandHandler(repo, new FixedCurrentUser(TestUserId), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new DeleteRecipeCommand { RecipeId = Guid.NewGuid() });
 
@@ -27,7 +27,7 @@ public sealed class DeleteRecipeCommandHandlerTests
     {
         var recipeId = Guid.NewGuid();
         var repo = new FakeRecipeRepository(exists: true, recipeId: recipeId);
-        var sut = new DeleteRecipeCommandHandler(repo, new FixedCurrentUser(TestUserId));
+        var sut = new DeleteRecipeCommandHandler(repo, new FixedCurrentUser(TestUserId), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new DeleteRecipeCommand { RecipeId = recipeId });
 

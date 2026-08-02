@@ -1,3 +1,4 @@
+using RecipeLibrary.Domain.Ingredients;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Domain.Entities;
 using Xunit;

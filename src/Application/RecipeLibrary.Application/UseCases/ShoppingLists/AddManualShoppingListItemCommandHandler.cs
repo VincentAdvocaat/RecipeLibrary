@@ -9,7 +9,8 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 public sealed class AddManualShoppingListItemCommandHandler(
     IShoppingListRepository shoppingListRepository,
     ICurrentUser userContext,
-    ShoppingListIngredientMerger merger)
+    ShoppingListIngredientMerger merger,
+    IUnitOfWork unitOfWork)
     : ICommandHandler<AddManualShoppingListItemCommand, AddManualShoppingListItemResult>
 {
     public async Task<AddManualShoppingListItemResult> HandleAsync(
@@ -72,6 +73,7 @@ public sealed class AddManualShoppingListItemCommandHandler(
         var addedItem = merged.FirstOrDefault(i => !previousIds.Contains(i.Id));
 
         await shoppingListRepository.ReplaceListItemsAsync(list.Id, merged, list.UpdatedAt, ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return new AddManualShoppingListItemResult(true, addedItem?.Id);
     }

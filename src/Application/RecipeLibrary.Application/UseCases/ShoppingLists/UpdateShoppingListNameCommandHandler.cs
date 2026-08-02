@@ -6,7 +6,8 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 public sealed class UpdateShoppingListNameCommandHandler(
     IShoppingListRepository repository,
-    ICurrentUser userContext)
+    ICurrentUser userContext,
+    IUnitOfWork unitOfWork)
     : ICommandHandler<UpdateShoppingListNameCommand, UpdateShoppingListNameResult>
 {
     public async Task<UpdateShoppingListNameResult> HandleAsync(
@@ -31,6 +32,7 @@ public sealed class UpdateShoppingListNameCommandHandler(
             ct);
 
         var updated = await repository.UpdateListNameAsync(command.ShoppingListId, name, ct);
+        await unitOfWork.SaveChangesAsync(ct);
         return new UpdateShoppingListNameResult(updated);
     }
 }

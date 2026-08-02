@@ -32,12 +32,10 @@ public sealed class EfPantryRepository(RecipeDbContext dbContext) : IPantryRepos
             tracked.CanonicalIngredientId = item.CanonicalIngredientId;
             tracked.DisplayName = item.DisplayName;
             tracked.UpdatedAt = item.UpdatedAt;
-            await dbContext.SaveChangesAsync(ct);
             return tracked;
         }
 
         await dbContext.PantryItems.AddAsync(item, ct);
-        await dbContext.SaveChangesAsync(ct);
         return item;
     }
 

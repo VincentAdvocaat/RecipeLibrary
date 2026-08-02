@@ -169,7 +169,6 @@ public sealed class EfIngredientUnitConversionStore(RecipeDbContext dbContext) :
     public async Task AddConversionAsync(IngredientUnitConversion conversion, CancellationToken ct = default)
     {
         dbContext.IngredientUnitConversions.Add(conversion);
-        await dbContext.SaveChangesAsync(ct);
     }
 
     public async Task MarkSuggestionAcceptedAsync(Guid suggestionId, CancellationToken ct = default)
@@ -182,7 +181,6 @@ public sealed class EfIngredientUnitConversionStore(RecipeDbContext dbContext) :
         }
 
         entity.Status = ConversionSuggestionStatus.Accepted;
-        await dbContext.SaveChangesAsync(ct);
     }
 
     public Task<ConversionSource?> GetSourceByNameAsync(string name, CancellationToken ct = default) =>

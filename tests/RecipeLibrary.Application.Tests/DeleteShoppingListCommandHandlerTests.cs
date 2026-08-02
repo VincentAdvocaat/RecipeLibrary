@@ -12,7 +12,7 @@ public sealed class DeleteShoppingListCommandHandlerTests
     public async Task HandleAsync_ReturnsFalse_WhenListMissing()
     {
         var repo = new FakeShoppingListRepository(list: null);
-        var sut = new DeleteShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"));
+        var sut = new DeleteShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new DeleteShoppingListCommand { ShoppingListId = Guid.NewGuid() });
 
@@ -28,7 +28,7 @@ public sealed class DeleteShoppingListCommandHandlerTests
         var list = new ShoppingList { Id = listId, GroupId = groupId, Name = "Main" };
         var group = new ShoppingListGroup { Id = groupId };
         var repo = new FakeShoppingListRepository(list, group);
-        var sut = new DeleteShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"));
+        var sut = new DeleteShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new DeleteShoppingListCommand { ShoppingListId = listId });
 
@@ -60,7 +60,6 @@ public sealed class DeleteShoppingListCommandHandlerTests
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;
         public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default) => Task.CompletedTask;

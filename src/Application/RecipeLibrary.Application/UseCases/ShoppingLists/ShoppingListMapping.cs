@@ -5,7 +5,7 @@ namespace RecipeLibrary.Application.UseCases.ShoppingLists;
 
 internal static class ShoppingListMapping
 {
-    public static GetOrCreateShoppingListGroupResult MapGroup(ShoppingListGroup group) =>
+    public static EnsureShoppingListGroupResult MapGroup(ShoppingListGroup group) =>
         new()
         {
             GroupId = group.Id,

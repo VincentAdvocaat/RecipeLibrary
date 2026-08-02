@@ -1,5 +1,7 @@
+using RecipeLibrary.Domain.Ingredients;
 using Xunit;
 using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Domain.Entities;
 
@@ -21,7 +23,7 @@ public sealed class IngredientMatcherTests
 
         var result = await CreateMatcher(repo).MatchAsync("verse gember", "nl");
 
-        Assert.Equal("alias", result.MatchType);
+        Assert.Equal(IngredientMatchType.Alias, result.MatchType);
         Assert.Equal("gember", IngredientDisplayResolver.Resolve(result.Ingredient!, ["nl"]).DisplayName);
         Assert.False(result.RequiresConfirmation);
     }
@@ -33,7 +35,7 @@ public sealed class IngredientMatcherTests
 
         var result = await CreateMatcher(repo).MatchAsync("tomaat", "nl");
 
-        Assert.Equal("exact", result.MatchType);
+        Assert.Equal(IngredientMatchType.Exact, result.MatchType);
         Assert.Equal("tomaat", IngredientDisplayResolver.Resolve(result.Ingredient!, ["nl"]).DisplayName);
         Assert.False(result.RequiresConfirmation);
     }
@@ -45,7 +47,7 @@ public sealed class IngredientMatcherTests
 
         var result = await CreateMatcher(repo).MatchAsync("gembre", "nl");
 
-        Assert.Equal("fuzzy", result.MatchType);
+        Assert.Equal(IngredientMatchType.Fuzzy, result.MatchType);
         Assert.Equal("gember", IngredientDisplayResolver.Resolve(result.Ingredient!, ["nl"]).DisplayName);
         Assert.True(result.Confidence > IngredientMatcher.FuzzyMatchScore);
         Assert.True(result.RequiresConfirmation);
@@ -70,7 +72,7 @@ public sealed class IngredientMatcherTests
 
         var result = await CreateMatcher(repo).MatchAsync("xyzabc123", "nl");
 
-        Assert.Equal("none", result.MatchType);
+        Assert.Equal(IngredientMatchType.None, result.MatchType);
         Assert.False(result.RequiresConfirmation);
         Assert.Empty(result.Suggestions);
     }
@@ -140,7 +142,7 @@ public sealed class IngredientMatcherTests
 
         var result = await CreateMatcher(repo).MatchAsync("tomato", "en-US");
 
-        Assert.Equal("exact", result.MatchType);
+        Assert.Equal(IngredientMatchType.Exact, result.MatchType);
         Assert.Equal("tomato", IngredientDisplayResolver.Resolve(result.Ingredient!, result.LanguageChain).DisplayName);
     }
 
@@ -151,7 +153,7 @@ public sealed class IngredientMatcherTests
 
         var result = await CreateMatcher(repo).MatchAsync("   ", "nl");
 
-        Assert.Equal("none", result.MatchType);
+        Assert.Equal(IngredientMatchType.None, result.MatchType);
         Assert.Empty(result.Suggestions);
         Assert.False(result.RequiresConfirmation);
     }
@@ -159,13 +161,13 @@ public sealed class IngredientMatcherTests
     [Fact]
     public async Task MatchAsync_ReturnsNone_WhenBestScoreEqualsFuzzyThreshold()
     {
-        // Fuzzy requires score > 0.70 (strict). Equal to the threshold must stay "none".
+        // Fuzzy requires score > 0.70 (strict). Equal to the threshold must stay None.
         var repo = new FakeIngredientRepository([IngredientTestFactory.Create("gember")]);
         var matcher = new IngredientMatcher(repo, new IngredientTextNormalizer(), new FixedScorer(0.70m));
 
         var result = await matcher.MatchAsync("gembre", "nl");
 
-        Assert.Equal("none", result.MatchType);
+        Assert.Equal(IngredientMatchType.None, result.MatchType);
         Assert.Null(result.Ingredient);
         Assert.Equal(0m, result.Confidence);
         Assert.Contains(result.Suggestions, x => x.Display.DisplayName == "gember");
@@ -180,7 +182,7 @@ public sealed class IngredientMatcherTests
 
         var result = await matcher.MatchAsync("gembre", "nl");
 
-        Assert.Equal("fuzzy", result.MatchType);
+        Assert.Equal(IngredientMatchType.Fuzzy, result.MatchType);
         Assert.Equal(0.71m, result.Confidence);
     }
 
@@ -197,7 +199,7 @@ public sealed class IngredientMatcherTests
         var result = await matcher.MatchAsync("gemberx", "nl");
 
         Assert.Equal(IngredientMatcher.MaxSuggestions, result.Suggestions.Count);
-        Assert.Equal("fuzzy", result.MatchType);
+        Assert.Equal(IngredientMatchType.Fuzzy, result.MatchType);
     }
 
     [Fact]
@@ -211,7 +213,7 @@ public sealed class IngredientMatcherTests
         var result = await matcher.MatchAsync("gembre", "nl");
 
         Assert.Equal("gember", result.Suggestions[0].Display.DisplayName);
-        Assert.Equal("fuzzy", result.MatchType);
+        Assert.Equal(IngredientMatchType.Fuzzy, result.MatchType);
         Assert.Equal(shortName.Id, result.Ingredient!.Id);
     }
 
@@ -225,7 +227,7 @@ public sealed class IngredientMatcherTests
         // Too short for prefix fallback — must not call SearchAsync("", …).
         var result = await matcher.MatchAsync("xy", "nl");
 
-        Assert.Equal("none", result.MatchType);
+        Assert.Equal(IngredientMatchType.None, result.MatchType);
         Assert.Null(result.Ingredient);
         Assert.Empty(result.Suggestions);
         Assert.False(repo.SearchWasCalled);
@@ -240,7 +242,7 @@ public sealed class IngredientMatcherTests
 
         var result = await matcher.MatchAsync("xyzunrelated", "nl");
 
-        Assert.Equal("none", result.MatchType);
+        Assert.Equal(IngredientMatchType.None, result.MatchType);
         Assert.Null(result.Ingredient);
         Assert.True(repo.SearchWasCalled);
         Assert.Equal("xyz", repo.LastSearchQuery);
@@ -254,7 +256,7 @@ public sealed class IngredientMatcherTests
 
         var result = await CreateMatcher(repo).MatchAsync("gehakt", "nl");
 
-        Assert.Equal("none", result.MatchType);
+        Assert.Equal(IngredientMatchType.None, result.MatchType);
         Assert.Null(result.Ingredient);
         Assert.True(result.RequiresConfirmation);
         Assert.Contains(result.Suggestions, x => x.Display.DisplayName == "runder gehakt");

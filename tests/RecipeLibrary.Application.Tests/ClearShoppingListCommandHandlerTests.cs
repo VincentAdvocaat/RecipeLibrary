@@ -13,7 +13,7 @@ public sealed class ClearShoppingListCommandHandlerTests
     {
         var listId = Guid.NewGuid();
         var repo = new FakeShoppingListRepository(list: null);
-        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"));
+        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId });
 
@@ -27,7 +27,7 @@ public sealed class ClearShoppingListCommandHandlerTests
         var listId = Guid.NewGuid();
         var list = new ShoppingList { Id = listId, GroupId = Guid.NewGuid(), Name = "Main" };
         var repo = new FakeShoppingListRepository(list);
-        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"));
+        var sut = new ClearShoppingListCommandHandler(repo, new FixedCurrentUser("user-a"), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new ClearShoppingListCommand { ShoppingListId = listId });
 
@@ -56,7 +56,6 @@ public sealed class ClearShoppingListCommandHandlerTests
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;
         public Task ReplaceListItemsAsync(Guid shoppingListId, IReadOnlyList<ShoppingListItem> items, DateTimeOffset? expectedUpdatedAt = null, CancellationToken ct = default) => Task.CompletedTask;

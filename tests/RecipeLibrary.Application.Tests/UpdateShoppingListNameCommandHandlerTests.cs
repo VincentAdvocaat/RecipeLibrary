@@ -11,7 +11,7 @@ public sealed class UpdateShoppingListNameCommandHandlerTests
     [Fact]
     public async Task HandleAsync_Throws_WhenNameEmpty()
     {
-        var sut = new UpdateShoppingListNameCommandHandler(new FakeShoppingListRepository(), new FixedCurrentUser("user-a"));
+        var sut = new UpdateShoppingListNameCommandHandler(new FakeShoppingListRepository(), new FixedCurrentUser("user-a"), new NoOpUnitOfWork());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             sut.HandleAsync(new UpdateShoppingListNameCommand { ShoppingListId = Guid.NewGuid(), Name = "  " }));
@@ -22,7 +22,7 @@ public sealed class UpdateShoppingListNameCommandHandlerTests
     {
         var listId = Guid.NewGuid();
         var repo = new FakeShoppingListRepository { UpdateNameResult = true };
-        var sut = new UpdateShoppingListNameCommandHandler(repo, new FixedCurrentUser("user-a"));
+        var sut = new UpdateShoppingListNameCommandHandler(repo, new FixedCurrentUser("user-a"), new NoOpUnitOfWork());
 
         var result = await sut.HandleAsync(new UpdateShoppingListNameCommand { ShoppingListId = listId, Name = "Store 2" });
 
@@ -53,7 +53,6 @@ public sealed class UpdateShoppingListNameCommandHandlerTests
         public Task<ShoppingList?> GetPrimaryListInGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult<ShoppingList?>(null);
         public Task<bool> GroupHasSecondListAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(false);
         public Task<int> GetUncheckedItemCountForGroupAsync(Guid groupId, CancellationToken ct = default) => Task.FromResult(0);
-        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task ClearListItemsAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteListAsync(Guid shoppingListId, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteGroupAsync(Guid groupId, CancellationToken ct = default) => Task.CompletedTask;
