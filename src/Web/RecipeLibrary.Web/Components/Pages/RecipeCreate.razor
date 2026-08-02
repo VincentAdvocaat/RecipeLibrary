@@ -457,12 +457,14 @@
 
             CompleteImport(result);
         }
-        catch (ArgumentException ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            _importError = ex.Message;
+            _importError = MapImportException(ex);
         }
-        catch (InvalidOperationException) { _importError = L["RecipeImport.Error.Failed"]; }
-        catch (Exception) { _importError = L["RecipeImport.Error.Failed"]; }
+        catch (Exception)
+        {
+            _importError = L["RecipeImport.Error.Failed"];
+        }
         finally
         {
             _isProcessing = false;
@@ -536,12 +538,14 @@
         {
             _importError = L["RecipeCreate.PhotoImport.Error.UploadTimeout"];
         }
-        catch (ArgumentException ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            _importError = ex.Message;
+            _importError = MapImportException(ex);
         }
-        catch (InvalidOperationException) { _importError = L["RecipeImport.Error.Failed"]; }
-        catch (Exception) { _importError = L["RecipeImport.Error.Failed"]; }
+        catch (Exception)
+        {
+            _importError = L["RecipeImport.Error.Failed"];
+        }
         finally
         {
             _isProcessing = false;
@@ -569,16 +573,73 @@
 
             CompleteImport(result);
         }
-        catch (ArgumentException ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            _importError = ex.Message;
+            _importError = MapImportException(ex);
         }
-        catch (InvalidOperationException) { _importError = L["RecipeImport.Error.Failed"]; }
-        catch (Exception) { _importError = L["RecipeImport.Error.Failed"]; }
+        catch (Exception)
+        {
+            _importError = L["RecipeImport.Error.Failed"];
+        }
         finally
         {
             _isProcessing = false;
         }
+    }
+
+    private string MapImportException(Exception ex)
+    {
+        var message = ex.Message ?? string.Empty;
+
+        if (message.Equals("URL is required.", StringComparison.Ordinal)
+            || message.Equals("URL host is required.", StringComparison.Ordinal))
+        {
+            return L["RecipeCreate.Url.Error.Empty"];
+        }
+
+        if (message.Equals("URL must be an absolute http or https address.", StringComparison.Ordinal))
+        {
+            return L["RecipeImport.Error.UrlInvalid"];
+        }
+
+        if (message.Equals("URL host is not allowed.", StringComparison.Ordinal))
+        {
+            return L["RecipeImport.Error.UrlHostNotAllowed"];
+        }
+
+        if (message.Equals("URL host could not be resolved.", StringComparison.Ordinal))
+        {
+            return L["RecipeImport.Error.UrlHostUnresolved"];
+        }
+
+        if (message.Equals("Image is required.", StringComparison.Ordinal))
+        {
+            return L["RecipeCreate.PhotoImport.Error.NoFile"];
+        }
+
+        if (message.StartsWith("At most ", StringComparison.Ordinal)
+            && message.Contains(" images are allowed per import.", StringComparison.Ordinal))
+        {
+            var maxImages = Math.Max(1, ImportOptions.Value.Ocr.MaxImagesPerImport);
+            return L["RecipeCreate.PhotoImport.Error.MaxImages", maxImages];
+        }
+
+        if (message.StartsWith("Image exceeds maximum size of ", StringComparison.Ordinal))
+        {
+            return L["RecipeImport.Error.ImageTooLarge"];
+        }
+
+        if (message.Equals("No text could be extracted from the image.", StringComparison.Ordinal))
+        {
+            return L["RecipeImport.Error.NoOcrText"];
+        }
+
+        if (message.Equals("Unsupported image type. Use jpg, png, or webp.", StringComparison.Ordinal))
+        {
+            return L["RecipeImport.Error.UnsupportedImageType"];
+        }
+
+        return L["RecipeImport.Error.Failed"];
     }
 
     private void CompleteImport(ImportRecipeResult result)

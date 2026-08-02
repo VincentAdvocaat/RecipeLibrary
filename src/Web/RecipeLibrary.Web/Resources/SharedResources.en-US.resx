@@ -75,7 +75,13 @@
   <data name="RecipeImport.Ingredient.LowConfidence" xml:space="preserve"><value>Low confidence ({0}) — parsed via {1}. Please verify.</value></data>
   <data name="RecipeImport.Error.EmptyContent" xml:space="preserve"><value>Paste recipe text to import.</value></data>
   <data name="RecipeImport.Error.NoResult" xml:space="preserve"><value>Import returned no result.</value></data>
-  <data name="RecipeImport.Error.Failed" xml:space="preserve"><value>Import failed. Please try again.</value></data>
+  <data name="RecipeImport.Error.Failed" xml:space="preserve"><value>Import failed. Try again or use another source.</value></data>
+  <data name="RecipeImport.Error.UrlInvalid" xml:space="preserve"><value>Enter a valid http or https link.</value></data>
+  <data name="RecipeImport.Error.UrlHostNotAllowed" xml:space="preserve"><value>This link cannot be imported for security reasons.</value></data>
+  <data name="RecipeImport.Error.UrlHostUnresolved" xml:space="preserve"><value>The website address could not be resolved.</value></data>
+  <data name="RecipeImport.Error.ImageTooLarge" xml:space="preserve"><value>One of the photos is too large. Try a smaller image.</value></data>
+  <data name="RecipeImport.Error.NoOcrText" xml:space="preserve"><value>No text could be read from the photo.</value></data>
+  <data name="RecipeImport.Error.UnsupportedImageType" xml:space="preserve"><value>Unsupported image type. Use jpg, png, or webp.</value></data>
   <data name="RecipeCreate.Mode.AriaLabel" xml:space="preserve"><value>How to add the recipe</value></data>
   <data name="RecipeCreate.Mode.Manual" xml:space="preserve"><value>Manual</value></data>
   <data name="RecipeCreate.Mode.Text" xml:space="preserve"><value>Text</value></data>
