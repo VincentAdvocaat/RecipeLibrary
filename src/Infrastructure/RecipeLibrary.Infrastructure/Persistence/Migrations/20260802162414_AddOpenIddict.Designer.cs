@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RecipeLibrary.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using RecipeLibrary.Infrastructure.Persistence;
 namespace RecipeLibrary.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(RecipeDbContext))]
-    partial class RecipeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260802162414_AddOpenIddict")]
+    partial class AddOpenIddict
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -391,83 +394,6 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                         .HasFilter("[CatalogKey] IS NOT NULL");
 
                     b.ToTable("Ingredients", (string)null);
-                });
-
-            modelBuilder.Entity("RecipeLibrary.Domain.Entities.ContentModerationEvent", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("CategoriesSummary")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Decision")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
-
-                    b.Property<Guid?>("RecipeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("SubjectKey")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("RecipeId");
-
-                    b.HasIndex("SubjectKey");
-
-                    b.ToTable("ContentModerationEvents");
-                });
-
-            modelBuilder.Entity("RecipeLibrary.Domain.Entities.ContentReport", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<bool>("Handled")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTimeOffset?>("HandledAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Reason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<Guid>("RecipeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ReporterUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RecipeId");
-
-                    b.HasIndex("Handled", "CreatedAt");
-
-                    b.ToTable("ContentReports");
                 });
 
             modelBuilder.Entity("RecipeLibrary.Domain.Entities.ConversionSource", b =>
@@ -849,20 +775,6 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
-                    b.Property<DateTimeOffset?>("ModeratedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("ModerationStatus")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)")
-                        .HasDefaultValue("NotModerated");
-
-                    b.Property<string>("ModerationSummary")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
                     b.Property<string>("OwnerUserId")
                         .IsRequired()
                         .HasMaxLength(450)
@@ -883,8 +795,6 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ModerationStatus");
 
                     b.HasIndex("OwnerUserId");
 

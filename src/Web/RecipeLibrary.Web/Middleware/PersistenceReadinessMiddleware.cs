@@ -74,6 +74,7 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
     {
         var path = request.Path;
         if (path.StartsWithSegments("/api")
+            || path.StartsWithSegments("/connect")
             || path.StartsWithSegments("/ingredients")
             || path.StartsWithSegments("/tags")
             || IsRecipeImportApiPath(path))

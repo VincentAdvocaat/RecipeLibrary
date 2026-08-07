@@ -18,6 +18,9 @@ using RecipeLibrary.Infrastructure.Identity;
 using RecipeLibrary.Infrastructure.Persistence;
 using RecipeLibrary.Infrastructure.RecipeImport;
 using RecipeLibrary.Application.Abstractions;
+using OpenIddict.Abstractions;
+using RecipeLibrary.Web.Auth;
+using RecipeLibrary.Web.Endpoints.V1;
 using RecipeLibrary.Web.Services;
 using RecipeLibrary.Web.Middleware;
 
@@ -116,12 +119,34 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
+builder.Services.AddRecipeLibraryOpenIddict(builder.Configuration, builder.Environment);
+
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
+
+    // Bearer JWTs carry OpenIddict scope claims and must include "api".
+    // Blazor cookie principals have no scope claims and remain allowed.
+    options.AddPolicy(OpenIddictAppConstants.ApiV1Policy, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(context =>
+        {
+            var hasScopeClaims = context.User.Claims.Any(static c =>
+                c.Type is OpenIddictConstants.Claims.Private.Scope
+                    or OpenIddictConstants.Claims.Scope);
+
+            if (!hasScopeClaims)
+            {
+                return true;
+            }
+
+            return context.User.HasScope(OpenIddictAppConstants.ApiScope);
+        });
+    });
 });
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.Configure<IdentitySeedUserOptions>(
@@ -132,6 +157,7 @@ builder.Services.AddHostedService<PersistenceWarmupHostedService>();
 builder.Services.AddRecipeImport(builder.Configuration);
 builder.Services.AddContentModeration(builder.Configuration);
 builder.Services.AddApplication();
+builder.Services.AddOpenApi();
 
 var ocrOptions = builder.Configuration.GetSection($"{RecipeImportOptions.SectionName}:Ocr").Get<RecipeImportOcrOptions>()
     ?? new RecipeImportOcrOptions();
@@ -248,8 +274,18 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+{
+    app.MapOpenApi().AllowAnonymous();
+}
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapOpenIddictTokenEndpoints();
+app.MapAuthApiV1();
+app.MapRecipesApiV1();
+app.MapRecipeImagesApiV1();
 
 // Liveness: process is up (no database dependency). /health is a backward-compatible alias.
 static IResult LiveHealth() => Results.Ok(new { status = "Healthy" });

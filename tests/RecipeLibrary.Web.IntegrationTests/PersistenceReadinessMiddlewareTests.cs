@@ -247,6 +247,36 @@ public sealed class PersistenceReadinessMiddlewareTests
     }
 
     [Fact]
+    public async Task Invoke_WhenNotReady_ConnectToken_Returns503()
+    {
+        var readiness = new PersistenceReadiness();
+        var middleware = new PersistenceReadinessMiddleware(_ => Task.CompletedTask);
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/connect/token";
+        context.Request.Method = HttpMethods.Post;
+        context.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(context, readiness);
+
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Invoke_WhenNotReady_ConnectRevoke_Returns503()
+    {
+        var readiness = new PersistenceReadiness();
+        var middleware = new PersistenceReadinessMiddleware(_ => Task.CompletedTask);
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/connect/revoke";
+        context.Request.Method = HttpMethods.Post;
+        context.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(context, readiness);
+
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
+    }
+
+    [Fact]
     public async Task Invoke_WhenNotReady_IngredientsPath_Returns503()
     {
         var readiness = new PersistenceReadiness();
