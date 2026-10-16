@@ -34,6 +34,13 @@ seven-second cancellation deadline and five-second result cache. EF retries are 
 used for these probes. Temporary SQL failures return `Starting` and can recover
 without restarting the process. There is no recurring SQL probe.
 
+Initialization orders schema/catalog setup, the optional Development account seed,
+and the configured admin-role seed before marking Ready. Neither account nor admin
+seeding runs as a separate host-start task. Seed-only Identity managers pass the
+warmup cancellation token to the underlying stores, including their database I/O;
+normal request managers are unchanged. `Testing` executes the same ordered setup
+synchronously for deterministic fixtures.
+
 `/health/live`, `/health/ready` and the `/health` alias check the HTTP process only.
 `/health/database` continues to expose the initial migration state for operators;
 use `/api/system/readiness` for current SQL reachability.

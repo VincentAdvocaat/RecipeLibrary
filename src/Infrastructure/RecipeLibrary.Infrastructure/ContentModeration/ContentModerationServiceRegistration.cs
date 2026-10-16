@@ -3,6 +3,7 @@ using Azure.AI.ContentSafety;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RecipeLibrary.Application.Abstractions;
+using RecipeLibrary.Infrastructure.Identity;
 
 namespace RecipeLibrary.Infrastructure.ContentModeration;
 
@@ -38,7 +39,9 @@ public static class ContentModerationServiceRegistration
         }
 
         services.AddScoped<IContentModerationStore, EfContentModerationStore>();
-        services.AddHostedService<ContentModerationAdminSeedHostedService>();
+        services.AddScoped<SeedUserManager>();
+        services.AddScoped<SeedRoleManager>();
+        services.AddSingleton<ContentModerationAdminSeedHostedService>();
         return services;
     }
 }

@@ -21,7 +21,7 @@ public sealed class StartupAvailabilityTests
         {
             BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false
         });
-        foreach (var path in new[] { "/health/live", "/health/ready", "/api/system/readiness", "/starting", "/failed", "/startup.js", "/app.css" })
+        foreach (var path in new[] { "/health/live", "/health/ready", "/api/system/readiness", "/starting", "/failed", "/starting/", "/failed/", "/startup.js", "/app.css" })
         {
             using var response = await client.GetAsync(path).WaitAsync(TimeSpan.FromSeconds(10));
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -31,7 +31,7 @@ public sealed class StartupAvailabilityTests
                 Assert.Contains("\"state\":\"Starting\"", body);
                 Assert.True(response.Headers.CacheControl!.NoStore);
             }
-            if (path is "/starting" or "/failed")
+            if (path.TrimEnd('/') is "/starting" or "/failed")
             {
                 Assert.Contains("startup.js", body);
                 Assert.DoesNotContain("\"type\":\"server\"", body);
@@ -164,6 +164,7 @@ public sealed class StartupAvailabilityTests
             builder.UseSetting("ConnectionStrings:RecipeDb", "Server=localhost;Database=unused;Integrated Security=True;TrustServerCertificate=True");
             builder.UseSetting("Welcome:AllowedOrigins:0", "https://recipelibrary.vasoftware.nl");
             builder.UseSetting("Welcome:AllowedOrigins:1", "https://test-welcome.azurestaticapps.net");
+            builder.UseSetting("ContentModeration:AdminEmails:0", "admin@example.invalid");
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IPersistenceInitializer>();

@@ -46,6 +46,7 @@ stages:
       displayName: Use Node for static welcome validation
 
     - script: |
+        set -euo pipefail
         node --test tests/welcome/startup.test.mjs
         node scripts/build-welcome.mjs
       displayName: Test and build static welcome page

@@ -129,6 +129,7 @@ builder.Services.Configure<IdentitySeedUserOptions>(
 builder.Services.AddSingleton<IdentitySeedUserHostedService>();
 
 builder.Services.AddSingleton<IPersistenceInitializer, PersistenceInitializer>();
+builder.Services.AddSingleton<IPersistenceSchemaInitializer, PersistenceSchemaInitializer>();
 builder.Services.Configure<PersistenceWarmupOptions>(builder.Configuration.GetSection("PersistenceWarmup"));
 builder.Services.AddHostedService<PersistenceWarmupHostedService>();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -198,7 +199,7 @@ var app = builder.Build();
 // Tests retain deterministic schema setup. All runtime environments start HTTP immediately.
 if (app.Environment.IsEnvironment("Testing"))
 {
-    app.Services.EnsurePersistenceMigrated();
+    await app.Services.GetRequiredService<IPersistenceInitializer>().InitializeAsync(CancellationToken.None);
     app.Services.GetRequiredService<IPersistenceReadiness>().MarkReady();
 }
 

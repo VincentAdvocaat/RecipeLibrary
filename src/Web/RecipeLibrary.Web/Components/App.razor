@@ -31,8 +31,9 @@
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
-    private bool IsStartupPage => HttpContext.Request.Path.Equals(new PathString("/starting"))
-        || HttpContext.Request.Path.Equals(new PathString("/failed"));
+    private bool IsStartupPage => HttpContext.Request.Path.Value?.TrimEnd('/') is { } path
+        && (path.Equals("/starting", StringComparison.OrdinalIgnoreCase)
+            || path.Equals("/failed", StringComparison.OrdinalIgnoreCase));
 
     private IComponentRenderMode? PageRenderMode =>
         HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
