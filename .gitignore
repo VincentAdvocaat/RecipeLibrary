@@ -93,3 +93,6 @@ node_modules/
 **/StrykerOutput/
 **/mutation-report.html
 **/mutation-report.json
+
+# Static welcome build and browser test results
+.welcome-dist/
