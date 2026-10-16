@@ -14,7 +14,8 @@ public sealed class RecipeContentModerationService(
     IContentModerator moderator,
     IContentModerationStore store,
     IUnitOfWork unitOfWork,
-    IOptions<ContentModerationOptions> options)
+    IOptions<ContentModerationOptions> options,
+    IDemoContext? demo = null, ICurrentUser? currentUser = null)
 {
     public async Task ApplyTextModerationAsync(
         Recipe recipe,
@@ -81,6 +82,7 @@ public sealed class RecipeContentModerationService(
                 new ContentModerationEvent
                 {
                     Id = Guid.NewGuid(),
+                    DemoOwnerUserId = demo?.IsDemo == true ? currentUser?.UserId : null,
                     RecipeId = null,
                     SubjectKey = null,
                     Kind = ContentModerationKind.Image,
@@ -110,6 +112,7 @@ public sealed class RecipeContentModerationService(
             new ContentModerationEvent
             {
                 Id = Guid.NewGuid(),
+                    DemoOwnerUserId = demo?.IsDemo == true ? currentUser?.UserId : null,
                 RecipeId = null,
                 SubjectKey = subjectKey.Trim(),
                 Kind = ContentModerationKind.Image,
@@ -164,6 +167,7 @@ public sealed class RecipeContentModerationService(
                 new ContentModerationEvent
                 {
                     Id = Guid.NewGuid(),
+                    DemoOwnerUserId = demo?.IsDemo == true ? currentUser?.UserId : null,
                     RecipeId = recipe.Id == Guid.Empty ? null : recipe.Id,
                     Kind = kind,
                     Decision = result.Decision,
@@ -183,6 +187,7 @@ public sealed class RecipeContentModerationService(
             new ContentModerationEvent
             {
                 Id = Guid.NewGuid(),
+                    DemoOwnerUserId = demo?.IsDemo == true ? currentUser?.UserId : null,
                 RecipeId = recipe.Id,
                 Kind = kind,
                 Decision = result.Decision,

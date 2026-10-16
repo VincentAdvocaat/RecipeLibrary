@@ -8,6 +8,7 @@
 @using RecipeLibrary.Web.Services
 @using RecipeCategory = RecipeLibrary.Domain.ValueObjects.RecipeCategory
 @using RecipeDifficulty = RecipeLibrary.Domain.ValueObjects.Difficulty
+@inject IDemoContext DemoContext
 @inject ICommandBus CommandBus
 @inject IQueryBus QueryBus
 @inject NavigationManager Navigation
@@ -400,7 +401,8 @@
             };
 
             _ = await CommandBus.SendAsync<UpdateRecipeCommand, UpdateRecipeResult>(command);
-            await RecipeIngredientEditorSupport.ApplyIngredientTagsAsync(CommandBus, _vm.Ingredients, _ingredientTags);
+            if (!DemoContext.IsDemo)
+                await RecipeIngredientEditorSupport.ApplyIngredientTagsAsync(CommandBus, _vm.Ingredients, _ingredientTags);
             _saveSucceeded = true;
             _statusMessage = L["RecipeEdit.Saved.Message"];
             Navigation.NavigateTo($"/recipes/{RecipeId}", forceLoad: true);
@@ -414,7 +416,7 @@
         catch (Exception ex)
         {
             _saveSucceeded = false;
-            _statusMessage = ex.Message;
+            _statusMessage = ex is DemoAccessException demoError ? L[demoError.Code] : ex.Message;
             StateHasChanged();
         }
         finally

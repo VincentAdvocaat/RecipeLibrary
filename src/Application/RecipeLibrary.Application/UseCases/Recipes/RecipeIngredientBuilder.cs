@@ -17,7 +17,8 @@ internal static class RecipeIngredientBuilder
         IIngredientTextNormalizer normalizer,
         IngredientMatcher matcher,
         IngredientLineResolver lineResolver,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool allowCatalogWrites = true)
     {
         var ingredients = new List<Ingredient>();
         var cultureName = CultureInfo.CurrentUICulture.Name;
@@ -32,13 +33,13 @@ internal static class RecipeIngredientBuilder
             // Shared-token-only hits have IngredientMatchType.None (Ingredient null) after matcher gating;
             // exact, alias, and high-confidence fuzzy typos still set Ingredient and auto-link.
             var canonicalIngredient = match.Ingredient
-                ?? await FindOrCreateNewIngredientAsync(
+                ?? (allowCatalogWrites ? await FindOrCreateNewIngredientAsync(
                     ingredientRepository,
                     normalizer,
                     languageCode,
                     resolved.DisplayName,
                     rawName,
-                    ct);
+                    ct) : null);
 
             Quantity? quantity = null;
             Unit? unit = null;
@@ -55,7 +56,7 @@ internal static class RecipeIngredientBuilder
                 RecipeId = recipeId,
                 Name = resolved.DisplayName,
                 Preparation = resolved.Preparation,
-                IngredientId = canonicalIngredient.Id,
+                IngredientId = canonicalIngredient?.Id,
                 Quantity = quantity,
                 Unit = unit,
             });

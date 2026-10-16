@@ -5,9 +5,7 @@ namespace RecipeLibrary.Testing;
 
 public sealed class SqlContainerFixture : IAsyncLifetime
 {
-    private readonly MsSqlContainer _container = new MsSqlBuilder()
-        .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
-        .Build();
+    private readonly TestSqlDatabase _container = new();
 
     public string ConnectionString { get; private set; } = string.Empty;
 
@@ -18,7 +16,7 @@ public sealed class SqlContainerFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await _container.StartAsync();
-        ConnectionString = _container.GetConnectionString();
+        ConnectionString = _container.ConnectionString;
         Environment.SetEnvironmentVariable("ConnectionStrings__RecipeDb", ConnectionString);
         Factory = new TestWebApplicationFactory(ConnectionString);
         Seed = await Factory.SeedAsync();

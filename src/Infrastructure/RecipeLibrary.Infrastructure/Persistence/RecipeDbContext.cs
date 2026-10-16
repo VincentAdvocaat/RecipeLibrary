@@ -10,6 +10,10 @@ namespace RecipeLibrary.Infrastructure.Persistence;
 public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
     : IdentityDbContext<ApplicationUser>(options)
 {
+    public DbSet<DemoSaveAttempt> DemoSaveAttempts => Set<DemoSaveAttempt>();
+    public DbSet<DemoStartQuota> DemoStartQuotas => Set<DemoStartQuota>();
+    public DbSet<DemoSession> DemoSessions => Set<DemoSession>();
+
     public DbSet<Recipe> Recipes => Set<Recipe>();
     public DbSet<Ingredient> RecipeIngredients => Set<Ingredient>();
     public DbSet<InstructionStep> InstructionSteps => Set<InstructionStep>();
@@ -34,6 +38,28 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<DemoSaveAttempt>(b =>
+        {
+            b.HasKey(x => x.OperationId);
+            b.Property(x => x.UserId).HasMaxLength(450);
+            b.HasOne<DemoSession>().WithMany().HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<DemoStartQuota>(b =>
+        {
+            b.HasKey(x => x.AddressHash);
+            b.Property(x => x.AddressHash).HasMaxLength(64);
+            b.HasIndex(x => x.WindowStart);
+        });
+        modelBuilder.Entity<DemoSession>(b =>
+        {
+            b.HasKey(x => x.UserId);
+            b.Property(x => x.UserId).HasMaxLength(450);
+            b.HasIndex(x => x.ExpiresAt);
+            b.HasOne<ApplicationUser>().WithOne().HasForeignKey<DemoSession>(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
         var recipeTitleConverter = new ValueConverter<RecipeTitle, string>(
             v => v.Value,
@@ -109,6 +135,8 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
         modelBuilder.Entity<ContentModerationEvent>(b =>
         {
             b.HasKey(x => x.Id);
+            b.Property(x => x.DemoOwnerUserId).HasMaxLength(450);
+            b.HasIndex(x => x.DemoOwnerUserId);
             b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16).IsRequired();
             b.Property(x => x.Decision).HasConversion<string>().HasMaxLength(32).IsRequired();
             b.Property(x => x.SubjectKey).HasMaxLength(2000);

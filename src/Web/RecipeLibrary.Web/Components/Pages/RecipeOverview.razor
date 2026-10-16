@@ -56,7 +56,7 @@
 
         @if (_statusMessage is not null)
         {
-            <p class="mb-4 text-sm text-green-700">@_statusMessage</p>
+            <p class="mb-4 text-sm text-green-700" data-testid="@UiTestIds.RecipeSelectionStatus">@_statusMessage</p>
         }
 
         @if (_viewMode == ViewToggle.ViewModeKind.List)

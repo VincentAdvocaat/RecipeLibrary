@@ -13,7 +13,9 @@ public sealed class IngredientQuantityConversionService(
     IIngredientUnitConversionStore store,
     IIngredientUnitConversionAiProposer aiProposer,
     IOptions<RecipeImportOptions> importOptions,
-    ILogger<IngredientQuantityConversionService> logger)
+    ILogger<IngredientQuantityConversionService> logger,
+    IDemoContext? demo = null,
+    IDemoOperationRunner? demoRunner = null)
 {
     public static readonly string[] SourcePriority =
     [
@@ -22,7 +24,13 @@ public sealed class IngredientQuantityConversionService(
         ConversionSourceNames.Manual,
     ];
 
-    public async Task<IngredientQuantityConversionResult> ConvertToMassAsync(
+    public Task<IngredientQuantityConversionResult> ConvertToMassAsync(
+        IngredientQuantityConversionRequest request, CancellationToken ct = default) =>
+        demoRunner is not null && demo?.IsDemo == true
+            ? demoRunner.RunReadAsync(() => ConvertToMassCoreAsync(request, ct), ct)
+            : ConvertToMassCoreAsync(request, ct);
+
+    private async Task<IngredientQuantityConversionResult> ConvertToMassCoreAsync(
         IngredientQuantityConversionRequest request,
         CancellationToken ct = default)
     {
@@ -41,6 +49,8 @@ public sealed class IngredientQuantityConversionService(
                 return BuildResult(request.Quantity, preferred.AmountFrom, preferred.AmountTo, Unit.Gram, preferred.Origin.ToString());
             }
         }
+
+        if (demo?.IsDemo == true) return IngredientQuantityConversionResult.Unavailable();
 
         var pending = await store.GetPendingSuggestionAsync(
             request.CanonicalIngredientId,
@@ -111,7 +121,13 @@ public sealed class IngredientQuantityConversionService(
     /// <summary>
     /// Batch: which item keys can use curated/pending rows or AI fallback (no AI call).
     /// </summary>
-    public async Task<IReadOnlySet<string>> GetConvertibleKeysAsync(
+    public Task<IReadOnlySet<string>> GetConvertibleKeysAsync(
+        IReadOnlyList<(string Key, IngredientQuantityConversionRequest Request)> items, CancellationToken ct = default) =>
+        demoRunner is not null && demo?.IsDemo == true
+            ? demoRunner.RunReadAsync(() => GetConvertibleKeysCoreAsync(items, ct), ct)
+            : GetConvertibleKeysCoreAsync(items, ct);
+
+    private async Task<IReadOnlySet<string>> GetConvertibleKeysCoreAsync(
         IReadOnlyList<(string Key, IngredientQuantityConversionRequest Request)> items,
         CancellationToken ct = default)
     {
@@ -167,6 +183,10 @@ public sealed class IngredientQuantityConversionService(
             .Select(x => x.Request.IngredientDisplayName)
             .ToList();
 
+        if (demo?.IsDemo == true) return convertibleByIngredient.Count == 0 ? result
+            : candidates.Where(x => x.Request.CanonicalIngredientId is Guid id && convertibleByIngredient.Contains((id, x.Request.FromUnit)))
+                .Select(x => x.Key).ToHashSet(StringComparer.Ordinal);
+
         var pendings = await store.GetPendingSuggestionsBatchAsync(
             ingredientIds,
             namesWithoutId,
@@ -195,7 +215,13 @@ public sealed class IngredientQuantityConversionService(
     /// <summary>
     /// True when convert can use a curated/pending row or AI fallback (no AI call).
     /// </summary>
-    public async Task<bool> HasEstimateSourceAsync(
+    public Task<bool> HasEstimateSourceAsync(
+        IngredientQuantityConversionRequest request, CancellationToken ct = default) =>
+        demoRunner is not null && demo?.IsDemo == true
+            ? demoRunner.RunReadAsync(() => HasEstimateSourceCoreAsync(request, ct), ct)
+            : HasEstimateSourceCoreAsync(request, ct);
+
+    private async Task<bool> HasEstimateSourceCoreAsync(
         IngredientQuantityConversionRequest request,
         CancellationToken ct = default)
     {
@@ -220,6 +246,8 @@ public sealed class IngredientQuantityConversionService(
             }
         }
 
+        if (demo?.IsDemo == true) return false;
+
         var pending = await store.GetPendingSuggestionAsync(
             request.CanonicalIngredientId,
             request.IngredientDisplayName,
@@ -230,7 +258,8 @@ public sealed class IngredientQuantityConversionService(
     }
 
     public bool IsAiFallbackAvailable =>
-        importOptions.Value.Ai.Enabled
+        demo?.IsDemo != true
+        && importOptions.Value.Ai.Enabled
         && !string.IsNullOrWhiteSpace(importOptions.Value.Ai.ApiKey);
 
     public async Task<IngredientUnitConversion?> GetPreferredConversionAsync(

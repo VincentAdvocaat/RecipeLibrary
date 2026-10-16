@@ -12,6 +12,7 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpAccessor
 
 <PageTitle>@L["Auth.Login.PageTitle"]</PageTitle>
 
@@ -101,6 +102,7 @@
             return;
         }
 
+        RecipeLibrary.Web.Demo.DemoEndpoints.ClearBrowserState(HttpAccessor.HttpContext!);
         Navigation.NavigateTo(GetSafeReturnUrl(), forceLoad: true);
     }
 

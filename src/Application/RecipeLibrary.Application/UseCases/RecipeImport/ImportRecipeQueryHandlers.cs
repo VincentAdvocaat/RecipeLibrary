@@ -21,11 +21,13 @@ public sealed class ImportRecipeFromUrlQueryHandler(
     IRecipeImportContentFetcher contentFetcher,
     IRecipeSocialCaptionFetcher socialCaptionFetcher,
     IRecipeImportUrlGuard urlGuard,
-    RecipeImportService recipeImportService)
+    RecipeImportService recipeImportService,
+    IDemoContext? demo = null)
     : IQueryHandler<ImportRecipeFromUrlQuery, ImportRecipeResult>
 {
     public async Task<ImportRecipeResult> HandleAsync(ImportRecipeFromUrlQuery query, CancellationToken ct = default)
     {
+        if (demo?.IsDemo == true) throw new DemoAccessException("Demo.AccountRequired");
         var url = (query.Url ?? string.Empty).Trim();
         if (url.Length == 0)
         {
@@ -57,7 +59,8 @@ public sealed class ImportRecipeFromUrlQueryHandler(
 public sealed class ImportRecipeFromImageQueryHandler(
     IRecipeImageTextExtractor imageTextExtractor,
     RecipeImportService recipeImportService,
-    IOptions<RecipeImportOptions> options)
+    IOptions<RecipeImportOptions> options,
+    IDemoContext? demo = null)
     : IQueryHandler<ImportRecipeFromImageQuery, ImportRecipeResult>
 {
     private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -70,6 +73,7 @@ public sealed class ImportRecipeFromImageQueryHandler(
 
     public async Task<ImportRecipeResult> HandleAsync(ImportRecipeFromImageQuery query, CancellationToken ct = default)
     {
+        if (demo?.IsDemo == true) throw new DemoAccessException("Demo.AccountRequired");
         var images = ResolveImages(query);
         if (images.Count == 0)
         {

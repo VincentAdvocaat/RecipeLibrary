@@ -6,10 +6,13 @@ namespace RecipeLibrary.Web.E2E.Tests.Fixtures;
 public sealed class E2eProcessHost : IAsyncDisposable
 {
     private Process? _process;
+    private readonly System.Collections.Concurrent.ConcurrentQueue<string> _output = new();
+
+    public string Diagnostics => string.Join(Environment.NewLine, _output);
 
     public string BaseUrl { get; private set; } = string.Empty;
 
-    public async Task StartAsync(string connectionString, CancellationToken ct = default)
+    public async Task StartAsync(string connectionString, CancellationToken ct = default, IReadOnlyDictionary<string, string>? settings = null)
     {
         var port = Random.Shared.Next(10000, 60000);
         BaseUrl = $"http://127.0.0.1:{port}";
@@ -41,7 +44,15 @@ public sealed class E2eProcessHost : IAsyncDisposable
         psi.Environment["ConnectionStrings__RecipeDb"] = connectionString;
         psi.Environment["RecipeFileStorage__LocalBasePath"] = uploadPath;
 
+        if (settings is not null)
+            foreach (var setting in settings) psi.Environment[setting.Key] = setting.Value;
+
         _process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start the web application process.");
+
+        _process.OutputDataReceived += (_, line) => Capture(line.Data);
+        _process.ErrorDataReceived += (_, line) => Capture(line.Data);
+        _process.BeginOutputReadLine();
+        _process.BeginErrorReadLine();
 
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         var deadline = DateTime.UtcNow.AddMinutes(2);
@@ -66,7 +77,7 @@ public sealed class E2eProcessHost : IAsyncDisposable
 
             if (_process.HasExited)
             {
-                var stderr = await _process.StandardError.ReadToEndAsync(ct);
+                var stderr = string.Join(Environment.NewLine, _output);
                 throw new InvalidOperationException(
                     $"Web application process exited with code {_process.ExitCode}. stderr: {stderr}",
                     lastError);
@@ -76,6 +87,13 @@ public sealed class E2eProcessHost : IAsyncDisposable
         }
 
         throw new InvalidOperationException("Web application did not become reachable in time.", lastError);
+    }
+
+    private void Capture(string? line)
+    {
+        if (line is null) return;
+        _output.Enqueue(line);
+        while (_output.Count > 100) _output.TryDequeue(out _);
     }
 
     public async ValueTask DisposeAsync()
