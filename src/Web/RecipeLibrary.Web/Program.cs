@@ -230,7 +230,8 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 
-app.MapStaticAssets();
+// Login and startup pages must load their public CSS/JS before a session exists.
+app.MapStaticAssets().AllowAnonymous();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

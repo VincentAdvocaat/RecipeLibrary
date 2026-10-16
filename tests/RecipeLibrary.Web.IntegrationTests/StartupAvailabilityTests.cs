@@ -21,7 +21,7 @@ public sealed class StartupAvailabilityTests
         {
             BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false
         });
-        foreach (var path in new[] { "/health/live", "/health/ready", "/api/system/readiness", "/starting", "/failed" })
+        foreach (var path in new[] { "/health/live", "/health/ready", "/api/system/readiness", "/starting", "/failed", "/startup.js" })
         {
             using var response = await client.GetAsync(path).WaitAsync(TimeSpan.FromSeconds(10));
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
