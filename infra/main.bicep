@@ -41,6 +41,24 @@ param ghcrUsername string
 @description('GitHub PAT (or token) with read:packages used by Container Apps to pull from GHCR.')
 param ghcrPassword string
 
+@description('SEC only: provision the independent static welcome site.')
+param enableWelcome bool = false
+
+@description('Existing hostname/certificate bindings, passed by the pipeline to preserve them on redeploy.')
+param appCustomDomains array = []
+
+resource welcome 'Microsoft.Web/staticSites@2023-12-01' = if (enableWelcome) {
+  name: 'swa-recipelibrary-test-sec'
+  location: 'westeurope'
+  sku: {
+    name: 'Free'
+    tier: 'Free'
+  }
+  properties: {
+    provider: 'Custom'
+  }
+}
+
 var stableSuffix = toLower(uniqueString(subscription().subscriptionId, resourceGroup().id))
 var suffix = (nameSuffix == '') ? stableSuffix : toLower(nameSuffix)
 
@@ -390,6 +408,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 8080
         transport: 'auto'
         allowInsecure: false
+        customDomains: appCustomDomains
         stickySessions: {
           affinity: 'sticky'
         }
@@ -412,6 +431,14 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'SKIP_SQL_WAIT'
               value: 'true'
+            }
+            {
+              name: 'Welcome__AllowedOrigins__0'
+              value: enableWelcome ? 'https://recipelibrary.vasoftware.nl' : ''
+            }
+            {
+              name: 'Welcome__AllowedOrigins__1'
+              value: enableWelcome ? 'https://${welcome!.properties.defaultHostname}' : ''
             }
             {
               name: 'AZURE_CLIENT_ID'
@@ -520,3 +547,7 @@ output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVault.properties.vaultUri
 output openAiKeyVaultSecretName string = openAiKeyVaultSecretName
 output youTubeKeyVaultSecretName string = youTubeKeyVaultSecretName
+
+output welcomeSiteName string = enableWelcome ? welcome!.name : ''
+output welcomeSiteHostname string = enableWelcome ? welcome!.properties.defaultHostname : ''
+output appDomainVerificationId string = containerApp.properties.customDomainVerificationId

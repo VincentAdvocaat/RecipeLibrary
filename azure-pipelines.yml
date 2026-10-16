@@ -16,6 +16,10 @@ parameters:
   displayName: Run Stryker mutation pilot (opt-in, report-only)
   type: boolean
   default: false
+- name: configurePublicDomains
+  displayName: Validate DNS and bind public SEC domains
+  type: boolean
+  default: false
 
 variables:
   buildConfiguration: Release
@@ -36,6 +40,17 @@ stages:
         packageType: sdk
         version: 10.x
 
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '22.x'
+      displayName: Use Node for static welcome validation
+
+    - script: |
+        set -euo pipefail
+        node --test tests/welcome/startup.test.mjs
+        node scripts/build-welcome.mjs
+      displayName: Test and build static welcome page
+
     - script: dotnet restore RecipeLibrary.slnx
       displayName: Restore
 
@@ -55,6 +70,12 @@ stages:
 
     - script: dotnet test tests/RecipeLibrary.Web.ComponentTests --configuration $(buildConfiguration) --no-build --verbosity normal
       displayName: Component tests
+
+    - pwsh: ./tests/RecipeLibrary.Web.E2E.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+      displayName: Install Chromium for welcome page tests
+
+    - script: dotnet test tests/RecipeLibrary.Web.E2E.Tests --configuration $(buildConfiguration) --no-build --filter FullyQualifiedName~WelcomePageTests --verbosity normal
+      displayName: Static welcome browser tests
 
     - script: dotnet test tests/RecipeLibrary.Web.IntegrationTests --configuration $(buildConfiguration) --no-build --verbosity normal
       displayName: Integration tests
@@ -153,15 +174,24 @@ stages:
                 echo "Verifying resource group exists (pipeline does not create RGs)..."
                 az group show --name "$(resourceGroupName)" >/dev/null
 
+                # ARM replaces customDomains. Carry forward existing certificate bindings.
+                current_app="$(az containerapp list -g "$(resourceGroupName)" --query "[?starts_with(name, 'ca-rl-')].name | [0]" -o tsv)"
+                domains='[]'
+                if [ -n "$current_app" ]; then
+                  domains="$(az containerapp show -g "$(resourceGroupName)" -n "$current_app" --query properties.configuration.ingress.customDomains -o json)"
+                fi
+                domain_parameters="$(Agent.TempDirectory)/app-domains.json"
+                jq -n --argjson domains "$domains" '{appCustomDomains: {value: ($domains // [])}}' > "$domain_parameters"
                 deployment_name="main-$(Build.BuildId)"
                 outputs="$(az deployment group create \
                   --name "$deployment_name" \
                   --resource-group "$(resourceGroupName)" \
                   --template-file infra/main.bicep \
-                  --parameters \
+                  --parameters "@$domain_parameters" \
                     location="$(azureLocation)" \
                     projectName="$(projectName)" \
                     environment="$(environmentName)" \
+                    enableWelcome=true \
                     tenantId="$(AZURE_TENANT_ID)" \
                     entraAdminLogin="$(AZURE_ENTRA_ADMIN_LOGIN)" \
                     entraAdminObjectId="$(AZURE_ENTRA_ADMIN_OBJECT_ID)" \
@@ -180,6 +210,59 @@ stages:
                 echo "##vso[task.setvariable variable=containerAppName]$container_app_name"
                 echo "##vso[task.setvariable variable=containerAppFqdn]$container_app_fqdn"
                 echo "##vso[task.setvariable variable=keyVaultName]$key_vault_name"
+
+                welcome_site_name="$(echo "$outputs" | jq -r '.welcomeSiteName.value')"
+                welcome_site_hostname="$(echo "$outputs" | jq -r '.welcomeSiteHostname.value')"
+                echo "##vso[task.setvariable variable=welcomeSiteName]$welcome_site_name"
+                echo "##vso[task.setvariable variable=welcomeSiteHostname]$welcome_site_hostname"
+
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '22.x'
+            displayName: Use Node for welcome deployment
+
+          - task: AzureCLI@2
+            displayName: Prepare welcome page and optional domain bindings
+            inputs:
+              azureSubscription: RecipeLibrary-Azure-SEC
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                rg="$(resourceGroupName)"
+                app="$(containerAppName)"
+                site="$(welcomeSiteName)"
+                site_fqdn="$(welcomeSiteHostname)"
+                verification="$(az containerapp show -g "$rg" -n "$app" --query properties.customDomainVerificationId -o tsv)"
+                echo "CNAME recipelibrary.vasoftware.nl -> $site_fqdn"
+                echo "CNAME app-recipelibrary.vasoftware.nl -> $(containerAppFqdn)"
+                echo "TXT asuid.app-recipelibrary.vasoftware.nl -> $verification"
+                if [[ '${{ parameters.configurePublicDomains }}' =~ ^[Tt]rue$ ]]; then
+                  bash scripts/configure-welcome-domains.sh "$rg" "$app" "$site"
+                fi
+                binding="$(az containerapp hostname list -g "$rg" -n "$app" --query "[?name=='app-recipelibrary.vasoftware.nl'].bindingType | [0]" -o tsv)"
+                backend="https://$(containerAppFqdn)"
+                if [ "$binding" = 'SniEnabled' ]; then
+                  backend='https://app-recipelibrary.vasoftware.nl'
+                  curl --fail --silent --show-error --max-time 60 "$backend/health/live" -o /dev/null
+                fi
+                node scripts/build-welcome.mjs "$backend"
+                token="$(az staticwebapp secrets list -g "$rg" -n "$site" --query properties.apiKey -o tsv)"
+                echo "##vso[task.setvariable variable=welcomeDeploymentToken;issecret=true]$token"
+                echo "##vso[task.setvariable variable=welcomeSiteHostname]$site_fqdn"
+
+          - task: AzureStaticWebApp@0
+            displayName: Deploy independent static welcome page
+            inputs:
+              app_location: '.welcome-dist'
+              output_location: ''
+              skip_app_build: true
+              skip_api_build: true
+              azure_static_web_apps_api_token: $(welcomeDeploymentToken)
+
+          - script: |
+              curl --fail --silent --show-error --max-time 30 "https://$(welcomeSiteHostname)/" -o /dev/null
+            displayName: Smoke check static welcome page
 
           - task: AzureCLI@2
             displayName: Smoke check (cold start tolerant)
@@ -285,12 +368,21 @@ stages:
                 echo "Verifying resource group exists (pipeline does not create RGs)..."
                 az group show --name "$(resourceGroupName)" >/dev/null
 
+                # Preserve existing hostname/certificate bindings in this region too.
+                current_app="$(az containerapp list -g "$(resourceGroupName)" --query "[?starts_with(name, 'ca-rl-')].name | [0]" -o tsv)"
+                domains='[]'
+                if [ -n "$current_app" ]; then
+                  domains="$(az containerapp show -g "$(resourceGroupName)" -n "$current_app" --query properties.configuration.ingress.customDomains -o json)"
+                fi
+                domain_parameters="$(Agent.TempDirectory)/app-domains.json"
+                jq -n --argjson domains "$domains" '{appCustomDomains: {value: ($domains // [])}}' > "$domain_parameters"
+
                 deployment_name="main-$(Build.BuildId)"
                 outputs="$(az deployment group create \
                   --name "$deployment_name" \
                   --resource-group "$(resourceGroupName)" \
                   --template-file infra/main.bicep \
-                  --parameters \
+                  --parameters "@$domain_parameters" \
                     location="$(azureLocation)" \
                     projectName="$(projectName)" \
                     environment="$(environmentName)" \

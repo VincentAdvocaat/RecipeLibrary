@@ -126,9 +126,21 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.Configure<IdentitySeedUserOptions>(
     builder.Configuration.GetSection(IdentitySeedUserOptions.SectionName));
-builder.Services.AddHostedService<IdentitySeedUserHostedService>();
+builder.Services.AddSingleton<IdentitySeedUserHostedService>();
 
+builder.Services.AddSingleton<IPersistenceInitializer, PersistenceInitializer>();
+builder.Services.AddSingleton<IPersistenceSchemaInitializer, PersistenceSchemaInitializer>();
+builder.Services.Configure<PersistenceWarmupOptions>(builder.Configuration.GetSection("PersistenceWarmup"));
 builder.Services.AddHostedService<PersistenceWarmupHostedService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IDatabaseProbe>(_ => new SqlDatabaseProbe(recipeDbConnectionString));
+builder.Services.AddSingleton<DatabaseAvailability>();
+var welcomeOrigins = builder.Configuration.GetSection("Welcome:AllowedOrigins").Get<string[]>() ?? [];
+welcomeOrigins = welcomeOrigins.Where(origin => !string.IsNullOrWhiteSpace(origin)).ToArray();
+builder.Services.AddCors(options => options.AddPolicy("WelcomeReadiness", policy =>
+{
+    if (welcomeOrigins.Length > 0) policy.WithOrigins(welcomeOrigins).WithMethods("GET");
+}));
 builder.Services.AddRecipeImport(builder.Configuration);
 builder.Services.AddContentModeration(builder.Configuration);
 builder.Services.AddApplication();
@@ -184,39 +196,11 @@ builder.Services.AddScoped(sp =>
 
 var app = builder.Build();
 
-// Prefer a synchronous migrate on startup. When Azure SQL is paused (error 40613), continue so the
-// app can serve a "starting" page while PersistenceWarmupHostedService retries in the background.
-var persistenceStartupStartedAt = TimeProvider.System.GetUtcNow();
+// Tests retain deterministic schema setup. All runtime environments start HTTP immediately.
 if (app.Environment.IsEnvironment("Testing"))
 {
-    app.Services.EnsurePersistenceMigrated();
+    await app.Services.GetRequiredService<IPersistenceInitializer>().InitializeAsync(CancellationToken.None);
     app.Services.GetRequiredService<IPersistenceReadiness>().MarkReady();
-}
-else if (!app.Services.TryEnsurePersistenceMigrated(out var persistenceError))
-{
-    var readiness = app.Services.GetRequiredService<IPersistenceReadiness>();
-    if (readiness.HasPermanentlyFailed)
-    {
-        var durationSeconds = (TimeProvider.System.GetUtcNow() - persistenceStartupStartedAt).TotalSeconds;
-        app.Logger.LogError(
-            persistenceError,
-            "Application failed. StartupDurationSeconds={StartupDurationSeconds:0.###}",
-            durationSeconds);
-    }
-    else
-    {
-        app.Logger.LogInformation("Application starting (persistence warmup)");
-        app.Logger.LogWarning(
-            persistenceError,
-            "Database is not ready yet (e.g. Azure SQL auto-pause). Serving the starting page until migrations succeed.");
-    }
-}
-else
-{
-    var durationSeconds = (TimeProvider.System.GetUtcNow() - persistenceStartupStartedAt).TotalSeconds;
-    app.Logger.LogInformation(
-        "Application ready. StartupDurationSeconds={StartupDurationSeconds:0.###}",
-        durationSeconds);
 }
 
 // Configure the HTTP request pipeline.
@@ -237,6 +221,7 @@ app.UseHttpsRedirection();
 
 var localizationOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<RequestLocalizationOptions>>().Value;
 app.UseRequestLocalization(localizationOptions);
+app.UseCors();
 
 // Before auth: otherwise FallbackPolicy challenges to login while SQL is still waking up.
 app.UseMiddleware<PersistenceReadinessMiddleware>();
@@ -246,7 +231,16 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 
-app.MapStaticAssets();
+// Login and startup pages need CSS/JS before a session exists. Keep uploaded assets protected.
+app.MapStaticAssets().Add(endpoint =>
+{
+    if (endpoint is RouteEndpointBuilder route && route.RoutePattern.RawText is { } path
+        && !path.TrimStart('/').StartsWith("uploads/", StringComparison.OrdinalIgnoreCase)
+        && Path.GetExtension(path) is ".js" or ".css")
+    {
+        endpoint.Metadata.Add(new AllowAnonymousAttribute());
+    }
+});
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
@@ -264,16 +258,17 @@ app.MapGet("/health/database", (IPersistenceReadiness readiness) =>
     Results.Ok(new { state = readiness.State.ToString() })).AllowAnonymous();
 
 // UI poll endpoint while persistence warms up.
-app.MapGet("/api/system/readiness", (HttpContext httpContext, IPersistenceReadiness readiness) =>
+app.MapGet("/api/system/readiness", async (HttpContext httpContext, DatabaseAvailability availability) =>
 {
-    const int retryAfterSeconds = 5;
+    var state = await availability.GetStateAsync(httpContext.RequestAborted);
+    httpContext.Response.Headers.CacheControl = "no-store";
     return Results.Ok(new
     {
-        state = readiness.State.ToString(),
-        retryAfterSeconds = readiness.State == PersistenceWarmupState.Starting ? retryAfterSeconds : (int?)null,
+        state = state.ToString(),
+        retryAfterSeconds = state == PersistenceWarmupState.Starting ? 5 : (int?)null,
         traceId = httpContext.TraceIdentifier
     });
-}).AllowAnonymous();
+}).AllowAnonymous().RequireCors("WelcomeReadiness");
 
 app.MapPost("/api/upload-recipe-image", async (IFormFile file, ICommandBus commandBus, CancellationToken ct) =>
 {

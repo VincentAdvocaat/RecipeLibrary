@@ -1,5 +1,9 @@
 ## Infrastructure (Bicep)
 
+SEC also provisions an independent Azure Static Web Apps Free welcome site when
+`enableWelcome=true`. See [static welcome runbook](../docs/azure/static-welcome.md)
+for deployment, DNS, managed certificates and preservation of `appCustomDomains`.
+
 This folder contains Bicep templates to provision a **test** environment on Azure:
 
 - **Container Apps Consumption**: external ingress on port `8080`, `minReplicas: 0`, `maxReplicas: 1`, sticky sessions

@@ -32,7 +32,8 @@ public sealed class IdentitySeedUserHostedService(
         }
 
         using var scope = scopeFactory.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<SeedUserManager>();
+        userManager.SeedToken = cancellationToken;
 
         var user = await userManager.FindByEmailAsync(settings.Email);
         if (user is null)
