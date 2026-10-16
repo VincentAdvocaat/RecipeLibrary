@@ -1,6 +1,7 @@
 @page "/recipes/{RecipeId:guid}"
 @rendermode InteractiveServer
 
+@inject IDemoContext DemoContext
 @inject IQueryBus QueryBus
 @inject ICommandBus CommandBus
 @inject ShoppingListSessionService ShoppingSession
@@ -81,7 +82,7 @@ else if (_recipe is not null)
 
                     @if (_addMessage is not null)
                     {
-                        <p class="text-sm text-green-700">@_addMessage <AppNavLink Href="/shopping-list">@L["Nav.ShoppingList"]</AppNavLink></p>
+                        <p class="text-sm text-green-700" data-testid="@UiTestIds.RecipeAddedToListStatus">@_addMessage <AppNavLink Href="/shopping-list">@L["Nav.ShoppingList"]</AppNavLink></p>
                     }
 
                     <div class="flex flex-wrap items-end gap-3 pt-4 border-t border-gray-200">
@@ -105,6 +106,8 @@ else if (_recipe is not null)
                             @L["RecipeDetail.AddToShoppingListButton"]
                         </button>
                         <AppNavLink Href="@($"/recipes/{_recipe.Id}/edit")" data-testid="@UiTestIds.RecipeEdit">@L["RecipeDetail.EditButton"]</AppNavLink>
+                        @if (!DemoContext.IsDemo)
+                        {
                         <button type="button"
                                 data-testid="@UiTestIds.RecipeReport"
                                 class="text-sm font-medium text-gray-700 hover:text-gray-900"
@@ -112,6 +115,7 @@ else if (_recipe is not null)
                                 @onclick="ReportAsync">
                             @L["RecipeDetail.ReportButton"]
                         </button>
+                        }
                         <button type="button"
                                 data-testid="@UiTestIds.RecipeDelete"
                                 class="text-sm font-medium text-red-600 hover:text-red-800"

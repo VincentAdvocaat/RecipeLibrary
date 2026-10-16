@@ -142,6 +142,20 @@ public sealed class RecipeIngredientBuilderTests
         }
     }
 
+    [Fact]
+    public async Task DemoUnknownIngredient_RemainsRecipeLocal()
+    {
+        var repo = new LanguageTrackingIngredientRepository();
+        var normalizer = new IngredientTextNormalizer();
+        var items = await RecipeIngredientBuilder.BuildAsync(Guid.NewGuid(),
+            [new() { Name = "Unknown demo ingredient", Quantity = 1, Unit = "Gram" }],
+            repo, normalizer, new IngredientMatcher(repo, normalizer, new IngredientSimilarityScorer()),
+            new IngredientLineResolver(new IngredientNameParser()), CancellationToken.None, allowCatalogWrites: false);
+        Assert.Null(items[0].IngredientId);
+        Assert.Equal("Unknown demo ingredient", items[0].Name);
+        Assert.Null(repo.LastLanguageCode);
+    }
+
     private sealed class LanguageTrackingIngredientRepository : IngredientRepositoryStub
     {
         public string? LastLanguageCode { get; private set; }

@@ -36,6 +36,7 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "returnUrl")] public string? ReturnUrl { get; set; }
     private CancellationTokenSource? _cts;
 
     protected override void OnInitialized()
@@ -64,7 +65,7 @@
 
                     if (string.Equals(response.State, "Ready", StringComparison.OrdinalIgnoreCase))
                     {
-                        await InvokeAsync(() => Navigation.NavigateTo("/", forceLoad: true));
+                        await InvokeAsync(() => Navigation.NavigateTo(RecipeLibrary.Application.Security.LocalRedirect.Normalize(ReturnUrl), forceLoad: true));
                         return;
                     }
 
@@ -91,7 +92,7 @@
         }
     }
 
-    private void Reload() => Navigation.NavigateTo("/starting", forceLoad: true);
+    private void Reload() => Navigation.NavigateTo("/starting?returnUrl=" + Uri.EscapeDataString(RecipeLibrary.Application.Security.LocalRedirect.Normalize(ReturnUrl)), forceLoad: true);
 
     public async ValueTask DisposeAsync()
     {

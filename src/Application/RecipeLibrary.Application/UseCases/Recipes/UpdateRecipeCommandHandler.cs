@@ -16,7 +16,8 @@ public sealed class UpdateRecipeCommandHandler(
     IngredientLineResolver lineResolver,
     ICurrentUser currentUser,
     IUnitOfWork unitOfWork,
-    RecipeContentModerationService contentModeration)
+    RecipeContentModerationService contentModeration,
+    IDemoContext? demo = null)
     : ICommandHandler<UpdateRecipeCommand, UpdateRecipeResult>
 {
     public async Task<UpdateRecipeResult> HandleAsync(UpdateRecipeCommand command, CancellationToken ct = default)
@@ -59,7 +60,8 @@ public sealed class UpdateRecipeCommandHandler(
             normalizer,
             matcher,
             lineResolver,
-            ct);
+            ct,
+            allowCatalogWrites: demo?.IsDemo != true);
 
         var builtSteps = RecipeIngredientBuilder.BuildSteps(existing.Id, command.InstructionSteps);
 

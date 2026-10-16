@@ -8,6 +8,16 @@ namespace RecipeLibrary.Web.IntegrationTests;
 public sealed class PersistenceReadinessMiddlewareTests
 {
     [Fact]
+    public async Task Starting_PreservesDemoDestination()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/demo";
+        context.Request.Headers.Accept = "text/html";
+        await new PersistenceReadinessMiddleware(_ => Task.CompletedTask).InvokeAsync(context, new PersistenceReadiness());
+        Assert.Equal("/starting?returnUrl=%2Fdemo", context.Response.Headers.Location.ToString());
+    }
+
+    [Fact]
     public async Task Invoke_WhenReady_CallsNext()
     {
         var readiness = new PersistenceReadiness();
@@ -41,7 +51,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         await middleware.InvokeAsync(context, readiness);
 
         Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
-        Assert.Equal("/starting", context.Response.Headers.Location.ToString());
+        Assert.Equal("/starting?returnUrl=%2Frecipes", context.Response.Headers.Location.ToString());
     }
 
     [Fact]
@@ -57,7 +67,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         await middleware.InvokeAsync(context, readiness);
 
         Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
-        Assert.Equal("/failed", context.Response.Headers.Location.ToString());
+        Assert.Equal("/failed?returnUrl=%2Frecipes", context.Response.Headers.Location.ToString());
     }
 
     [Fact]

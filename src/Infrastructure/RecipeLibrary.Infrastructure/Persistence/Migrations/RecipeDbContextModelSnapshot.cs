@@ -200,6 +200,10 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<string>("DemoOwnerUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -215,6 +219,8 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("DemoOwnerUserId");
 
                     b.HasIndex("RecipeId");
 
@@ -276,6 +282,56 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("ConversionSources", (string)null);
+                });
+
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.DemoSession", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("ResetCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SaveAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SeedVersion")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("DemoSessions");
+                });
+
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.DemoStartQuota", b =>
+                {
+                    b.Property<string>("AddressHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Starts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("WindowStart")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("AddressHash");
+
+                    b.HasIndex("WindowStart");
+
+                    b.ToTable("DemoStartQuotas");
                 });
 
             modelBuilder.Entity("RecipeLibrary.Domain.Entities.Ingredient", b =>
@@ -933,6 +989,15 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.HasOne("RecipeLibrary.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.DemoSession", b =>
+                {
+                    b.HasOne("RecipeLibrary.Infrastructure.Identity.ApplicationUser", null)
+                        .WithOne()
+                        .HasForeignKey("RecipeLibrary.Domain.Entities.DemoSession", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

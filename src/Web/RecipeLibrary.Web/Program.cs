@@ -1,4 +1,5 @@
 using System.Globalization;
+using RecipeLibrary.Web.Demo;
 using Azure.Extensions.AspNetCore.DataProtection.Blobs;
 using Azure.Identity;
 using Microsoft.AspNetCore.Authorization;
@@ -22,6 +23,8 @@ using RecipeLibrary.Web.Services;
 using RecipeLibrary.Web.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+if (builder.Environment.IsEnvironment("Testing"))
+    builder.WebHost.UseStaticWebAssets();
 
 // In Development, load .env from repo root so MSSQL_SA_PASSWORD is available for local connection string fallback.
 if (builder.Environment.IsDevelopment())
@@ -123,7 +126,7 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .Build();
 });
-builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+builder.Services.AddDemo(builder.Configuration);
 builder.Services.Configure<IdentitySeedUserOptions>(
     builder.Configuration.GetSection(IdentitySeedUserOptions.SectionName));
 builder.Services.AddHostedService<IdentitySeedUserHostedService>();
@@ -242,11 +245,21 @@ app.UseRequestLocalization(localizationOptions);
 app.UseMiddleware<PersistenceReadinessMiddleware>();
 
 app.UseAuthentication();
+app.UseMiddleware<DemoMiddleware>();
 app.UseAuthorization();
 
 app.UseAntiforgery();
 
-app.MapStaticAssets();
+app.MapDemo();
+app.MapStaticAssets().Add(endpoint =>
+{
+    if (endpoint is Microsoft.AspNetCore.Routing.RouteEndpointBuilder route
+        && (route.RoutePattern.RawText?.StartsWith("demo", StringComparison.Ordinal) == true
+            || route.RoutePattern.RawText?.EndsWith(".css", StringComparison.Ordinal) == true
+            || route.RoutePattern.RawText?.EndsWith(".js", StringComparison.Ordinal) == true
+            || route.RoutePattern.RawText?.StartsWith("images/demo/", StringComparison.Ordinal) == true))
+        endpoint.Metadata.Add(new AllowAnonymousAttribute());
+});
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

@@ -40,7 +40,8 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
         }
 
         var redirectPath = readiness.HasPermanentlyFailed ? FailedPath.Value! : StartingPath.Value!;
-        context.Response.Redirect(redirectPath);
+        var target = context.Request.Path + context.Request.QueryString;
+        context.Response.Redirect(redirectPath + "?returnUrl=" + Uri.EscapeDataString(target));
     }
 
     private static bool IsExempt(PathString path) =>

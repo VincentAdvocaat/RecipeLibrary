@@ -165,6 +165,10 @@ Policy reference: `.cursor/rules/worktrees-and-branches.mdc`
 
 Code lives on **GitHub**; backlog and pipelines in **Azure DevOps**. See `docs/azure/ado-github-integration.md`.
 
+## Public demo
+
+Enable the optional visitor demo at `/demo` with `Demo__Enabled=true`. Setup, limits and cleanup: [docs/public-demo.md](docs/public-demo.md).
+
 ## Docs index
 
 - `docs/getting-started.md` — clone and run in ≈ 30 minutes

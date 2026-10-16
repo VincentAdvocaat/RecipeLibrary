@@ -13,12 +13,14 @@ public sealed class RecipeImportService(
     HtmlRecipeTextExtractor htmlRecipeTextExtractor,
     IngredientMatcher ingredientMatcher,
     IRecipeAiParser recipeAiParser,
-    IOptions<RecipeImportOptions> importOptions)
+    IOptions<RecipeImportOptions> importOptions,
+    IDemoContext? demo = null)
 {
     public async Task<ImportRecipeResult> ImportContentAsync(
         ImportRecipeContentQuery query,
         CancellationToken ct = default)
     {
+        if (demo?.IsDemo == true) throw new DemoAccessException("Demo.AccountRequired");
         var text = ResolvePlainText(query.Content, query.ContentKind);
         return await BuildResultAsync(text, query.ParseOptions, ct);
     }
@@ -79,6 +81,7 @@ public sealed class RecipeImportService(
         ImportRecipeParseOptions? parseOptions,
         CancellationToken ct)
     {
+        if (demo?.IsDemo == true) throw new DemoAccessException("Demo.AccountRequired");
         var options = parseOptions ?? new ImportRecipeParseOptions();
         var aiEnabled = importOptions.Value.Ai.Enabled
             && !string.IsNullOrWhiteSpace(importOptions.Value.Ai.ApiKey);

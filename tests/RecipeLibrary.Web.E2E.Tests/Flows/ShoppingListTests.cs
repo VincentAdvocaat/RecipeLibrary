@@ -11,14 +11,15 @@ public sealed class ShoppingListTests(E2eFixture fixture)
     [Fact]
     public async Task Detail_AddToShoppingList_ShowsItemOnListPage()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoAsync($"{fixture.BaseUrl}/recipes/{fixture.Seed.RecipeId}");
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
 
         await page.GetByTestId(UiTestIds.AddToShoppingList).ClickAsync();
-        await page.GotoAsync($"{fixture.BaseUrl}/shopping-list");
-        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
+        await page.GetByTestId(UiTestIds.RecipeAddedToListStatus).WaitForAsync();
+        await page.GotoShoppingListAsync(fixture.BaseUrl);
 
         await Assertions.Expect(page.GetByText("Gehakt")).ToBeVisibleAsync();
     }
@@ -26,7 +27,7 @@ public sealed class ShoppingListTests(E2eFixture fixture)
     [Fact]
     public async Task Overview_MultiSelect_AddsToList()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoRecipesAsync(fixture.BaseUrl);
@@ -34,22 +35,23 @@ public sealed class ShoppingListTests(E2eFixture fixture)
         await page.GetByTestId(UiTestIds.SelectModeStart).ClickAsync();
         await page.GetByTestId(UiTestIds.SelectRecipe(fixture.Seed.RecipeId)).CheckAsync();
         await page.GetByTestId(UiTestIds.AddSelectedToList).ClickAsync();
+        await page.GetByTestId(UiTestIds.RecipeSelectionStatus).WaitForAsync();
 
-        await page.GotoAsync($"{fixture.BaseUrl}/shopping-list");
-        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
+        await page.GotoShoppingListAsync(fixture.BaseUrl);
         await Assertions.Expect(page.GetByText("Gehakt")).ToBeVisibleAsync();
     }
 
     [Fact]
     public async Task ToggleItem_ChecksOff()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoAsync($"{fixture.BaseUrl}/recipes/{fixture.Seed.RecipeId}");
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
         await page.GetByTestId(UiTestIds.AddToShoppingList).ClickAsync();
-        await page.GotoAsync($"{fixture.BaseUrl}/shopping-list");
-        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
+        await page.GetByTestId(UiTestIds.RecipeAddedToListStatus).WaitForAsync();
+        await page.GotoShoppingListAsync(fixture.BaseUrl);
 
         var checkbox = page.Locator("[data-testid$='-checkbox']").First;
         await checkbox.CheckAsync();
@@ -59,11 +61,10 @@ public sealed class ShoppingListTests(E2eFixture fixture)
     [Fact]
     public async Task RenameList_UpdatesHeading()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
-        await page.GotoAsync($"{fixture.BaseUrl}/shopping-list");
-        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
+        await page.GotoShoppingListAsync(fixture.BaseUrl);
 
         var newName = $"List {Guid.NewGuid():N}";
         await page.GetByTestId(UiTestIds.ListRename).ClickAsync();
@@ -76,13 +77,14 @@ public sealed class ShoppingListTests(E2eFixture fixture)
     [Fact]
     public async Task SplitList_CreatesSecondTab()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoAsync($"{fixture.BaseUrl}/recipes/{fixture.Seed.RecipeId}");
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
         await page.GetByTestId(UiTestIds.AddToShoppingList).ClickAsync();
-        await page.GotoAsync($"{fixture.BaseUrl}/shopping-list");
-        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
+        await page.GetByTestId(UiTestIds.RecipeAddedToListStatus).WaitForAsync();
+        await page.GotoShoppingListAsync(fixture.BaseUrl);
 
         await page.GetByTestId(UiTestIds.SplitStart).ClickAsync();
         await page.Locator("input[type=checkbox]").First.CheckAsync();
@@ -99,13 +101,14 @@ public sealed class ShoppingListTests(E2eFixture fixture)
     [Fact]
     public async Task RemoveItem_RemovesFromList()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoAsync($"{fixture.BaseUrl}/recipes/{fixture.Seed.RecipeId}");
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
         await page.GetByTestId(UiTestIds.AddToShoppingList).ClickAsync();
-        await page.GotoAsync($"{fixture.BaseUrl}/shopping-list");
-        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
+        await page.GetByTestId(UiTestIds.RecipeAddedToListStatus).WaitForAsync();
+        await page.GotoShoppingListAsync(fixture.BaseUrl);
 
         var removeButtons = page.Locator("[data-testid$='-remove']");
         var countBefore = await removeButtons.CountAsync();
@@ -116,13 +119,14 @@ public sealed class ShoppingListTests(E2eFixture fixture)
     [Fact]
     public async Task ClearList_WithConfirm_EmptiesList()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoAsync($"{fixture.BaseUrl}/recipes/{fixture.Seed.RecipeId}");
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
         await page.GetByTestId(UiTestIds.AddToShoppingList).ClickAsync();
-        await page.GotoAsync($"{fixture.BaseUrl}/shopping-list");
-        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
+        await page.GetByTestId(UiTestIds.RecipeAddedToListStatus).WaitForAsync();
+        await page.GotoShoppingListAsync(fixture.BaseUrl);
 
         await page.GetByTestId(UiTestIds.ListClear).ClickAsync();
         await page.GetByTestId(UiTestIds.ConfirmYes).WaitForAsync();
@@ -134,13 +138,14 @@ public sealed class ShoppingListTests(E2eFixture fixture)
     [Fact]
     public async Task EditQuantity_UpdatesDisplayedAmount()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoAsync($"{fixture.BaseUrl}/recipes/{fixture.Seed.RecipeId}");
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
         await page.GetByTestId(UiTestIds.AddToShoppingList).ClickAsync();
-        await page.GotoAsync($"{fixture.BaseUrl}/shopping-list");
-        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
+        await page.GetByTestId(UiTestIds.RecipeAddedToListStatus).WaitForAsync();
+        await page.GotoShoppingListAsync(fixture.BaseUrl);
 
         var editButton = page.Locator("[data-testid$='-quantity-edit']").First;
         await editButton.ClickAsync();
@@ -154,11 +159,10 @@ public sealed class ShoppingListTests(E2eFixture fixture)
     [Fact]
     public async Task AddManualItem_ShowsOnList()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
-        await page.GotoAsync($"{fixture.BaseUrl}/shopping-list");
-        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
+        await page.GotoShoppingListAsync(fixture.BaseUrl);
 
         var itemName = $"Handmatig {Guid.NewGuid():N}";
         await page.GetByTestId(UiTestIds.AddItemName).FillBlazorInputAsync(itemName);
@@ -170,7 +174,7 @@ public sealed class ShoppingListTests(E2eFixture fixture)
     [Fact]
     public async Task PantryPage_AddItem_ShowsOnList()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoAsync($"{fixture.BaseUrl}/pantry");

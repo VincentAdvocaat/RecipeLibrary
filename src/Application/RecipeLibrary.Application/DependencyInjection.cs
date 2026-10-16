@@ -64,7 +64,15 @@ public static class DependencyInjection
                 var definition = iface.GetGenericTypeDefinition();
                 if (definition == typeof(ICommandHandler<,>) || definition == typeof(IQueryHandler<,>))
                 {
-                    services.AddScoped(iface, type);
+                    var innerType = type;
+                    var serviceType = iface;
+                    var wrapper = iface.GetGenericTypeDefinition() == typeof(ICommandHandler<,>)
+                        ? typeof(RecipeLibrary.Application.Demo.DemoCommandHandler<,>)
+                        : typeof(RecipeLibrary.Application.Demo.DemoQueryHandler<,>);
+                    var decoratedType = wrapper.MakeGenericType(iface.GenericTypeArguments);
+                    services.AddScoped(serviceType, sp => Activator.CreateInstance(decoratedType,
+                        ActivatorUtilities.CreateInstance(sp, innerType),
+                        sp.GetService<IDemoOperationRunner>())!);
                 }
             }
         }

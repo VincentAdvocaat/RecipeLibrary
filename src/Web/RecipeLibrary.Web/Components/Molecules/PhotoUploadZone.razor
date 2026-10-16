@@ -3,6 +3,14 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
+@inject IServiceProvider Services
+@{ var isDemo = (Services.GetService(typeof(IDemoContext)) as IDemoContext)?.IsDemo == true; }
+@if (isDemo)
+{
+    <DemoAccountRequired />
+}
+else
+{
 <div @ref="_zoneRef" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center @(string.IsNullOrEmpty(ImageUrl) ? "" : "relative") @CssClass relative min-h-[12rem] flex items-center justify-center">
     @if (string.IsNullOrEmpty(ImageUrl))
     {
@@ -29,6 +37,8 @@
     }
 </div>
 
+}
+
 @code {
     [Parameter] public string? ImageUrl { get; set; }
     [Parameter] public EventCallback<string?> ImageUrlChanged { get; set; }
@@ -40,7 +50,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && (Services.GetService(typeof(IDemoContext)) as IDemoContext)?.IsDemo != true)
         {
             _dotNetRef = DotNetObjectReference.Create(this);
             try

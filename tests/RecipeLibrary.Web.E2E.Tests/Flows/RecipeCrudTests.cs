@@ -14,7 +14,7 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
     public async Task CreateMinimalRecipe_RedirectsToDetail()
     {
         var title = $"E2E Recipe {Guid.NewGuid():N}";
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);
@@ -31,7 +31,7 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
     public async Task CreateWithPreparation_ShowsOnDetail()
     {
         var title = $"E2E Prep {Guid.NewGuid():N}";
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);
@@ -47,7 +47,7 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
     [Fact]
     public async Task Create_EmptyTitle_ShowsValidation()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);
@@ -63,7 +63,7 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
     [Fact]
     public async Task Create_EmptyIngredient_ShowsValidation()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);
@@ -79,7 +79,7 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
     [Fact]
     public async Task Create_EmptyStep_ShowsValidation()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);
@@ -95,7 +95,7 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
     [Fact]
     public async Task EditRecipe_UpdatesTitle()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoAsync($"{fixture.BaseUrl}/recipes/{fixture.Seed.RecipeId}");
@@ -113,7 +113,7 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
     public async Task DeleteRecipe_ReturnsToOverview()
     {
         var title = $"Delete Me {Guid.NewGuid():N}";
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);
@@ -133,21 +133,21 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
     [Fact]
     public async Task IngredientAutocomplete_SelectsSuggestion()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);
 
         await page.GetByTestId(UiTestIds.IngredientRowName(0)).FillAsync("ge");
-        await page.GetByRole(AriaRole.Button, new() { Name = "Gehakt" }).WaitForAsync();
-        await page.GetByRole(AriaRole.Button, new() { Name = "Gehakt" }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "[Ge]hakt", Exact = true }).WaitForAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "[Ge]hakt", Exact = true }).ClickAsync();
         await Assertions.Expect(page.GetByTestId(UiTestIds.IngredientRowName(0))).ToHaveValueAsync("Gehakt");
     }
 
     [Fact]
     public async Task AddAndRemoveIngredientRow_WorksOnCreatePage()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);
@@ -162,7 +162,7 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
     [Fact]
     public async Task AddIngredientTag_ShowsChip()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);

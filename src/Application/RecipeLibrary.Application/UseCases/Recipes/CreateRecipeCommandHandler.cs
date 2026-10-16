@@ -16,7 +16,8 @@ public sealed class CreateRecipeCommandHandler(
     IngredientLineResolver lineResolver,
     ICurrentUser currentUser,
     IUnitOfWork unitOfWork,
-    RecipeContentModerationService contentModeration)
+    RecipeContentModerationService contentModeration,
+    IDemoContext? demo = null)
     : ICommandHandler<CreateRecipeCommand, CreateRecipeResult>
 {
     public async Task<CreateRecipeResult> HandleAsync(CreateRecipeCommand command, CancellationToken ct = default)
@@ -64,7 +65,8 @@ public sealed class CreateRecipeCommandHandler(
             normalizer,
             matcher,
             lineResolver,
-            ct);
+            ct,
+            allowCatalogWrites: demo?.IsDemo != true);
         foreach (var ingredient in builtIngredients)
         {
             recipe.Ingredients.Add(ingredient);

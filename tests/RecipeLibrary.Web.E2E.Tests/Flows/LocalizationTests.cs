@@ -12,7 +12,7 @@ public sealed class LocalizationTests(E2eFixture fixture)
     [Fact]
     public async Task LanguageSwitch_NlToEnAndBack_StillFunctional()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoRecipesAsync(fixture.BaseUrl);

@@ -273,6 +273,44 @@ public sealed class IngredientQuantityConversionServiceTests
         Assert.Equal(ConversionOrigin.Curated, preferred.Origin);
     }
 
+    [Fact]
+    public async Task DemoConversion_DoesNotCallAiOrCreateSuggestion()
+    {
+        var store = new FakeStore();
+        var ai = new FakeAi();
+        var sut = CreateSut(store, aiEnabled: true, ai, isDemo: true);
+        var result = await sut.ConvertToMassAsync(new()
+        {
+            IngredientDisplayName = "Unknown flour", FromUnit = Unit.Cup, Quantity = 1
+        });
+        Assert.True(result.IsUnavailable);
+        Assert.False(ai.Called);
+        Assert.Empty(store.AddedSuggestions);
+        Assert.False(sut.IsAiFallbackAvailable);
+    }
+
+    [Fact]
+    public async Task DemoConversion_UsesCuratedConversion()
+    {
+        var id = Guid.NewGuid();
+        var store = new FakeStore { Conversions = [CreateConversion(id, ConversionSourceNames.Manual, 120, ConversionOrigin.Curated)] };
+        var ai = new FakeAi();
+        var sut = CreateSut(store, aiEnabled: true, ai, isDemo: true);
+        var result = await sut.ConvertToMassAsync(new()
+        {
+            CanonicalIngredientId = id, IngredientDisplayName = "Flour", FromUnit = Unit.Cup, Quantity = 2
+        });
+        Assert.Equal(240, result.Quantity);
+        Assert.False(ai.Called);
+        Assert.Empty(store.AddedSuggestions);
+    }
+
+    private sealed class DemoContext : IDemoContext
+    {
+        public bool IsDemo => true;
+        public int Revision => 1;
+    }
+
     private static IngredientUnitConversion CreateConversion(
         Guid ingredientId,
         string sourceName,
@@ -295,7 +333,7 @@ public sealed class IngredientQuantityConversionServiceTests
     private static IngredientQuantityConversionService CreateSut(
         FakeStore store,
         bool aiEnabled,
-        FakeAi? ai = null) =>
+        FakeAi? ai = null, bool isDemo = false) =>
         new(
             store,
             ai ?? new FakeAi(),
@@ -308,7 +346,7 @@ public sealed class IngredientQuantityConversionServiceTests
                     Model = "gpt-test",
                 },
             }),
-            NullLogger<IngredientQuantityConversionService>.Instance);
+            NullLogger<IngredientQuantityConversionService>.Instance, isDemo ? new DemoContext() : null);
 
     private sealed class FakeAi : IIngredientUnitConversionAiProposer
     {
