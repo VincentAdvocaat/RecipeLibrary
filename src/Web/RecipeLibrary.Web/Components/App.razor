@@ -16,7 +16,10 @@
 
 <body>
     <Routes @rendermode="PageRenderMode" />
-    <ReconnectModal @rendermode="InteractiveServer" />
+    @if (!IsStartupPage)
+    {
+        <ReconnectModal @rendermode="InteractiveServer" />
+    }
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="demo.js"></script>
     <script src="photoUploadZone.js"></script>
@@ -28,6 +31,10 @@
 @code {
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
+
+    private bool IsStartupPage => HttpContext.Request.Path.Value?.TrimEnd('/') is { } path
+        && (path.Equals("/starting", StringComparison.OrdinalIgnoreCase)
+            || path.Equals("/failed", StringComparison.OrdinalIgnoreCase));
 
     private IComponentRenderMode? PageRenderMode =>
         HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;

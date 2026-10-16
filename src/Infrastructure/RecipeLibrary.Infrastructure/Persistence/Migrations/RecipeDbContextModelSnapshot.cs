@@ -284,6 +284,27 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.ToTable("ConversionSources", (string)null);
                 });
 
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.DemoSaveAttempt", b =>
+                {
+                    b.Property<Guid>("OperationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CompletedRecipeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("OperationId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DemoSaveAttempts");
+                });
+
             modelBuilder.Entity("RecipeLibrary.Domain.Entities.DemoSession", b =>
                 {
                     b.Property<string>("UserId")
@@ -987,6 +1008,15 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
                     b.HasOne("RecipeLibrary.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.DemoSaveAttempt", b =>
+                {
+                    b.HasOne("RecipeLibrary.Domain.Entities.DemoSession", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)

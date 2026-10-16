@@ -40,6 +40,8 @@ public sealed class DemoOperationRunner(
         }
         if (!IsAllowed(operation)) return Denied<TResult>("Demo.AccountRequired");
 
+        // Stable across every execution-strategy retry, including an uncertain reservation commit.
+        var saveOperationId = operation is CreateRecipeCommand or UpdateRecipeCommand ? Guid.NewGuid() : Guid.Empty;
         await operations.WaitAsync(ct);
         try
         {
@@ -49,6 +51,12 @@ public sealed class DemoOperationRunner(
                 await gate.AcquireAsync(ct);
                 db.ChangeTracker.Clear();
                 var session = await GetValidSessionAsync(ct);
+                var reservation = saveOperationId == Guid.Empty ? null
+                    : await db.DemoSaveAttempts.SingleOrDefaultAsync(x => x.OperationId == saveOperationId && x.UserId == session.UserId, ct);
+                if (reservation?.CompletedRecipeId is Guid completedId)
+                    return operation is CreateRecipeCommand
+                        ? (TResult)(object)new CreateRecipeResult(completedId)
+                        : (TResult)(object)new UpdateRecipeResult(completedId);
                 if (operation is EnsureShoppingListGroupCommand ensure && ensure.OwnerUserId != user.UserId)
                     return Denied<TResult>("Demo.AccountRequired");
                 if (operation is CreateRecipeCommand && await db.Recipes.CountAsync(x => x.OwnerUserId == user.UserId, ct) >= options.Value.MaxRecipes)
@@ -56,10 +64,11 @@ public sealed class DemoOperationRunner(
                 if (operation is CreateRecipeCommand create) ValidateRecipe(create.ImageUrl, create.Ingredients.Count, create.InstructionSteps.Count);
                 if (operation is UpdateRecipeCommand update) ValidateRecipe(update.ImageUrl, update.Ingredients.Count, update.InstructionSteps.Count);
 
-                if (operation is CreateRecipeCommand or UpdateRecipeCommand)
+                if (saveOperationId != Guid.Empty && reservation is null)
                 {
                     if (session.SaveAttempts >= options.Value.MaxSaveAttempts) return Denied<TResult>("Demo.Limit");
                     session.SaveAttempts++;
+                    db.DemoSaveAttempts.Add(new DemoSaveAttempt { OperationId = saveOperationId, UserId = session.UserId });
                     // Keep attempts even when validation, moderation or the later transaction fails.
                     await db.SaveChangesAsync(ct);
                 }
@@ -70,12 +79,26 @@ public sealed class DemoOperationRunner(
                     var result = await action();
                     await db.SaveChangesAsync(ct);
                     await CheckCountsAsync(session.UserId, ct);
+                    Guid? resultId = result switch
+                    {
+                        CreateRecipeResult created => created.RecipeId,
+                        UpdateRecipeResult updated => updated.RecipeId,
+                        _ => null
+                    };
+                    if (saveOperationId != Guid.Empty && resultId is not null)
+                        await db.DemoSaveAttempts.Where(x => x.OperationId == saveOperationId)
+                            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.CompletedRecipeId, resultId), ct);
                     await transaction.CommitAsync(ct);
                     return result;
                 }
                 catch
                 {
-                    await transaction.RollbackAsync(ct);
+                    try { await transaction.RollbackAsync(ct); }
+                    catch (Exception rollbackError)
+                    {
+                        // Preserve the original transient error when commit succeeded or the connection was lost.
+                        logger.LogWarning(rollbackError, "Could not roll back demo content transaction");
+                    }
                     db.ChangeTracker.Clear();
                     throw;
                 }

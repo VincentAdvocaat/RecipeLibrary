@@ -30,8 +30,10 @@ public sealed class ContentModerationAdminSeedHostedService(
         }
 
         using var scope = scopeFactory.CreateScope();
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<SeedRoleManager>();
+        var userManager = scope.ServiceProvider.GetRequiredService<SeedUserManager>();
+        roleManager.SeedToken = cancellationToken;
+        userManager.SeedToken = cancellationToken;
 
         if (!await roleManager.RoleExistsAsync(ContentModerationOptions.AdminRoleName))
         {

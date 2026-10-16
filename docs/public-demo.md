@@ -4,7 +4,7 @@ The public entry point is `/demo`. Each visitor receives a passwordless temporar
 
 ## Enable and configure
 
-The demo is disabled by default. Deploy the application, bundled photos and `AddPublicDemoSessions` migration together, then set `Demo__Enabled=true`. Link to `https://<application-host>/demo` from the portfolio website.
+The demo is disabled by default. Deploy the application, bundled photos and both demo migrations (`AddPublicDemoSessions` and `AddDemoSaveReservations`) together, then set `Demo__Enabled=true`. Link to `https://<application-host>/demo` from the portfolio website.
 
 Configuration keys under `Demo` and their defaults:
 
@@ -22,7 +22,7 @@ Configuration keys under `Demo` and their defaults:
 | `MaxPantryItems` | `100` |
 | `MaxSaveAttempts` | `30` |
 
-Lifetime is absolute. Refreshing, resuming and resetting do not extend it. Reset also preserves the save-attempt counter. A new revision invalidates existing circuits; those tabs must reload. Demo cookies cannot be renewed by Identity's sliding expiration or lose their demo claims through security-stamp renewal.
+Lifetime is absolute. Refreshing, resuming and resetting do not extend it. Reset also preserves the save-attempt counter and its durable operation reservations. Database retries reuse one reservation, including when the final available attempt is retried. Recipe results are marked in the content transaction so an uncertain successful commit can return the existing result. A new revision invalidates existing circuits; those tabs must reload. Demo cookies cannot be renewed by Identity's sliding expiration or lose their demo claims through security-stamp renewal.
 
 The start quota uses a durable one-hour window per hashed remote IP. Configure trusted forwarding at the hosting boundary correctly. Start, reset, cleanup and demo application operations use a SQL Server application lock to serialize changes across app instances. This deliberately favors predictable behavior over high demo throughput. Normal accounts do not acquire the demo lock.
 

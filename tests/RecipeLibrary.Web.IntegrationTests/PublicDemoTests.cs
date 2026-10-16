@@ -1,4 +1,6 @@
 using System.Net;
+using System.Data.Common;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.Net.Http.Json;
 using System.Security.Claims;
@@ -156,11 +158,13 @@ public sealed class PublicDemoTests(SqlContainerFixture fixture)
         await using var factory = new DemoWebApplicationFactory(fixture.ConnectionString);
         using var client = Client(factory);
         var (owner, _) = await StartAsync(factory, client);
+        await AsDemoAsync(factory, owner, sp => sp.GetRequiredService<ICommandBus>().SendAsync<CreateRecipeCommand, CreateRecipeResult>(Recipe("Before end")));
         var end = await PostFormAsync(client, "/demo/end");
         Assert.Equal("/demo?state=ended", end.Headers.Location?.ToString());
         await CheckAsync(factory, async db =>
         {
             Assert.False(await db.Users.AnyAsync(x => x.Id == owner));
+            Assert.False(await db.DemoSaveAttempts.AnyAsync(x => x.UserId == owner));
             Assert.False(await db.Recipes.AnyAsync(x => x.OwnerUserId == owner));
             Assert.False(await db.PantryItems.AnyAsync(x => x.OwnerUserId == owner));
             Assert.False(await db.ShoppingListGroups.AnyAsync(x => x.OwnerUserId == owner));
@@ -361,6 +365,90 @@ public sealed class PublicDemoTests(SqlContainerFixture fixture)
                 throw new DbUpdateException("Injected demo seed failure");
             return base.SavingChangesAsync(eventData, result, cancellationToken);
         }
+    }
+
+    [Theory]
+    [InlineData(1, false, false)]
+    [InlineData(30, false, false)]
+    [InlineData(1, true, false)]
+    [InlineData(1, true, true)]
+    public async Task RecipeSaveRetry_UsesOneReservation_EvenForLastAttempt(int limit, bool failAfterCommit, bool failReservationCommit)
+    {
+        var saveFault = new RetrySaveFault();
+        var commitFault = new RetryCommitFault();
+        await using var factory = new DemoWebApplicationFactory(fixture.ConnectionString,
+            configure: options => options.MaxSaveAttempts = limit,
+            customize: services => services.AddDbContext<RecipeDbContext>(options => options
+                .AddInterceptors(saveFault, commitFault).ReplaceService<IExecutionStrategyFactory, RetryStrategyFactory>()));
+        using var client = Client(factory);
+        var (owner, _) = await StartAsync(factory, client);
+        await CheckAsync(factory, async db =>
+        {
+            var session = await db.DemoSessions.SingleAsync(x => x.UserId == owner);
+            session.SaveAttempts = limit - 1;
+            await db.SaveChangesAsync();
+        });
+        saveFault.Enabled = !failAfterCommit;
+        commitFault.Enabled = failAfterCommit;
+        commitFault.ReservationCommit = failReservationCommit;
+        Guid resultId = default;
+        await AsDemoAsync(factory, owner, async sp =>
+        {
+            var result = await sp.GetRequiredService<ICommandBus>().SendAsync<CreateRecipeCommand, CreateRecipeResult>(Recipe("Retry ingredient"));
+            resultId = result.RecipeId;
+        });
+        Assert.Equal(1, saveFault.Hits + commitFault.Hits);
+        await CheckAsync(factory, async db =>
+        {
+            Assert.Equal(limit, (await db.DemoSessions.SingleAsync(x => x.UserId == owner)).SaveAttempts);
+            Assert.Equal(9, await db.Recipes.CountAsync(x => x.OwnerUserId == owner));
+            var reservation = await db.DemoSaveAttempts.SingleAsync(x => x.UserId == owner);
+            Assert.Equal(resultId, reservation.CompletedRecipeId);
+            Assert.True(await db.Recipes.AnyAsync(x => x.Id == resultId));
+        });
+    }
+
+    private sealed class RetryFaultException : Exception;
+
+    private sealed class RetrySaveFault : SaveChangesInterceptor
+    {
+        public bool Enabled { get; set; }
+        public int Hits;
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
+            InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (Enabled && eventData.Context!.ChangeTracker.Entries<Recipe>().Any(x => x.State == EntityState.Added)
+                && Interlocked.CompareExchange(ref Hits, 1, 0) == 0)
+                throw new RetryFaultException();
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
+    }
+
+    private sealed class RetryCommitFault : DbTransactionInterceptor
+    {
+        public bool Enabled { get; set; }
+        public bool ReservationCommit { get; set; }
+        public int Hits;
+        public override Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData,
+            CancellationToken cancellationToken = default)
+        {
+            var hasRecipe = eventData.Context!.ChangeTracker.Entries<Recipe>().Any();
+            var reservation = eventData.Context.ChangeTracker.Entries<DemoSaveAttempt>().Any() && !hasRecipe;
+            if (Enabled && (ReservationCommit ? reservation : hasRecipe)
+                && Interlocked.CompareExchange(ref Hits, 1, 0) == 0)
+                throw new RetryFaultException();
+            return Task.CompletedTask;
+        }
+    }
+
+    public sealed class RetryStrategyFactory(ExecutionStrategyDependencies dependencies) : IExecutionStrategyFactory
+    {
+        public IExecutionStrategy Create() => new RetryStrategy(dependencies);
+    }
+
+    private sealed class RetryStrategy(ExecutionStrategyDependencies dependencies) : ExecutionStrategy(dependencies, 1, TimeSpan.Zero)
+    {
+        protected override bool ShouldRetryOn(Exception exception) => exception.GetBaseException() is RetryFaultException;
     }
 
     public static CreateRecipeCommand Recipe(string ingredient) => new()

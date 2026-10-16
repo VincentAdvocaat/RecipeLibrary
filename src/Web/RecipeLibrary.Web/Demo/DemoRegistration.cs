@@ -13,7 +13,6 @@ public static class DemoRegistration
                 && x.StartsPerIpPerHour > 0 && x.MaxActiveSessions > 0 && x.MaxResets >= 0
                 && x.MaxRecipes >= 8 && x.MaxLists > 0 && x.MaxItemsPerList >= 7
                 && x.MaxPantryItems >= 3 && x.MaxSaveAttempts > 0, "Invalid demo limits.").ValidateOnStart();
-        services.AddSingleton(TimeProvider.System);
         services.AddScoped<DemoIdentity>();
         services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<DemoIdentity>());
         services.AddScoped<IDemoContext>(sp => sp.GetRequiredService<DemoIdentity>());

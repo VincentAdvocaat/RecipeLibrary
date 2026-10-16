@@ -11,6 +11,7 @@ public sealed class PersistenceReadinessMiddlewareTests
     public async Task Starting_PreservesDemoDestination()
     {
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/demo";
         context.Request.Headers.Accept = "text/html";
         await new PersistenceReadinessMiddleware(_ => Task.CompletedTask).InvokeAsync(context, new PersistenceReadiness());
@@ -31,6 +32,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         });
 
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/recipes";
 
         await middleware.InvokeAsync(context, readiness);
@@ -45,6 +47,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         var readiness = new PersistenceReadiness();
         var middleware = new PersistenceReadinessMiddleware(_ => Task.CompletedTask);
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/recipes";
         context.Request.Headers.Accept = "text/html";
 
@@ -61,6 +64,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         readiness.MarkPermanentlyFailed();
         var middleware = new PersistenceReadinessMiddleware(_ => Task.CompletedTask);
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/recipes";
         context.Request.Headers.Accept = "text/html";
 
@@ -76,6 +80,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         var readiness = new PersistenceReadiness();
         var middleware = new PersistenceReadinessMiddleware(_ => Task.CompletedTask);
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/api/upload-recipe-image";
         context.Response.Body = new MemoryStream();
 
@@ -91,6 +96,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         readiness.MarkPermanentlyFailed();
         var middleware = new PersistenceReadinessMiddleware(_ => Task.CompletedTask);
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/api/upload-recipe-image";
         context.Response.Body = new MemoryStream();
 
@@ -115,6 +121,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         });
 
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/culture/set";
 
         await middleware.InvokeAsync(context, readiness);
@@ -134,6 +141,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         });
 
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/health";
 
         await middleware.InvokeAsync(context, readiness);
@@ -153,6 +161,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         });
 
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/health/live";
 
         await middleware.InvokeAsync(context, readiness);
@@ -172,6 +181,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         });
 
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/health/ready";
 
         await middleware.InvokeAsync(context, readiness);
@@ -191,6 +201,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         });
 
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/health/database";
 
         await middleware.InvokeAsync(context, readiness);
@@ -210,6 +221,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         });
 
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/api/system/readiness";
 
         await middleware.InvokeAsync(context, readiness);
@@ -229,6 +241,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         });
 
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/starting";
 
         await middleware.InvokeAsync(context, readiness);
@@ -249,6 +262,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         });
 
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/failed";
 
         await middleware.InvokeAsync(context, readiness);
@@ -262,6 +276,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         var readiness = new PersistenceReadiness();
         var middleware = new PersistenceReadinessMiddleware(_ => Task.CompletedTask);
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/ingredients/search";
         context.Request.Headers.Accept = "text/html";
         context.Response.Body = new MemoryStream();
@@ -277,6 +292,7 @@ public sealed class PersistenceReadinessMiddlewareTests
         var readiness = new PersistenceReadiness();
         var middleware = new PersistenceReadinessMiddleware(_ => Task.CompletedTask);
         var context = new DefaultHttpContext();
+        context.Request.Method = "GET";
         context.Request.Path = "/recipes/import-url";
         context.Response.Body = new MemoryStream();
 

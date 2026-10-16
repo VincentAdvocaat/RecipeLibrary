@@ -1,4 +1,5 @@
 using RecipeLibrary.Infrastructure.Persistence;
+using Microsoft.Extensions.Options;
 
 namespace RecipeLibrary.Web.Services;
 
@@ -7,13 +8,13 @@ namespace RecipeLibrary.Web.Services;
 /// Stops retrying after a deadline or on a non-transient failure.
 /// </summary>
 public sealed class PersistenceWarmupHostedService(
-    IServiceScopeFactory scopeFactory,
+    IPersistenceInitializer initializer,
+    IOptions<PersistenceWarmupOptions> options,
     IPersistenceReadiness readiness,
     ILogger<PersistenceWarmupHostedService> logger) : BackgroundService
 {
     private static readonly TimeSpan InitialDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan MaxDelay = TimeSpan.FromSeconds(15);
-    private static readonly TimeSpan MaxWarmupDuration = TimeSpan.FromMinutes(5);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -22,15 +23,19 @@ public sealed class PersistenceWarmupHostedService(
             return;
         }
 
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+        deadline.CancelAfter(options.Value.Timeout);
+        var warmupToken = deadline.Token;
         var startedAt = TimeProvider.System.GetUtcNow();
         logger.LogInformation("Application starting (persistence warmup)");
 
         var delay = InitialDelay;
-        while (!stoppingToken.IsCancellationRequested)
+        while (!warmupToken.IsCancellationRequested)
         {
             try
             {
-                await PersistenceServiceRegistration.EnsurePersistenceMigratedAsync(scopeFactory, stoppingToken);
+                await initializer.InitializeAsync(warmupToken);
+                warmupToken.ThrowIfCancellationRequested();
                 readiness.MarkReady();
                 var durationSeconds = (TimeProvider.System.GetUtcNow() - startedAt).TotalSeconds;
                 logger.LogInformation(
@@ -42,20 +47,27 @@ public sealed class PersistenceWarmupHostedService(
             {
                 return;
             }
+            catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+            {
+                readiness.MarkPermanentlyFailed();
+                logger.LogError("Application failed. Category=WarmupTimeout StartupDurationSeconds={Duration}",
+                    (TimeProvider.System.GetUtcNow() - startedAt).TotalSeconds);
+                return;
+            }
             catch (Exception ex) when (!SqlTransientExceptionDetector.IsTransient(ex))
             {
                 readiness.MarkPermanentlyFailed();
                 var durationSeconds = (TimeProvider.System.GetUtcNow() - startedAt).TotalSeconds;
                 logger.LogError(
                     ex,
-                    "Application failed. StartupDurationSeconds={StartupDurationSeconds:0.###}",
-                    durationSeconds);
+                    "Application failed. Category={Category} StartupDurationSeconds={StartupDurationSeconds:0.###}",
+                    ex.GetType().Name, durationSeconds);
                 return;
             }
             catch (Exception ex)
             {
                 var elapsed = TimeProvider.System.GetUtcNow() - startedAt;
-                if (elapsed >= MaxWarmupDuration)
+                if (elapsed >= options.Value.Timeout)
                 {
                     readiness.MarkPermanentlyFailed();
                     logger.LogError(
@@ -72,16 +84,26 @@ public sealed class PersistenceWarmupHostedService(
 
                 try
                 {
-                    await Task.Delay(delay, stoppingToken);
+                    await Task.Delay(delay, warmupToken);
                 }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                catch (OperationCanceledException) when (warmupToken.IsCancellationRequested)
                 {
+                    if (!stoppingToken.IsCancellationRequested)
+                    {
+                        readiness.MarkPermanentlyFailed();
+                        logger.LogError("Application failed. Category=WarmupTimeout");
+                    }
                     return;
                 }
 
                 var nextSeconds = Math.Min(delay.TotalSeconds * 1.5, MaxDelay.TotalSeconds);
                 delay = TimeSpan.FromSeconds(nextSeconds);
             }
+        }
+        if (!stoppingToken.IsCancellationRequested)
+        {
+            readiness.MarkPermanentlyFailed();
+            logger.LogError("Application failed. Category=WarmupTimeout");
         }
     }
 }

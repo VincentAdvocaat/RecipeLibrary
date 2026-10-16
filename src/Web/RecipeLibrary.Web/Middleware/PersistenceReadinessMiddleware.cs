@@ -1,4 +1,5 @@
 using RecipeLibrary.Infrastructure.Persistence;
+using RecipeLibrary.Web.Services;
 
 namespace RecipeLibrary.Web.Middleware;
 
@@ -25,7 +26,8 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
             return;
         }
 
-        if (IsApiOrNonHtmlRequest(context.Request))
+        if ((!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method))
+            || IsApiOrNonHtmlRequest(context.Request))
         {
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
             context.Response.Headers.CacheControl = "no-store";
@@ -40,8 +42,9 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
         }
 
         var redirectPath = readiness.HasPermanentlyFailed ? FailedPath.Value! : StartingPath.Value!;
-        var target = context.Request.Path + context.Request.QueryString;
-        context.Response.Redirect(redirectPath + "?returnUrl=" + Uri.EscapeDataString(target));
+        var returnUrl = StartupReturnUrl.Normalize(context.Request.PathBase + context.Request.Path + context.Request.QueryString);
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Redirect(redirectPath + "?returnUrl=" + Uri.EscapeDataString(returnUrl));
     }
 
     private static bool IsExempt(PathString path) =>
@@ -54,7 +57,6 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
         || path.StartsWithSegments(BlazorPath)
         || path.StartsWithSegments(FrameworkPath)
         || path.StartsWithSegments(ContentPath)
-        || path.StartsWithSegments("/Account")
         || path.StartsWithSegments("/css")
         || path.StartsWithSegments("/js")
         || path.Value?.EndsWith(".js", StringComparison.OrdinalIgnoreCase) == true

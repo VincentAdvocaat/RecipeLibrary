@@ -10,6 +10,7 @@ namespace RecipeLibrary.Infrastructure.Persistence;
 public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
     : IdentityDbContext<ApplicationUser>(options)
 {
+    public DbSet<DemoSaveAttempt> DemoSaveAttempts => Set<DemoSaveAttempt>();
     public DbSet<DemoStartQuota> DemoStartQuotas => Set<DemoStartQuota>();
     public DbSet<DemoSession> DemoSessions => Set<DemoSession>();
 
@@ -38,6 +39,13 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<DemoSaveAttempt>(b =>
+        {
+            b.HasKey(x => x.OperationId);
+            b.Property(x => x.UserId).HasMaxLength(450);
+            b.HasOne<DemoSession>().WithMany().HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
         modelBuilder.Entity<DemoStartQuota>(b =>
         {
             b.HasKey(x => x.AddressHash);
