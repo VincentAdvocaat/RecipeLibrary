@@ -178,7 +178,7 @@ stages:
                 current_app="$(az containerapp list -g "$(resourceGroupName)" --query "[?starts_with(name, 'ca-rl-')].name | [0]" -o tsv)"
                 domains='[]'
                 if [ -n "$current_app" ]; then
-                  domains="$(az containerapp show -g "$(resourceGroupName)" -n "$current_app" --query properties.configuration.ingress.customDomains -o json)"
+                  domains="$(az containerapp show -g "$(resourceGroupName)" -n "$current_app" -o json | jq '.properties.configuration.ingress.customDomains // []')"
                 fi
                 domain_parameters="$(Agent.TempDirectory)/app-domains.json"
                 jq -n --argjson domains "$domains" '{appCustomDomains: {value: ($domains // [])}}' > "$domain_parameters"
@@ -372,7 +372,7 @@ stages:
                 current_app="$(az containerapp list -g "$(resourceGroupName)" --query "[?starts_with(name, 'ca-rl-')].name | [0]" -o tsv)"
                 domains='[]'
                 if [ -n "$current_app" ]; then
-                  domains="$(az containerapp show -g "$(resourceGroupName)" -n "$current_app" --query properties.configuration.ingress.customDomains -o json)"
+                  domains="$(az containerapp show -g "$(resourceGroupName)" -n "$current_app" -o json | jq '.properties.configuration.ingress.customDomains // []')"
                 fi
                 domain_parameters="$(Agent.TempDirectory)/app-domains.json"
                 jq -n --argjson domains "$domains" '{appCustomDomains: {value: ($domains // [])}}' > "$domain_parameters"
