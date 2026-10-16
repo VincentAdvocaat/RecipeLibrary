@@ -21,7 +21,7 @@ public sealed class StartupAvailabilityTests
         {
             BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false
         });
-        foreach (var path in new[] { "/health/live", "/health/ready", "/api/system/readiness", "/starting", "/failed", "/startup.js" })
+        foreach (var path in new[] { "/health/live", "/health/ready", "/api/system/readiness", "/starting", "/failed", "/startup.js", "/app.css" })
         {
             using var response = await client.GetAsync(path).WaitAsync(TimeSpan.FromSeconds(10));
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -43,6 +43,9 @@ public sealed class StartupAvailabilityTests
         await WaitUntilAsync(() => readiness.IsReady);
         Assert.Contains("\"state\":\"Ready\"", await client.GetStringAsync("/api/system/readiness"));
         Assert.Equal(1, factory.Probe.Calls);
+        using var upload = await client.GetAsync("/uploads/recipe-images/95eb3480-fdb9-4928-bedd-f6f84e4b31cc.webp");
+        Assert.Equal(HttpStatusCode.Redirect, upload.StatusCode);
+        Assert.Contains("/Account/Login", upload.Headers.Location!.ToString());
     }
 
     [Theory]

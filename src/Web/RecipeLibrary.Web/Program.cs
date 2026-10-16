@@ -230,8 +230,16 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 
-// Login and startup pages must load their public CSS/JS before a session exists.
-app.MapStaticAssets().AllowAnonymous();
+// Login and startup pages need CSS/JS before a session exists. Keep uploaded assets protected.
+app.MapStaticAssets().Add(endpoint =>
+{
+    if (endpoint is RouteEndpointBuilder route && route.RoutePattern.RawText is { } path
+        && !path.TrimStart('/').StartsWith("uploads/", StringComparison.OrdinalIgnoreCase)
+        && Path.GetExtension(path) is ".js" or ".css")
+    {
+        endpoint.Metadata.Add(new AllowAnonymousAttribute());
+    }
+});
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
