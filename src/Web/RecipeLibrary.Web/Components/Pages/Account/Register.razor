@@ -12,6 +12,7 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpAccessor
 
 <PageTitle>@L["Auth.Register.PageTitle"]</PageTitle>
 
@@ -100,6 +101,7 @@
             return;
         }
 
+        RecipeLibrary.Web.Demo.DemoEndpoints.ClearBrowserState(HttpAccessor.HttpContext!);
         await SignInManager.SignInAsync(user, isPersistent: true);
         Navigation.NavigateTo("/recipes", forceLoad: true);
     }

@@ -129,6 +129,7 @@ public static class CreateRecipeCommandValidator
         }
 
         var value = imageUrl.Trim();
+        if (Enumerable.Range(1, 8).Any(i => value == $"/images/demo/recipe-{i}.png")) return;
         if (value.StartsWith("/api/recipe-images/", StringComparison.OrdinalIgnoreCase)
             && value.Length > "/api/recipe-images/".Length
             && !value.Contains("..", StringComparison.Ordinal)

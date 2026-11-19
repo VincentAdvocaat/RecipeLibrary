@@ -132,7 +132,9 @@ public sealed class ApiV1AuthAndRecipesTests(SqlContainerFixture fixture)
         var user = await CreateUserAsync(factory, "twofactor", "twofactor@example.com", Password);
         using var scope = factory.Services.CreateScope();
         var manager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-        Assert.True((await manager.SetTwoFactorEnabledAsync(user, true)).Succeeded);
+        var trackedUser = await manager.FindByIdAsync(user.Id);
+        Assert.NotNull(trackedUser);
+        Assert.True((await manager.SetTwoFactorEnabledAsync(trackedUser, true)).Succeeded);
 
         using var content = PasswordGrant(user.UserName!, Password);
         using var response = await client.PostAsync("/connect/token", content);
@@ -154,11 +156,13 @@ public sealed class ApiV1AuthAndRecipesTests(SqlContainerFixture fixture)
 
         using var scope = factory.Services.CreateScope();
         var manager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var trackedUser = await manager.FindByIdAsync(user.Id);
+        Assert.NotNull(trackedUser);
         var result = change switch
         {
-            "security stamp" => await manager.UpdateSecurityStampAsync(user),
-            "lockout" => await manager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddMinutes(5)),
-            "two-factor" => await manager.SetTwoFactorEnabledAsync(user, true),
+            "security stamp" => await manager.UpdateSecurityStampAsync(trackedUser),
+            "lockout" => await manager.SetLockoutEndDateAsync(trackedUser, DateTimeOffset.UtcNow.AddMinutes(5)),
+            "two-factor" => await manager.SetTwoFactorEnabledAsync(trackedUser, true),
             _ => throw new ArgumentOutOfRangeException(nameof(change)),
         };
         Assert.True(result.Succeeded);

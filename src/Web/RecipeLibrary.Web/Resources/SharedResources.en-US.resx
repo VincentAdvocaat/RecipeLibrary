@@ -353,4 +353,25 @@
   <data name="RecipeDetail.ReportButton" xml:space="preserve"><value>Report</value></data>
   <data name="RecipeDetail.Report.Submitted" xml:space="preserve"><value>Thanks — your report was submitted for review.</value></data>
   <data name="RecipeDetail.Report.Failed" xml:space="preserve"><value>Could not submit the report. Please try again.</value></data>
+  <data name="Demo.Title" xml:space="preserve"><value>Try RecipeLibrary</value></data>
+  <data name="Demo.NormalAccount" xml:space="preserve"><value>You are already signed in. Open the demo in a private window to keep your own library.</value></data>
+  <data name="Demo.Back" xml:space="preserve"><value>Back to my recipes</value></data>
+  <data name="Demo.Disabled" xml:space="preserve"><value>The demo is currently unavailable.</value></data>
+  <data name="Demo.Expired" xml:space="preserve"><value>Your demo session has expired. Start another demo or create your own account.</value></data>
+  <data name="Demo.Reload" xml:space="preserve"><value>The demo was reset in another tab. Reload this page to continue.</value></data>
+  <data name="Demo.Limit" xml:space="preserve"><value>You have reached a demo limit. Try again later or create your own account.</value></data>
+  <data name="Demo.Ended" xml:space="preserve"><value>Your demo has ended and your changes have been deleted.</value></data>
+  <data name="Demo.AccountRequired" xml:space="preserve"><value>Available with your own account.</value></data>
+  <data name="Demo.Preparing" xml:space="preserve"><value>Preparing your demo…</value></data>
+  <data name="Demo.Start" xml:space="preserve"><value>Start a new demo</value></data>
+  <data name="Demo.Duration" xml:space="preserve"><value>You get your own sample library for {0} minutes. Your changes are temporary.</value></data>
+  <data name="Demo.Register" xml:space="preserve"><value>Create an account</value></data>
+  <data name="Demo.Banner" xml:space="preserve"><value>You are using the demo. Your changes are deleted {0} minutes after starting.</value></data>
+  <data name="Demo.Reset" xml:space="preserve"><value>Reset demo</value></data>
+  <data name="Demo.ResetConfirm" xml:space="preserve"><value>Delete your demo changes and restore the sample recipes? The expiry time stays the same.</value></data>
+  <data name="Demo.End" xml:space="preserve"><value>Leave demo</value></data>
+  <data name="Demo.Hint" xml:space="preserve"><value>Open a recipe and add its ingredients to your shopping list.</value></data>
+  <data name="Demo.Close" xml:space="preserve"><value>Dismiss tip</value></data>
+  <data name="Demo.Error" xml:space="preserve"><value>This page could not be loaded. Try opening it again.</value></data>
+  <data name="Demo.ReloadAction" xml:space="preserve"><value>Reload page</value></data>
 </root>

@@ -1,6 +1,25 @@
 @inherits LayoutComponentBase
+@inject IDemoContext DemoContext
 
-@Body
+<DemoBanner />
+@if (DemoContext.IsDemo)
+{
+<DemoErrorBoundary>
+    <ChildContent>@Body</ChildContent>
+    <ErrorContent Context="error">
+        <div class="mx-auto max-w-xl p-6 space-y-4" role="alert">
+            <p>@(error is DemoAccessException demoError ? L[demoError.Code] : L["Demo.Error"])</p>
+            <a href="/demo?state=expired" class="underline">@L["Demo.Start"]</a>
+            <a href="/recipes" data-enhance-nav="false" class="underline">@L["Demo.ReloadAction"]</a>
+            <a href="/Account/Register" class="underline">@L["Demo.Register"]</a>
+        </div>
+    </ErrorContent>
+</DemoErrorBoundary>
+}
+else
+{
+    @Body
+}
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.

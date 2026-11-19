@@ -12,6 +12,7 @@
 @using RecipeLibrary.Web.Services
 @using RecipeCategory = RecipeLibrary.Domain.ValueObjects.RecipeCategory
 @using RecipeDifficulty = RecipeLibrary.Domain.ValueObjects.Difficulty
+@inject IDemoContext DemoContext
 @inject ICommandBus CommandBus
 @inject IQueryBus QueryBus
 @inject NavigationManager Navigation
@@ -26,7 +27,11 @@
 
         <RecipeCreateModeSwitcher Mode="_mode" ModeChanged="OnModeChanged" />
 
-        @if (_mode == RecipeCreateMode.Text)
+        @if (DemoContext.IsDemo && _mode != RecipeCreateMode.Manual)
+        {
+            <DemoAccountRequired />
+        }
+        else if (_mode == RecipeCreateMode.Text)
         {
             @RenderTextImport()
         }
@@ -891,7 +896,8 @@
             };
 
             var result = await CommandBus.SendAsync<CreateRecipeCommand, CreateRecipeResult>(command);
-            await RecipeIngredientEditorSupport.ApplyIngredientTagsAsync(CommandBus, _vm.Ingredients, _ingredientTags);
+            if (!DemoContext.IsDemo)
+                await RecipeIngredientEditorSupport.ApplyIngredientTagsAsync(CommandBus, _vm.Ingredients, _ingredientTags);
             _saveSucceeded = true;
             _statusMessage = L["RecipeCreate.Saved.Message"];
             // Full reload: soft NavigateTo after save can TaskCancel and kill the Blazor circuit.
@@ -906,7 +912,7 @@
         catch (Exception ex)
         {
             _saveSucceeded = false;
-            _statusMessage = ex.Message;
+            _statusMessage = ex is DemoAccessException demoError ? L[demoError.Code] : ex.Message;
             StateHasChanged();
         }
         finally

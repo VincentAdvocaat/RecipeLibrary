@@ -12,6 +12,9 @@ public sealed class EfUnitOfWork(RecipeDbContext dbContext) : IUnitOfWork
     {
         ArgumentNullException.ThrowIfNull(action);
 
+        if (dbContext.Database.CurrentTransaction is not null)
+            return action(ct);
+
         var strategy = dbContext.Database.CreateExecutionStrategy();
         return strategy.ExecuteAsync(async () =>
         {

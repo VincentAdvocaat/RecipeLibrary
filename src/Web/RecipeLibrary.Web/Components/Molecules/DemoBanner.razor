@@ -1,0 +1,89 @@
+@using RecipeLibrary.Web.Demo
+@using Microsoft.Extensions.Options
+@inject DemoIdentity Identity
+@inject IOptions<DemoOptions> Options
+@inject IJSRuntime JS
+@inject TimeProvider Time
+@implements IAsyncDisposable
+
+@if (Identity.IsDemo)
+{
+    <aside class="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-gray-900" data-testid="@UiTestIds.DemoBanner" aria-label="@L["Demo.Title"]">
+        @if (_expired || !Options.Value.Enabled)
+        {
+            <p role="status">@L["Demo.Expired"]</p>
+            <a href="/demo?state=expired" class="underline">@L["Demo.Start"]</a>
+        }
+        else
+        {
+            <p>@L["Demo.Banner", Options.Value.LifetimeMinutes]</p>
+            <div class="flex flex-wrap gap-4 mt-2">
+                <button type="button" class="underline" @onclick="() => _confirmReset = true" data-testid="@UiTestIds.DemoReset">@L["Demo.Reset"]</button>
+                <form method="post" action="/demo/end" data-enhance="false">
+                    <AntiforgeryToken />
+                    <button type="submit" class="underline" data-testid="@UiTestIds.DemoEnd">@L["Demo.End"]</button>
+                </form>
+            </div>
+            @if (_confirmReset)
+            {
+                <ConfirmPanel Message="@L["Demo.ResetConfirm"]" OnYes="ResetAsync" OnNo="() => _confirmReset = false" />
+            }
+            <form id="demo-reset-form" method="post" action="/demo/reset" data-enhance="false" hidden>
+                <AntiforgeryToken />
+            </form>
+            @if (_showHint)
+            {
+                <div class="flex gap-4 mt-2" role="status">
+                    <p>@L["Demo.Hint"]</p>
+                    <button type="button" @onclick="() => _showHint = false" aria-label="@L["Demo.Close"]">×</button>
+                </div>
+            }
+        }
+        <a href="/Account/Register" class="inline-block mt-2 underline">@L["Demo.Register"]</a>
+    </aside>
+}
+
+@code {
+    private bool _confirmReset;
+    private bool _showHint;
+    private bool _expired;
+    private readonly CancellationTokenSource _cts = new();
+    private Task? _timer;
+
+    protected override void OnInitialized()
+    {
+        if (Identity.IsDemo) _expired = Identity.ExpiresAt <= Time.GetUtcNow();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !Identity.IsDemo) return;
+        try
+        {
+            _showHint = await JS.InvokeAsync<bool>("RecipeLibraryDemo.showHint", Identity.UserId);
+            StateHasChanged();
+        }
+        catch (JSException) { }
+        _timer = WatchExpiryAsync();
+    }
+
+    private Task ResetAsync() => JS.InvokeVoidAsync("RecipeLibraryDemo.submit", "demo-reset-form").AsTask();
+
+    private async Task WatchExpiryAsync()
+    {
+        try
+        {
+            var delay = Identity.ExpiresAt - Time.GetUtcNow();
+            if (delay > TimeSpan.Zero) await Task.Delay(delay, Time, _cts.Token);
+            await InvokeAsync(() => { _expired = true; StateHasChanged(); });
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _cts.CancelAsync();
+        if (_timer is not null) await _timer;
+        _cts.Dispose();
+    }
+}

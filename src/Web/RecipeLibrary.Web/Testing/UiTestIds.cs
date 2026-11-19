@@ -3,6 +3,16 @@ namespace RecipeLibrary.Web.Testing;
 /// <summary>Stable data-testid values for UI and E2E tests (language-independent).</summary>
 public static class UiTestIds
 {
+    public const string RecipeAddedToListStatus = "recipe-added-to-list-status";
+    public const string RecipeSelectionStatus = "recipe-selection-status";
+    public const string AppInteractiveReady = "app-interactive-ready";
+    public const string DemoBanner = "demo-banner";
+    public const string DemoStartPage = "demo-start-page";
+    public const string DemoStart = "demo-start";
+    public const string DemoState = "demo-state";
+    public const string DemoReset = "demo-reset";
+    public const string DemoEnd = "demo-end";
+    public const string DemoAccountRequired = "demo-account-required";
     public const string NavMenu = "nav-menu";
     public const string NavRecipes = "nav-recipes";
     public const string NavCreate = "nav-create";

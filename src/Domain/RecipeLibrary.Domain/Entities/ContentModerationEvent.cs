@@ -5,6 +5,8 @@ namespace RecipeLibrary.Domain.Entities;
 /// <summary>Audit row for a moderation decision (text or image).</summary>
 public sealed class ContentModerationEvent
 {
+    public string? DemoOwnerUserId { get; set; }
+
     public Guid Id { get; set; }
 
     /// <summary>Optional: set when the recipe already exists or was just created.</summary>

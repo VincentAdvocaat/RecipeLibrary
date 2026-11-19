@@ -14,12 +14,21 @@ public static class PlaywrightExtensions
     {
         await page.GotoAsync($"{baseUrl.TrimEnd('/')}/recipes");
         await page.GetByTestId(UiTestIds.OverviewReady).WaitForAsync();
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
     }
 
     public static async Task GotoCreateRecipeAsync(this IPage page, string baseUrl)
     {
         await page.GotoAsync($"{baseUrl.TrimEnd('/')}/recipes/create");
         await page.GetByTestId(UiTestIds.RecipeTitle).WaitForAsync();
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
+    }
+
+    public static async Task GotoShoppingListAsync(this IPage page, string baseUrl)
+    {
+        await page.GotoAsync(baseUrl + "/shopping-list");
+        await page.GetByTestId(UiTestIds.ShoppingListReady).WaitForAsync();
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
     }
 
     public static async Task FillBlazorInputAsync(this ILocator locator, string value)
