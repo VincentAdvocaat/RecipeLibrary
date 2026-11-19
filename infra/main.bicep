@@ -27,6 +27,9 @@ param clientPublicIp string = ''
 @description('Whether to allow Azure services to access the SQL server (equivalent to adding firewall rule 0.0.0.0).')
 param allowAzureServices bool = true
 
+@description('Explicit initial SQL provisioning or intentional SQL configuration maintenance. False for ordinary app releases to avoid resuming serverless SQL.')
+param provisionSqlInfrastructure bool = false
+
 @description('GHCR image repository without digest (lowercase), e.g. ghcr.io/owner/recipelibrary.')
 param ghcrImageRepository string = 'ghcr.io/vincentadvocaat/recipelibrary'
 
@@ -325,58 +328,19 @@ resource appBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01'
   }
 }
 
-resource sqlServer 'Microsoft.Sql/servers@2024-05-01-preview' = {
-  name: sqlServerName
-  location: location
-  properties: {
-    version: '12.0'
-    minimalTlsVersion: '1.2'
-    publicNetworkAccess: 'Enabled'
-    administrators: {
-      administratorType: 'ActiveDirectory'
-      azureADOnlyAuthentication: true
-      login: entraAdminLogin
-      sid: entraAdminObjectId
-      tenantId: tenantId
-      principalType: 'User'
-    }
-  }
-}
-
-resource sqlDb 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
-  name: sqlDatabaseName
-  parent: sqlServer
-  location: location
-  sku: {
-    name: 'GP_S_Gen5'
-    tier: 'GeneralPurpose'
-    family: 'Gen5'
-    capacity: 2
-  }
-  properties: {
-    minCapacity: json('0.5')
-    autoPauseDelay: 60
-    maxSizeBytes: 34359738368 // 32 GiB
-    useFreeLimit: true
-    freeLimitExhaustionBehavior: 'AutoPause'
-  }
-}
-
-resource sqlAllowAzure 'Microsoft.Sql/servers/firewallRules@2023-05-01-preview' = if (allowAzureServices) {
-  name: 'AllowAzureServices'
-  parent: sqlServer
-  properties: {
-    startIpAddress: '0.0.0.0'
-    endIpAddress: '0.0.0.0'
-  }
-}
-
-resource sqlAllowClientIp 'Microsoft.Sql/servers/firewallRules@2023-05-01-preview' = if (clientPublicIp != '') {
-  name: 'AllowClientIp'
-  parent: sqlServer
-  properties: {
-    startIpAddress: clientPublicIp
-    endIpAddress: clientPublicIp
+// Ordinary releases must not PUT the SQL server/database or firewall resources.
+// Incremental deployment leaves the existing database, users and free-tier settings intact.
+module sql './sql.bicep' = if (provisionSqlInfrastructure) {
+  name: 'sql'
+  params: {
+    location: location
+    sqlServerName: sqlServerName
+    sqlDatabaseName: sqlDatabaseName
+    tenantId: tenantId
+    entraAdminLogin: entraAdminLogin
+    entraAdminObjectId: entraAdminObjectId
+    allowAzureServices: allowAzureServices
+    clientPublicIp: clientPublicIp
   }
 }
 
@@ -652,9 +616,9 @@ output containerAppFqdn string = containerApp.properties.configuration.ingress.f
 output managedIdentityName string = appIdentity.name
 output managedIdentityPrincipalId string = appIdentity.properties.principalId
 output managedIdentityClientId string = appIdentity.properties.clientId
-output sqlServerName string = sqlServer.name
+output sqlServerName string = sqlServerName
 output sqlServerFqdn string = sqlFqdn
-output sqlDatabaseName string = sqlDb.name
+output sqlDatabaseName string = sqlDatabaseName
 output storageAccountName string = storageAccount.name
 output recipeImagesContainerName string = recipeImagesContainer.name
 output dataProtectionContainerName string = dataProtectionContainer.name

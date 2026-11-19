@@ -8,6 +8,10 @@ pool:
   vmImage: ubuntu-24.04
 
 parameters:
+- name: provisionSqlInfrastructure
+  displayName: Provision or intentionally update SQL (may resume database)
+  type: boolean
+  default: false
 - name: enableAnalytics
   displayName: Enable Free Tier analytics in SEC only
   type: boolean
@@ -54,6 +58,12 @@ stages:
         node --test tests/welcome/*.test.mjs
         node scripts/build-welcome.mjs
       displayName: Test and build static welcome page
+
+    - script: |
+        set -euo pipefail
+        az bicep build --file infra/main.bicep --outfile "$(Agent.TempDirectory)/main.json"
+        SQL_DEPLOYMENT_TEMPLATE="$(Agent.TempDirectory)/main.json" node --test tests/infra/*.test.mjs
+      displayName: Validate SQL deployment isolation and free limits
 
     - script: |
         set -euo pipefail
@@ -209,10 +219,12 @@ stages:
                   --name "$deployment_name" \
                   --resource-group "$(resourceGroupName)" \
                   --template-file infra/main.bicep \
+                  --mode Incremental \
                   --parameters "@$domain_parameters" \
                     location="$(azureLocation)" \
                     projectName="$(projectName)" \
                     environment="$(environmentName)" \
+                    provisionSqlInfrastructure=${{ lower(parameters.provisionSqlInfrastructure) }} \
                     enableWelcome=true \
                     enableAnalytics=${{ lower(parameters.enableAnalytics) }} \
                     tenantId="$(AZURE_TENANT_ID)" \
@@ -223,6 +235,19 @@ stages:
                     ghcrUsername="$(GHCR_USERNAME)" \
                     ghcrPassword="$(GHCR_TOKEN)" \
                   --query properties.outputs -o json)"
+
+                # ARM metadata GET only: never connect to SQL or repair settings during app releases.
+                sql_server="$(echo "$outputs" | jq -r '.sqlServerName.value')"
+                sql_database="$(echo "$outputs" | jq -r '.sqlDatabaseName.value')"
+                if ! sql_settings="$(az sql db show -g "$(resourceGroupName)" -s "$sql_server" -n "$sql_database" -o json)"; then
+                  echo "SQL database missing or inaccessible. For initial provisioning, manually enable provisionSqlInfrastructure; do not enable it for routine releases."
+                  exit 1
+                fi
+                if ! echo "$sql_settings" | jq -e '.useFreeLimit == true and .freeLimitExhaustionBehavior == "AutoPause"' >/dev/null; then
+                  echo "SQL free-limit protection is missing. Stopping deployment validation without changing SQL."
+                  exit 1
+                fi
+                echo "SQL free limit and AutoPause verified through management metadata."
 
                 container_app_name="$(echo "$outputs" | jq -r '.containerAppName.value')"
                 container_app_fqdn="$(echo "$outputs" | jq -r '.containerAppFqdn.value')"
@@ -400,10 +425,12 @@ stages:
                   --name "$deployment_name" \
                   --resource-group "$(resourceGroupName)" \
                   --template-file infra/main.bicep \
+                  --mode Incremental \
                   --parameters "@$domain_parameters" \
                     location="$(azureLocation)" \
                     projectName="$(projectName)" \
                     environment="$(environmentName)" \
+                    provisionSqlInfrastructure=${{ lower(parameters.provisionSqlInfrastructure) }} \
                     tenantId="$(AZURE_TENANT_ID)" \
                     entraAdminLogin="$(AZURE_ENTRA_ADMIN_LOGIN)" \
                     entraAdminObjectId="$(AZURE_ENTRA_ADMIN_OBJECT_ID)" \
@@ -412,6 +439,19 @@ stages:
                     ghcrUsername="$(GHCR_USERNAME)" \
                     ghcrPassword="$(GHCR_TOKEN)" \
                   --query properties.outputs -o json)"
+
+                # ARM metadata GET only: never connect to SQL or repair settings during app releases.
+                sql_server="$(echo "$outputs" | jq -r '.sqlServerName.value')"
+                sql_database="$(echo "$outputs" | jq -r '.sqlDatabaseName.value')"
+                if ! sql_settings="$(az sql db show -g "$(resourceGroupName)" -s "$sql_server" -n "$sql_database" -o json)"; then
+                  echo "SQL database missing or inaccessible. For initial provisioning, manually enable provisionSqlInfrastructure; do not enable it for routine releases."
+                  exit 1
+                fi
+                if ! echo "$sql_settings" | jq -e '.useFreeLimit == true and .freeLimitExhaustionBehavior == "AutoPause"' >/dev/null; then
+                  echo "SQL free-limit protection is missing. Stopping deployment validation without changing SQL."
+                  exit 1
+                fi
+                echo "SQL free limit and AutoPause verified through management metadata."
 
                 container_app_name="$(echo "$outputs" | jq -r '.containerAppName.value')"
                 container_app_fqdn="$(echo "$outputs" | jq -r '.containerAppFqdn.value')"

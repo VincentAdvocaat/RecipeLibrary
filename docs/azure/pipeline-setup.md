@@ -13,11 +13,41 @@ environment after a successful build on `main`.
 Deploy stage steps:
 
 1. Verify the target resource group already exists (pipeline does **not** deploy at subscription scope)
-2. Deploy Container Apps, SQL, storage (`infra/main.bicep`) with an **immutable GHCR digest**
+2. Deploy Container Apps and storage (`infra/main.bicep`) with an **immutable GHCR digest**, reusing the existing SQL infrastructure without writing it
 3. Extended HTTP smoke check (`/health/live`, `/`, and `/api/system/readiness`) tolerant of scale-to-zero cold starts and soft readiness (`/starting` while SQL wakes up)
 
 No passwords or connection strings are stored in the repo. Entra IDs, GHCR
 credentials, and the Azure service connection are configured in Azure DevOps only.
+
+### SQL provisioning is separate from ordinary releases
+
+`provisionSqlInfrastructure` defaults to `false` in both Bicep and the pipeline.
+The SQL server, database, administrator configuration and firewall rules are all
+inside the conditional `infra/sql.bicep` module. Ordinary releases use incremental
+deployment and omit that module, leaving the existing database and its data intact.
+Reapplying serverless database properties can resume SQL even without app traffic;
+therefore an unchanged SQL resource must not be redeployed on each app release.
+
+The pipeline reads database management metadata after deployment and fails if SQL
+is missing/inaccessible or `useFreeLimit=true` / `freeLimitExhaustionBehavior=AutoPause`
+is absent. It does not connect to the database or automatically repair those settings.
+
+For a **first deployment** into an empty environment, manually run the pipeline
+with `provisionSqlInfrastructure=true`. The same explicit option is required for
+intentional changes to SQL configuration, Entra admin or firewall rules. It may
+resume SQL. The provisioning module retains the same names, serverless SKU,
+32 GiB size, free limit and AutoPause settings. Leave the option off for routine
+releases, including rollback releases. Keep deployment mode **Incremental**;
+complete mode can delete resources omitted from a template.
+
+Compiled ARM regression tests verify that every SQL resource is behind the
+default-off gate and that free-limit settings and app connection names are retained.
+After release, compare SQL state and Azure Activity Log resume events with the
+deployment window. Public HTTP probes must not POST `/api/system/start`.
+
+Microsoft references: [incremental deployments](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deployment-modes),
+[conditional Bicep deployments](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/conditional-resource-deployment),
+[serverless auto-resume](https://learn.microsoft.com/en-us/azure/azure-sql/database/serverless-tier-auto-pause-resume?view=azuresql).
 
 ## 0) Resource group and providers (manual, one-time)
 
@@ -164,7 +194,7 @@ keys is created by `infra/main.bicep` during deploy (idempotent).
 
 **Stage 1 — infra + first revision (expect unhealthy until SQL grant):**
 
-1. Merge to `main` (or run the pipeline on `main`).
+1. For an empty environment, manually run the pipeline on `main` with `provisionSqlInfrastructure=true`. A routine merge intentionally reuses existing SQL.
 2. Confirm Bicep deploy succeeds and note outputs:
    - `containerAppName`
    - `managedIdentityName` (user-assigned identity name for SQL grants)
@@ -175,7 +205,7 @@ keys is created by `infra/main.bicep` during deploy (idempotent).
 1. Connect to Azure SQL with Entra ID (Azure Data Studio).
 2. Run `docs/azure/sql-grants.sql` using the **managed identity name** from step 2
    (not the Container App name).
-3. Re-run the pipeline on `main` (or restart the Container App revision).
+3. Re-run the pipeline on `main` with `provisionSqlInfrastructure=false` (or restart the Container App revision).
 
 Subsequent pipeline deploys update the immutable image digest; SQL grants persist.
 
