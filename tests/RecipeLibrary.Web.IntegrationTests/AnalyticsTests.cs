@@ -141,6 +141,48 @@ public sealed class AnalyticsTests
         Assert.Equal(1, hour.Counts["database-probe"]);
         Assert.True(writer.Available);
     }
+    [Fact]
+    public async Task Invalid_keys_do_not_exhaust_the_administrator_report_limit()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging(); services.AddOptions();
+        var config = Config(("Analytics:AdminKey", new string('k', 32)));
+        services.AddSingleton<IConfiguration>(config); services.AddTrafficAnalytics(config);
+        await using var provider = services.BuildServiceProvider();
+        var builder = new ApplicationBuilder(provider);
+        builder.UseTrafficAnalytics();
+        var app = builder.Build();
+        for (var i = 0; i < 10; i++)
+        {
+            var context = new DefaultHttpContext { RequestServices = provider };
+            context.Request.Path = "/api/analytics/report"; context.Request.Method = "GET";
+            await app(context);
+            Assert.Equal(401, context.Response.StatusCode);
+        }
+        var valid = new DefaultHttpContext { RequestServices = provider };
+        valid.Response.Body = new MemoryStream();
+        valid.Request.Path = "/api/analytics/report"; valid.Request.Method = "GET";
+        valid.Request.Headers["X-Analytics-Key"] = new string('k', 32);
+        await app(valid);
+        Assert.Equal(200, valid.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Wake_observer_correlates_explicit_starts_and_failures_without_private_error_text()
+    {
+        var recorder = new TrafficRecorder(Config());
+        var observer = new AnalyticsWakeObserver(recorder);
+        var attempt = new RecipeLibrary.Web.Services.ApplicationWakeEvent("attempt", "ExplicitApplicationStart", DateTimeOffset.UtcNow, "request-123", "Requested");
+        observer.Observe(attempt);
+        observer.Observe(attempt with { Stage = "Failed" });
+        var store = new MemoryTrafficStore();
+        await new TrafficWriter(recorder, store).FlushAsync(default);
+        var hour = Assert.Single(await store.ReadAsync(DateTimeOffset.UtcNow.AddDays(-1), default));
+        Assert.Equal(1, hour.Counts["database-start-requested"]);
+        Assert.Equal(1, hour.Counts["database-start-failure"]);
+        Assert.All(hour.Events, e => { Assert.Equal("user-start", e.Reason); Assert.Equal("request-123", e.RequestId); });
+    }
+
     private sealed class AmbiguousStore : ITrafficStore
     {
         private readonly MemoryTrafficStore memory = new(); private bool first = true;
