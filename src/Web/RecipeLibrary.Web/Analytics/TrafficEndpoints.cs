@@ -35,7 +35,15 @@ public static class TrafficAnalyticsExtensions
                 ? await ReportAsync(context, services.GetRequiredService<IConfiguration>(), services.GetRequiredService<ITrafficStore>(), services.GetRequiredService<TrafficWriter>(), services.GetRequiredService<TrafficRecorder>(), services.GetRequiredService<TrafficEndpointLimits>())
                 : Results.StatusCode(405);
         if (result is not null) { await result.ExecuteAsync(context); return; }
-        context.Response.OnCompleted(() => { services.GetRequiredService<TrafficRecorder>().RecordRequest(context); return Task.CompletedTask; });
+        // Resolve the singleton while the request scope is alive. Error responses may dispose
+        // their scope before OnCompleted runs in a host or test server.
+        var recorder = services.GetRequiredService<TrafficRecorder>();
+        context.Response.OnCompleted(() =>
+        {
+            try { recorder.RecordRequest(context); }
+            catch { recorder.Drop(1); }
+            return Task.CompletedTask;
+        });
         await next(context);
     });
     public static IServiceCollection AddTrafficAnalytics(this IServiceCollection services, IConfiguration configuration)
@@ -105,9 +113,9 @@ public static class TrafficAnalyticsExtensions
     private static async Task<IResult> ReportAsync(HttpContext context, IConfiguration config, ITrafficStore store, TrafficWriter writer, TrafficRecorder recorder, TrafficEndpointLimits limits)
     {
         context.Response.Headers.CacheControl = "no-store";
+        if (!Authorized(config["Analytics:AdminKey"], context.Request.Headers["X-Analytics-Key"])) return Results.Unauthorized();
         using var lease = limits.Reports.AttemptAcquire();
         if (!lease.IsAcquired) return Results.StatusCode(429);
-        if (!Authorized(config["Analytics:AdminKey"], context.Request.Headers["X-Analytics-Key"])) return Results.Unauthorized();
         var days = int.TryParse(context.Request.Query["days"], out var requested) ? Math.Clamp(requested, 1, 31) : 7;
         var now = DateTimeOffset.UtcNow;
         IReadOnlyList<TrafficHour> hours = [];

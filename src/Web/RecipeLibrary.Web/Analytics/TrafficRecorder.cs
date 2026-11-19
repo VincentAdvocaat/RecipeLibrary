@@ -37,7 +37,13 @@ public sealed class TrafficRecorder(IConfiguration configuration)
             TrafficPrivacy.Origin($"{context.Request.Scheme}://{context.Request.Host}"), context.Response.StatusCode,
             TrafficPrivacy.Origin(referrer ?? context.Request.Headers.Referer.ToString()), browser, bot,
             TrafficPrivacy.Visitor(context.Connection.RemoteIpAddress?.ToString(), configuration["Analytics:AdminKey"] ?? "", now),
-            TrafficPrivacy.Bound(context.TraceIdentifier, 64)));
+            TrafficPrivacy.Bound(context.TraceIdentifier, 64), Method: TrafficPrivacy.Bound(context.Request.Method, 8)));
+    }
+    public void RecordSqlConnection(string kind, HttpContext? context, string reason)
+    {
+        if (kind is not ("database-connection-open" or "database-connection-failure")) return;
+        Enqueue(new(DateTimeOffset.UtcNow, kind, Path: TrafficPrivacy.Path(context?.Request.Path.Value ?? "/background"),
+            RequestId: TrafficPrivacy.Bound(context?.TraceIdentifier, 64), Reason: reason));
     }
     public void RecordLifecycle(string kind, string? reason = null, string? correlationId = null)
     {

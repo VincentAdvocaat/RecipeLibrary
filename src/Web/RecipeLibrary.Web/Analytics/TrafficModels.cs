@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 namespace RecipeLibrary.Web.Analytics;
 
 public sealed record TrafficEvent(DateTimeOffset At, string Kind, string Path = "", string Host = "", int Status = 0,
-    string Referrer = "", string Browser = "", string Bot = "", string Visitor = "", string RequestId = "", string Reason = "");
+    string Referrer = "", string Browser = "", string Bot = "", string Visitor = "", string RequestId = "", string Reason = "", string Method = "");
 
 public static partial class TrafficPrivacy
 {
@@ -60,7 +60,7 @@ public sealed class TrafficHour
     public List<TrafficEvent> Events { get; set; } = new();
     public long DroppedDetails { get; set; }
     public Dictionary<string, long> BatchSequences { get; set; } = new();
-    public static readonly string[] Kinds = ["request", "landing", "browser", "open-app", "database-start-requested", "database-start-success", "database-start-failure", "database-probe"];
+    public static readonly string[] Kinds = ["request", "landing", "browser", "open-app", "database-start-requested", "database-start-success", "database-start-failure", "database-probe", "database-probe-failure", "database-connection-open", "database-connection-failure"];
     public static TrafficHour Create(DateTimeOffset at)
     {
         var hour = new DateTimeOffset(at.UtcDateTime.Date.AddHours(at.UtcDateTime.Hour), TimeSpan.Zero);

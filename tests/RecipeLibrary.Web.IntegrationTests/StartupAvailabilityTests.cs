@@ -82,7 +82,7 @@ public sealed class StartupAvailabilityTests
         var identity = new System.Security.Claims.ClaimsIdentity(new[] { new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "old-demo-user") }, Microsoft.AspNetCore.Identity.IdentityConstants.ApplicationScheme);
         var ticket = new Microsoft.AspNetCore.Authentication.AuthenticationTicket(new System.Security.Claims.ClaimsPrincipal(identity), new Microsoft.AspNetCore.Authentication.AuthenticationProperties { IssuedUtc = DateTimeOffset.UtcNow.AddDays(-1) }, Microsoft.AspNetCore.Identity.IdentityConstants.ApplicationScheme);
         var cookie = options.TicketDataFormat.Protect(ticket);
-        foreach (var path in new[] { "/", "/starting", "/health", "/api/system/readiness", "/startup.js", "/wp-admin" })
+        foreach (var path in new[] { "/", "/starting", "/health", "/api/system/readiness", "/startup.js", "/wp-admin", "/analytics", "/analytics.html", "/analytics/dashboard.js", "/analytics-privacy.html", "/api/analytics/report" })
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, path);
             request.Headers.Add("Cookie", $"{options.Cookie.Name}={cookie}; RecipeLibrary.Demo=1");

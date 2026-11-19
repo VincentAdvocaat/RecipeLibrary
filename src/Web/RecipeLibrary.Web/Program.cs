@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.RateLimiting;
 using System.Globalization;
+using Microsoft.EntityFrameworkCore;
 using RecipeLibrary.Web.Analytics;
 using RecipeLibrary.Web.Demo;
 using Azure.Extensions.AspNetCore.DataProtection.Blobs;
@@ -100,6 +101,11 @@ if (string.IsNullOrWhiteSpace(recipeDbConnectionString))
 
 builder.Services.AddPersistence(recipeDbConnectionString);
 builder.Services.AddTrafficAnalytics(builder.Configuration);
+builder.Services.AddSingleton<IApplicationWakeObserver, AnalyticsWakeObserver>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<TrafficSqlConnectionInterceptor>();
+builder.Services.AddDbContext<RecipeDbContext>((services, options) =>
+    options.AddInterceptors(services.GetRequiredService<TrafficSqlConnectionInterceptor>()));
 
 builder.Services
     .AddIdentity<ApplicationUser, IdentityRole>(options =>

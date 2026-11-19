@@ -1,5 +1,5 @@
 const $ = selector => document.querySelector(selector);
-const names = { request: 'Serververzoek', landing: 'Welkomstpagina', browser: 'Browserpagina', 'open-app': 'Applicatie openen', 'database-start-requested': 'Start aangevraagd', 'database-start-success': 'Database gereed', 'database-start-failure': 'Start mislukt', 'database-probe': 'Databasecontrole' };
+const names = { request: 'Serververzoek', landing: 'Welkomstpagina', browser: 'Browserpagina', 'open-app': 'Applicatie openen', 'database-start-requested': 'Start aangevraagd', 'database-start-success': 'Database gereed', 'database-start-failure': 'Start mislukt', 'database-probe': 'Databasecontrole', 'database-probe-failure': 'Controle mislukt', 'database-connection-open': 'SQL-verbinding geopend', 'database-connection-failure': 'SQL-verbinding mislukt' };
 const count = value => new Intl.NumberFormat('nl-NL').format(Number(value) || 0);
 const date = value => value ? new Date(value).toLocaleString('nl-NL') : '—';
 let report;
@@ -51,7 +51,7 @@ function render(data) {
     top('#paths', breakdown.paths, '/');
     top('#bots', breakdown.bots, 'Geen herkenbare bot');
     table('#wake-events', events.filter(event => event.kind?.startsWith('database-')).slice(0, 200).map(event => [date(event.at), names[event.kind] || event.kind, event.reason, event.path, event.requestId]));
-    table('#events', events.filter(event => !event.kind?.startsWith('database-')).slice(0, 200).map(event => [date(event.at), names[event.kind] || event.kind, event.path, event.status || '—', event.referrer || 'Direct / onbekend', [event.browser, event.bot].filter(Boolean).join(' / '), event.visitor]));
+    table('#events', events.filter(event => !event.kind?.startsWith('database-')).slice(0, 200).map(event => [date(event.at), names[event.kind] || event.kind, [event.method, event.path].filter(Boolean).join(" "), event.status || '—', event.referrer || 'Direct / onbekend', [event.browser, event.bot].filter(Boolean).join(' / '), event.visitor]));
     $('#updated').textContent = `Bijgewerkt ${date(data.generatedAt)}. Tijden in je lokale tijdzone.`;
     const persistence = data.persistence || {};
     const available = persistence.configured && persistence.available;
