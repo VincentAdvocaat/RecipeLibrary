@@ -1,4 +1,5 @@
 using System.Globalization;
+using RecipeLibrary.Web.Analytics;
 using RecipeLibrary.Web.Demo;
 using Azure.Extensions.AspNetCore.DataProtection.Blobs;
 using Azure.Identity;
@@ -97,6 +98,7 @@ if (string.IsNullOrWhiteSpace(recipeDbConnectionString))
 }
 
 builder.Services.AddPersistence(recipeDbConnectionString);
+builder.Services.AddTrafficAnalytics(builder.Configuration);
 
 builder.Services
     .AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -247,6 +249,31 @@ forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
+app.UseTrafficAnalytics();
+app.Use(async (context, next) =>
+{
+    var file = context.Request.Path.Value switch
+    {
+        "/analytics" or "/analytics/" or "/analytics.html" => "analytics.html",
+        "/analytics/dashboard.js" => "analytics/dashboard.js",
+        "/analytics/dashboard.css" => "analytics/dashboard.css",
+        "/analytics-privacy.html" => "analytics-privacy.html",
+        _ => null
+    };
+    if (file is null) { await next(context); return; }
+    if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method))
+    {
+        context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+        return;
+    }
+    context.Response.Headers.CacheControl = "no-store";
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers.ContentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+    context.Response.ContentType = file.EndsWith(".js") ? "text/javascript; charset=utf-8"
+        : file.EndsWith(".css") ? "text/css; charset=utf-8" : "text/html; charset=utf-8";
+    if (!HttpMethods.IsHead(context.Request.Method))
+        await context.Response.SendFileAsync(Path.Combine(app.Environment.WebRootPath, file));
+});
 
 var localizationOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<RequestLocalizationOptions>>().Value;
 app.UseRequestLocalization(localizationOptions);
