@@ -31,7 +31,7 @@ var budgetName = toLower('budget-${projectName}-${environment}-${suffix}')
 var actionGroupName = toLower('ag-costguard-${suffix}')
 var logicAppName = toLower('la-costguard-${suffix}')
 
-var containerAppsContributorRoleId = '59998874-151c-4733-baea-4d096bc06595'
+var containerAppsContributorRoleId = '358470bc-b998-42bd-ab17-a7e34c199c0f'
 
 resource containerApp 'Microsoft.App/containerApps@2024-03-01' existing = {
   name: containerAppName
@@ -109,7 +109,7 @@ resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
       {
         name: 'StopContainerApp'
         resourceId: logicApp.id
-        callbackUrl: listCallbackUrl(logicApp.id, 'manual').value
+        callbackUrl: listCallbackUrl('${logicApp.id}/triggers/manual', '2016-06-01').value
         useCommonAlertSchema: false
       }
     ]
