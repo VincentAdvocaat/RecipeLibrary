@@ -12,6 +12,8 @@ The application uses at most one item per UTC hour and keeps it for 31 days from
 
 The dashboard returns at most 200 event details and the 12 largest dimension values per hour. Historical aggregate totals include events outside the detail sample. Referrer data describes the referring website where provided; user agent names and daily IP pseudonyms are indications, not verified identities or a geographic lookup.
 
+SQL connection events cover Entity Framework connection boundaries. Explicit start and availability probes have separate lifecycle events. The demo's independently owned SQL lock session is not intercepted, so these events are not a complete count of physical SQL connections. Use Azure SQL metrics for the service-wide connection total.
+
 Free Tier includes 1,000 RU/s and 25 GB storage. Cosmos does not provide a hard storage spending cap. The throughput limit does not cap storage charges, and Azure can raise throughput above the limit if stored data requires a higher minimum. The application's bounded storage is therefore essential. Keep the existing resource-group budget and cost guard in place. That guard stops the Container App, not Cosmos DB, and is not a substitute for these limits. Other existing infrastructure charges remain subject to their existing budgets.
 
 ## Identity and dashboard key
