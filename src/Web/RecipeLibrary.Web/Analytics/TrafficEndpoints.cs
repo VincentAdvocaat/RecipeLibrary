@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Diagnostics;
 
 namespace RecipeLibrary.Web.Analytics;
 
@@ -34,7 +35,14 @@ public static class TrafficAnalyticsExtensions
             result = HttpMethods.IsGet(context.Request.Method)
                 ? await ReportAsync(context, services.GetRequiredService<IConfiguration>(), services.GetRequiredService<ITrafficStore>(), services.GetRequiredService<TrafficWriter>(), services.GetRequiredService<TrafficRecorder>(), services.GetRequiredService<TrafficEndpointLimits>())
                 : Results.StatusCode(405);
-        if (result is not null) { await result.ExecuteAsync(context); return; }
+        if (result is not null)
+        {
+            // API errors must retain their status instead of re-executing a page through readiness or Identity.
+            var statusCodePages = context.Features.Get<IStatusCodePagesFeature>();
+            if (statusCodePages is not null) statusCodePages.Enabled = false;
+            await result.ExecuteAsync(context);
+            return;
+        }
         // Resolve the singleton while the request scope is alive. Error responses may dispose
         // their scope before OnCompleted runs in a host or test server.
         var recorder = services.GetRequiredService<TrafficRecorder>();
