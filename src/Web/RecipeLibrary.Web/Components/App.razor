@@ -21,6 +21,7 @@
         <ReconnectModal @rendermode="InteractiveServer" />
     }
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script type="module" src="browserTracker.js"></script>
     <script src="demo.js"></script>
     <script src="photoUploadZone.js"></script>
     <script src="disableSubmitOnPost.js"></script>
@@ -33,7 +34,7 @@
     private HttpContext HttpContext { get; set; } = default!;
 
     private bool IsStartupPage => HttpContext.Request.Path.Value?.TrimEnd('/') is { } path
-        && (path.Equals("/starting", StringComparison.OrdinalIgnoreCase)
+        && (path.Length == 0 || path.Equals("/starting", StringComparison.OrdinalIgnoreCase)
             || path.Equals("/failed", StringComparison.OrdinalIgnoreCase));
 
     private IComponentRenderMode? PageRenderMode =>

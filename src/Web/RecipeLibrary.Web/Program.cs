@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.RateLimiting;
 using System.Globalization;
+using Microsoft.EntityFrameworkCore;
+using RecipeLibrary.Web.Analytics;
 using RecipeLibrary.Web.Demo;
 using Azure.Extensions.AspNetCore.DataProtection.Blobs;
 using Azure.Identity;
@@ -97,6 +100,12 @@ if (string.IsNullOrWhiteSpace(recipeDbConnectionString))
 }
 
 builder.Services.AddPersistence(recipeDbConnectionString);
+builder.Services.AddTrafficAnalytics(builder.Configuration);
+builder.Services.AddSingleton<IApplicationWakeObserver, AnalyticsWakeObserver>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<TrafficSqlConnectionInterceptor>();
+builder.Services.AddDbContext<RecipeDbContext>((services, options) =>
+    options.AddInterceptors(services.GetRequiredService<TrafficSqlConnectionInterceptor>()));
 
 builder.Services
     .AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -160,6 +169,22 @@ builder.Services.AddSingleton<IPersistenceInitializer, PersistenceInitializer>()
 builder.Services.AddSingleton<IPersistenceSchemaInitializer, PersistenceSchemaInitializer>();
 builder.Services.Configure<PersistenceWarmupOptions>(builder.Configuration.GetSection("PersistenceWarmup"));
 builder.Services.AddHostedService<PersistenceWarmupHostedService>();
+builder.Services.AddSingleton<ApplicationWakeRequest>();
+builder.Services.AddSingleton<IApplicationWakeObserver, NullApplicationWakeObserver>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.OnRejected = async (context, ct) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsJsonAsync(new { error = "start_rate_limit" }, ct);
+    };
+    options.AddFixedWindowLimiter("ApplicationStart", limiter =>
+    {
+        limiter.PermitLimit = 90;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueLimit = 0;
+    });
+});
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IDatabaseProbe>(_ => new SqlDatabaseProbe(recipeDbConnectionString));
 builder.Services.AddSingleton<DatabaseAvailability>();
@@ -167,7 +192,7 @@ var welcomeOrigins = builder.Configuration.GetSection("Welcome:AllowedOrigins").
 welcomeOrigins = welcomeOrigins.Where(origin => !string.IsNullOrWhiteSpace(origin)).ToArray();
 builder.Services.AddCors(options => options.AddPolicy("WelcomeReadiness", policy =>
 {
-    if (welcomeOrigins.Length > 0) policy.WithOrigins(welcomeOrigins).WithMethods("GET");
+    if (welcomeOrigins.Length > 0) policy.WithOrigins(welcomeOrigins).WithMethods("GET", "POST").WithHeaders("X-Application-Start", "RequestVerificationToken", "Content-Type");
 }));
 builder.Services.AddRecipeImport(builder.Configuration);
 builder.Services.AddContentModeration(builder.Configuration);
@@ -247,10 +272,36 @@ forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
+app.UseTrafficAnalytics();
+app.Use(async (context, next) =>
+{
+    var file = context.Request.Path.Value switch
+    {
+        "/analytics" or "/analytics/" or "/analytics.html" => "analytics.html",
+        "/analytics/dashboard.js" => "analytics/dashboard.js",
+        "/analytics/dashboard.css" => "analytics/dashboard.css",
+        "/analytics-privacy.html" => "analytics-privacy.html",
+        _ => null
+    };
+    if (file is null) { await next(context); return; }
+    if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method))
+    {
+        context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+        return;
+    }
+    context.Response.Headers.CacheControl = "no-store";
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers.ContentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+    context.Response.ContentType = file.EndsWith(".js") ? "text/javascript; charset=utf-8"
+        : file.EndsWith(".css") ? "text/css; charset=utf-8" : "text/html; charset=utf-8";
+    if (!HttpMethods.IsHead(context.Request.Method))
+        await context.Response.SendFileAsync(Path.Combine(app.Environment.WebRootPath, file));
+});
 
 var localizationOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<RequestLocalizationOptions>>().Value;
 app.UseRequestLocalization(localizationOptions);
 app.UseCors();
+app.UseRateLimiter();
 
 // Before auth: otherwise FallbackPolicy challenges to login while SQL is still waking up.
 app.UseMiddleware<PersistenceReadinessMiddleware>();
@@ -311,6 +362,8 @@ app.MapGet("/api/system/readiness", async (HttpContext httpContext, DatabaseAvai
         traceId = httpContext.TraceIdentifier
     });
 }).AllowAnonymous().RequireCors("WelcomeReadiness");
+
+app.MapApplicationStart(welcomeOrigins);
 
 app.MapPost("/api/upload-recipe-image", async (IFormFile file, ICommandBus commandBus, CancellationToken ct) =>
 {

@@ -59,6 +59,21 @@ resource welcome 'Microsoft.Web/staticSites@2023-12-01' = if (enableWelcome) {
   }
 }
 
+@description('Enable the single subscription Free Tier analytics account. Keep false for other environments.')
+param enableAnalytics bool = false
+
+@secure()
+@description('Dashboard key stored only as a Container App secret. Default rotates on each deployment.')
+param analyticsAdminKey string = newGuid()
+
+module analytics './analytics.bicep' = if (enableAnalytics) {
+  name: 'analytics'
+  params: {
+    accountName: 'cosmos-analytics-${uniqueString(resourceGroup().id)}'
+    principalId: appIdentity.properties.principalId
+  }
+}
+
 var stableSuffix = toLower(uniqueString(subscription().subscriptionId, resourceGroup().id))
 var suffix = (nameSuffix == '') ? stableSuffix : toLower(nameSuffix)
 
@@ -437,7 +452,12 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
       activeRevisionsMode: 'Single'
       // GHCR packages are private by default; Container Apps need registry credentials to pull.
       // OpenAI / YouTube keys are referenced from Key Vault (never stored as plain Container App secret values).
-      secrets: [
+      secrets: concat(enableAnalytics ? [
+        {
+          name: 'analytics-admin-key'
+          value: analyticsAdminKey
+        }
+      ] : [], [
         {
           name: 'openiddict-signing'
           keyVaultUrl: '${keyVault.properties.vaultUri}secrets/${openIddictSigningSecretName}'
@@ -462,7 +482,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
           keyVaultUrl: '${keyVault.properties.vaultUri}secrets/${youTubeKeyVaultSecretName}'
           identity: appIdentity.id
         }
-      ]
+      ])
       registries: [
         {
           server: 'ghcr.io'
@@ -490,7 +510,24 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             cpu: json('0.25')
             memory: '0.5Gi'
           }
-          env: [
+          env: concat(enableAnalytics ? [
+            {
+              name: 'Analytics__CosmosEndpoint'
+              value: analytics!.outputs.endpoint
+            }
+            {
+              name: 'Analytics__Database'
+              value: 'analytics'
+            }
+            {
+              name: 'Analytics__Container'
+              value: 'traffic'
+            }
+            {
+              name: 'Analytics__AdminKey'
+              secretRef: 'analytics-admin-key'
+            }
+          ] : [], [
             {
               name: 'OpenIddict__SigningKey'
               secretRef: 'openiddict-signing'
@@ -555,7 +592,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'RecipeImport__YouTube__ApiKey'
               secretRef: youTubeContainerAppSecretName
             }
-          ]
+          ])
           probes: [
             {
               type: 'Startup'
@@ -626,3 +663,5 @@ output youTubeKeyVaultSecretName string = youTubeKeyVaultSecretName
 output welcomeSiteName string = enableWelcome ? welcome!.name : ''
 output welcomeSiteHostname string = enableWelcome ? welcome!.properties.defaultHostname : ''
 output appDomainVerificationId string = containerApp.properties.customDomainVerificationId
+
+output analyticsCosmosEndpoint string = enableAnalytics ? analytics!.outputs.endpoint : ''

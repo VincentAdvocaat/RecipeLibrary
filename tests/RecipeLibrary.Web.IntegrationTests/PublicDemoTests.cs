@@ -25,6 +25,47 @@ namespace RecipeLibrary.Web.IntegrationTests;
 public sealed class PublicDemoTests(SqlContainerFixture fixture)
 {
     [Fact]
+    public async Task DemoLock_ReleasesAfterOwningDbContextIsDisposed()
+    {
+        var options = new DbContextOptionsBuilder<RecipeDbContext>().UseSqlServer(fixture.ConnectionString).Options;
+        var context = new RecipeDbContext(options);
+        var gate = new DemoDatabaseLock(context);
+        await gate.AcquireAsync(default);
+        await context.DisposeAsync();
+        await gate.DisposeAsync();
+        await gate.DisposeAsync();
+
+        await using var nextContext = new RecipeDbContext(options);
+        await using var nextGate = new DemoDatabaseLock(nextContext);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        await nextGate.AcquireAsync(timeout.Token);
+    }
+
+    [Fact]
+    public async Task DemoLock_CancelledWaitDoesNotReleaseAnotherLeaseOrLeaveALock()
+    {
+        var options = new DbContextOptionsBuilder<RecipeDbContext>().UseSqlServer(fixture.ConnectionString).Options;
+        await using var ownerContext = new RecipeDbContext(options);
+        var owner = new DemoDatabaseLock(ownerContext);
+        await owner.AcquireAsync(default);
+        try
+        {
+            await using var waiterContext = new RecipeDbContext(options);
+            await using var waiter = new DemoDatabaseLock(waiterContext);
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiter.AcquireAsync(cancellation.Token));
+            await waiter.DisposeAsync();
+            using var stillBlocked = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiter.AcquireAsync(stillBlocked.Token));
+        }
+        finally { await owner.DisposeAsync(); }
+        await using var nextContext = new RecipeDbContext(options);
+        await using var next = new DemoDatabaseLock(nextContext);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        await next.AcquireAsync(timeout.Token);
+    }
+
+    [Fact]
     public async Task AnonymousStart_UsesCookie_SeedsEightRecipes_ResumesWithoutExtending()
     {
         await using var factory = new DemoWebApplicationFactory(fixture.ConnectionString);

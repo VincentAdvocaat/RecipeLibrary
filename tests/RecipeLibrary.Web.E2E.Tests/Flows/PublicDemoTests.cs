@@ -7,8 +7,22 @@ using Xunit;
 namespace RecipeLibrary.Web.E2E.Tests.Flows;
 
 [Collection(nameof(DemoE2eCollection))]
-public sealed class PublicDemoTests(DemoFixture fixture)
+public sealed class PublicDemoTests(DemoFixture fixture, Xunit.Abstractions.ITestOutputHelper output)
 {
+    private async Task ExpectVisibleAsync(IPage page, ILocator locator)
+    {
+        try { await Assertions.Expect(locator).ToBeVisibleAsync(); }
+        catch
+        {
+            output.WriteLine("Failed page: " + page.Url);
+            output.WriteLine(await page.Locator("body").InnerTextAsync());
+            output.WriteLine(fixture.Diagnostics);
+            var directory = Path.Combine(AppContext.BaseDirectory, "TestResults");
+            Directory.CreateDirectory(directory);
+            await page.ScreenshotAsync(new() { Path = Path.Combine(directory, "demo-failure-" + Guid.NewGuid().ToString("N") + ".png"), FullPage = true });
+            throw;
+        }
+    }
     [Theory]
     [InlineData(1280, 900)]
     [InlineData(390, 844)]
@@ -17,7 +31,7 @@ public sealed class PublicDemoTests(DemoFixture fixture)
         await using var context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = width, Height = height } });
         var page = await context.NewPageAsync();
         await page.GotoAsync(fixture.BaseUrl + "/demo");
-        await Assertions.Expect(page.GetByTestId(UiTestIds.DemoBanner)).ToBeVisibleAsync();
+        await ExpectVisibleAsync(page, page.GetByTestId(UiTestIds.DemoBanner));
         await Assertions.Expect(page.GetByTestId(UiTestIds.OverviewReady)).ToBeVisibleAsync();
         Assert.DoesNotContain("/Account/Login", page.Url);
         var screenshotPath = Path.Combine(AppContext.BaseDirectory, "TestResults");
@@ -42,7 +56,7 @@ public sealed class PublicDemoTests(DemoFixture fixture)
         await page.GotoAsync(fixture.BaseUrl + "/shopping-list");
         await Assertions.Expect(page.GetByTestId(UiTestIds.DemoBanner)).ToBeVisibleAsync();
         await page.GotoAsync(fixture.BaseUrl + "/pantry");
-        await Assertions.Expect(page.GetByText("olijfolie", new() { Exact = true })).ToBeVisibleAsync();
+        await ExpectVisibleAsync(page, page.GetByText("olijfolie", new() { Exact = true }));
     }
 
     [Fact]
@@ -51,7 +65,7 @@ public sealed class PublicDemoTests(DemoFixture fixture)
         await using var context = await fixture.Browser.NewContextAsync();
         var page = await context.NewPageAsync();
         await page.GotoAsync(fixture.BaseUrl + "/demo");
-        await Assertions.Expect(page.GetByTestId(UiTestIds.DemoBanner)).ToBeVisibleAsync();
+        await ExpectVisibleAsync(page, page.GetByTestId(UiTestIds.DemoBanner));
         await page.GotoAsync(fixture.BaseUrl + "/recipes/import");
         await Assertions.Expect(page.GetByTestId(UiTestIds.DemoAccountRequired)).ToBeVisibleAsync();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);

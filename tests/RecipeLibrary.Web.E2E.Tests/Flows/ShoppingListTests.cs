@@ -6,7 +6,7 @@ using RecipeLibrary.Web.Testing;
 using Xunit;
 
 [Collection(nameof(ShoppingListE2eCollection))]
-public sealed class ShoppingListTests(E2eFixture fixture)
+public sealed class ShoppingListTests(E2eFixture fixture, Xunit.Abstractions.ITestOutputHelper output)
 {
     [Fact]
     public async Task Detail_AddToShoppingList_ShowsItemOnListPage()
@@ -111,6 +111,7 @@ public sealed class ShoppingListTests(E2eFixture fixture)
         await page.GotoShoppingListAsync(fixture.BaseUrl);
 
         var removeButtons = page.Locator("[data-testid$='-remove']");
+        await Assertions.Expect(removeButtons.First).ToBeVisibleAsync();
         var countBefore = await removeButtons.CountAsync();
         await removeButtons.First.ClickAsync();
         await Assertions.Expect(removeButtons).ToHaveCountAsync(countBefore - 1);
@@ -176,14 +177,30 @@ public sealed class ShoppingListTests(E2eFixture fixture)
     {
         await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
+        page.Console += (_, message) => output.WriteLine("Browser: " + message.Text);
+        page.PageError += (_, error) => output.WriteLine("Browser error: " + error);
         page.UseBlazorDefaults();
         await page.GotoAsync($"{fixture.BaseUrl}/pantry");
         await page.GetByTestId(UiTestIds.PantryReady).WaitForAsync();
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
 
         var itemName = $"Voorraad {Guid.NewGuid():N}";
-        await page.GetByTestId(UiTestIds.PantryAddName).FillBlazorInputAsync(itemName);
-        await page.GetByTestId(UiTestIds.PantryAddSubmit).ClickAsync();
-
-        await Assertions.Expect(page.GetByText(itemName)).ToBeVisibleAsync();
+        try
+        {
+            await page.GetByTestId(UiTestIds.PantryAddName).FillBlazorInputAsync(itemName);
+            await Assertions.Expect(page.GetByTestId(UiTestIds.PantryAddName)).ToHaveValueAsync(itemName);
+            await page.GetByTestId(UiTestIds.PantryAddSubmit).ClickAsync();
+            await Assertions.Expect(page.GetByText(itemName)).ToBeVisibleAsync();
+        }
+        catch
+        {
+            output.WriteLine("Pantry input: " + await page.GetByTestId(UiTestIds.PantryAddName).InputValueAsync());
+            output.WriteLine(await page.Locator("body").InnerTextAsync());
+            output.WriteLine(fixture.Diagnostics);
+            var directory = Path.Combine(AppContext.BaseDirectory, "TestResults");
+            Directory.CreateDirectory(directory);
+            await page.ScreenshotAsync(new() { Path = Path.Combine(directory, "pantry-failure.png"), FullPage = true });
+            throw;
+        }
     }
 }

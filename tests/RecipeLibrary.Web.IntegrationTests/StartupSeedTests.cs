@@ -60,6 +60,13 @@ public sealed class StartupSeedTests
         await warmup.StopAsync(default);
     }
 
+    private static ApplicationWakeRequest RequestedWake()
+    {
+        var wake = new ApplicationWakeRequest([], NullLogger<ApplicationWakeRequest>.Instance);
+        wake.Request("TestExplicitStart", "seed-test");
+        return wake;
+    }
+
     private static async Task WaitUntilAsync(Func<bool> predicate)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -75,7 +82,7 @@ public sealed class StartupSeedTests
         public PersistenceWarmupHostedService StartWarmup(PersistenceReadiness readiness, TimeSpan timeout) =>
             new(services.GetRequiredService<IPersistenceInitializer>(),
                 Options.Create(new PersistenceWarmupOptions { Timeout = timeout }), readiness,
-                NullLogger<PersistenceWarmupHostedService>.Instance);
+                NullLogger<PersistenceWarmupHostedService>.Instance, RequestedWake());
 
         public static async Task<SeedFixture> CreateAsync(bool development)
         {

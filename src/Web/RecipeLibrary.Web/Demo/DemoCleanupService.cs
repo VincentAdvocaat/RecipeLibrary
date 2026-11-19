@@ -8,12 +8,15 @@ public sealed class DemoCleanupService(IServiceScopeFactory scopes, IOptions<Dem
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (!options.Value.Enabled) return;
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 using var scope = scopes.CreateScope();
-                if (scope.ServiceProvider.GetRequiredService<IPersistenceReadiness>().IsReady)
+                if (scope.ServiceProvider.GetRequiredService<IPersistenceReadiness>().IsReady
+                    && scope.ServiceProvider.GetRequiredService<RecipeLibrary.Web.Services.ApplicationWakeRequest>().LastActivity
+                        is { } lastActivity && time.GetUtcNow() - lastActivity < TimeSpan.FromMinutes(options.Value.LifetimeMinutes))
                     await scope.ServiceProvider.GetRequiredService<DemoSessionService>().CleanupAsync(stoppingToken);
                 else
                 {

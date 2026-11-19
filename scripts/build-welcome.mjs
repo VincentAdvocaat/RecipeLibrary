@@ -15,3 +15,5 @@ for (const name of ['index.html', 'style.css', 'staticwebapp.config.json']) {
 }
 await copyFile(path.join(repo, 'src/Web/RecipeLibrary.Web/wwwroot/startup.js'), path.join(output, 'startup.js'));
 console.log(`Welcome page built in ${output}`);
+
+await copyFile(path.join(repo, 'src/Web/RecipeLibrary.Web/wwwroot/browserTracker.js'), path.join(output, 'browserTracker.js'));

@@ -7,6 +7,11 @@ public sealed class DemoMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext http, DemoIdentity identity, DemoOperationRunner guard)
     {
+        if (RecipeLibrary.Web.Middleware.PassiveApplicationRequest.IsPassive(http))
+        {
+            await next(http);
+            return;
+        }
         try
         {
             var path = http.Request.Path;

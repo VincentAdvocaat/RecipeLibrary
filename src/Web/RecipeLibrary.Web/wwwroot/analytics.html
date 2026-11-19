@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<title>Verkeer · RecipeLibrary</title><link rel="stylesheet" href="/analytics/dashboard.css">
+</head>
+<body>
+<header><a class="brand" href="/">RecipeLibrary</a><span>Verkeer en database</span></header>
+<main>
+<section id="access" class="panel access"><h1>Analytics</h1><p>Gebruik de beheersleutel van deze omgeving om verkeersgegevens te bekijken.</p><form id="unlock"><label for="key">Beheersleutel</label><input id="key" type="password" autocomplete="off" required minlength="32"><button>Dashboard openen</button></form><p class="hint">De sleutel blijft alleen in dit tabblad bewaard. Analytics maakt geen verbinding met de recepten­database.</p></section>
+<section id="dashboard" hidden>
+<div class="toolbar"><div><h1>Verkeer en database</h1><p id="updated" class="hint"></p></div><div class="actions"><label>Periode <select id="days"><option value="1">24 uur</option><option value="7" selected>7 dagen</option><option value="31">31 dagen</option></select></label><button id="refresh">Vernieuwen</button><button id="download" class="secondary">Download JSON</button><button id="lock" class="secondary">Afmelden</button></div></div>
+<p id="storage" class="notice" role="status"></p>
+<div id="stats" class="stats"></div>
+<section class="panel"><h2>Verzoeken per uur</h2><div id="chart" class="chart" aria-label="Verkeer per uur"></div><p class="hint">Serververzoeken, browsermeldingen en database-starts worden apart geteld. Een verzoek is geen unieke bezoeker.</p></section>
+<div class="columns"><section class="panel"><h2>Verkeersbronnen</h2><div id="referrers"></div></section><section class="panel"><h2>Bezochte paden</h2><div id="paths"></div></section><section class="panel"><h2>Botindicaties</h2><div id="bots"></div></section></div>
+<section class="panel"><h2>Database-starts en controles</h2><p class="hint">De aanleiding en het verzoeknummer verbinden een start met de bijbehorende webactie. Een mislukte start betekent dat de initialisatie niet slaagde.</p><div class="scroll"><table><thead><tr><th>Tijd</th><th>Gebeurtenis</th><th>Aanleiding</th><th>Pad</th><th>Verzoek</th></tr></thead><tbody id="wake-events"></tbody></table></div></section>
+<section class="panel"><h2>Recente verkeersmeldingen</h2><p class="hint">Pseudoniemen wisselen dagelijks. Browser, herkomst en botindicatie geven aanwijzingen, geen bewijs van een persoon of organisatie. URL-parameters, ruwe IP-adressen en formulierinhoud worden niet bewaard.</p><div class="scroll"><table><thead><tr><th>Tijd</th><th>Soort</th><th>Pad</th><th>Status</th><th>Herkomst</th><th>Browser / bot</th><th>Pseudoniem</th></tr></thead><tbody id="events"></tbody></table></div></section>
+<p id="limits" class="hint"></p>
+</section>
+<p id="error" role="alert" hidden></p>
+</main><script type="module" src="/analytics/dashboard.js"></script>
+</body></html>
