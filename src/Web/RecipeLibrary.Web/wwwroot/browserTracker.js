@@ -8,7 +8,9 @@ export function recordVisit(event, page = location.pathname) {
     fetch(new URL('/api/analytics/visit', backend), {
         method: 'POST', mode: 'cors', credentials: 'omit',
         headers: { 'Content-Type': 'application/json' }, body: payload,
-        keepalive: true, signal: AbortSignal.timeout(4000)
+        // A scaled-to-zero backend can take longer to accept its first request.
+        // This background request never delays the page or retries a recorded event.
+        keepalive: true, signal: AbortSignal.timeout(60000)
     }).catch(() => {});
 }
 function pageView() {
