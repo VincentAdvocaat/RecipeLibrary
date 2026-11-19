@@ -38,6 +38,7 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.UseOpenIddict();
 
         modelBuilder.Entity<DemoSaveAttempt>(b =>
         {

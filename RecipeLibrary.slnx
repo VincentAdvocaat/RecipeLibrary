@@ -26,4 +26,7 @@
   <Folder Name="/src/Web/">
     <Project Path="src/Web/RecipeLibrary.Web/RecipeLibrary.Web.csproj" />
   </Folder>
+  <Folder Name="/src/Mobile/">
+    <Project Path="src/Mobile/RecipeLibrary.App/RecipeLibrary.App.csproj" />
+  </Folder>
 </Solution>
