@@ -1,0 +1,16 @@
+@namespace RecipeLibrary.Components.Atoms
+@using Microsoft.Extensions.Options
+@using RecipeLibrary.Infrastructure.FileStorage
+@using RecipeLibrary.Web.Services
+@inject IOptions<RecipeFileStorageOptions> Storage
+
+@if (ImageSourcePolicy.Classify(Src, Storage.Value).ExternalSource is { } external)
+{
+    <a href="@external.AbsoluteUri" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"
+       class="text-sm underline @CssClass">@L["Image.OpenExternal", external.IdnHost]</a>
+}
+
+@code {
+    [Parameter] public string? Src { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+}

@@ -25,17 +25,14 @@
                     @onclick="Toggle">
                 @if (!string.IsNullOrWhiteSpace(ProfileImageUrl))
                 {
-                    <img src="@ProfileImageUrl"
-                         alt=""
-                         class="h-full w-full object-cover"
-                         width="36"
-                         height="36" />
+                    <Image Src="@ProfileImageUrl" Alt="" ShowExternalLink="false" ImageClass="h-full w-full object-cover" />
                 }
                 else
                 {
                     <Icon Name="Icon.IconName.User" CssClass="h-5 w-5" />
                 }
             </button>
+            <ExternalImageLink Src="@ProfileImageUrl" />
             @if (_isOpen)
             {
                 <div class="absolute right-0 z-20 mt-1 min-w-[12rem] rounded border border-gray-300 bg-white py-1 shadow-lg"

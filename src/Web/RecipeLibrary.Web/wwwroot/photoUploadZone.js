@@ -69,7 +69,7 @@ window.RecipeLibrary.photoUploadZone = {
     el.appendChild(input);
 
     el.addEventListener('click', function (e) {
-      if (e.target.closest('button')) return;
+      if (e.target.closest('button, a')) return;
       input.click();
     });
 
