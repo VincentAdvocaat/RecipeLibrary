@@ -13,7 +13,7 @@ public sealed class RecipeOverviewTests(E2eFixture fixture)
     [Fact]
     public async Task Overview_ShowsSeededRecipe()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoRecipesAsync(fixture.BaseUrl);
@@ -24,7 +24,7 @@ public sealed class RecipeOverviewTests(E2eFixture fixture)
     [Fact]
     public async Task Search_FiltersByTitle()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoRecipesAsync(fixture.BaseUrl);
@@ -36,7 +36,7 @@ public sealed class RecipeOverviewTests(E2eFixture fixture)
     [Fact]
     public async Task CategoryFilter_Meat_ShowsSeededRecipe()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoRecipesAsync(fixture.BaseUrl);
@@ -48,12 +48,12 @@ public sealed class RecipeOverviewTests(E2eFixture fixture)
     [Fact]
     public async Task ViewToggle_SwitchesToCards()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoRecipesAsync(fixture.BaseUrl);
 
-        await page.GetByTestId(UiTestIds.ViewToggleCards).ClickAsync();
+        await page.GetByTestId(UiTestIds.ViewToggleCards).First.ClickAsync();
         await page.GetByTestId(UiTestIds.RecipeCard(fixture.Seed.RecipeId)).WaitForAsync();
         await Assertions.Expect(page.GetByTestId(UiTestIds.RecipeCard(fixture.Seed.RecipeId))).ToBeVisibleAsync();
     }
@@ -61,13 +61,13 @@ public sealed class RecipeOverviewTests(E2eFixture fixture)
     [Fact]
     public async Task ViewToggle_SwitchesToList()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoRecipesAsync(fixture.BaseUrl);
 
-        await page.GetByTestId(UiTestIds.ViewToggleCards).ClickAsync();
-        await page.GetByTestId(UiTestIds.ViewToggleList).ClickAsync();
+        await page.GetByTestId(UiTestIds.ViewToggleCards).First.ClickAsync();
+        await page.GetByTestId(UiTestIds.ViewToggleList).First.ClickAsync();
         await page.GetByTestId(UiTestIds.RecipeListItem(fixture.Seed.RecipeId)).WaitForAsync();
         await Assertions.Expect(page.GetByTestId(UiTestIds.RecipeListItem(fixture.Seed.RecipeId))).ToBeVisibleAsync();
     }
@@ -75,7 +75,7 @@ public sealed class RecipeOverviewTests(E2eFixture fixture)
     [Fact]
     public async Task AddRecipeFab_GoesToCreatePage()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoRecipesAsync(fixture.BaseUrl);
@@ -89,7 +89,7 @@ public sealed class RecipeOverviewTests(E2eFixture fixture)
     [Fact]
     public async Task NavMenu_OpenAndNavigateToCreate()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoRecipesAsync(fixture.BaseUrl);
@@ -103,7 +103,7 @@ public sealed class RecipeOverviewTests(E2eFixture fixture)
     [Fact]
     public async Task AddRecipeFab_HiddenOnCreatePage()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);

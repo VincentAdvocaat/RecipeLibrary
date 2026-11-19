@@ -1,4 +1,5 @@
 using System.Globalization;
+using RecipeLibrary.Web.Demo;
 using Azure.Extensions.AspNetCore.DataProtection.Blobs;
 using Azure.Identity;
 using Microsoft.AspNetCore.Authorization;
@@ -22,6 +23,8 @@ using RecipeLibrary.Web.Services;
 using RecipeLibrary.Web.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+if (builder.Environment.IsEnvironment("Testing"))
+    builder.WebHost.UseStaticWebAssets();
 
 // In Development, load .env from repo root so MSSQL_SA_PASSWORD is available for local connection string fallback.
 if (builder.Environment.IsDevelopment())
@@ -123,7 +126,7 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .Build();
 });
-builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+builder.Services.AddDemo(builder.Configuration);
 builder.Services.Configure<IdentitySeedUserOptions>(
     builder.Configuration.GetSection(IdentitySeedUserOptions.SectionName));
 builder.Services.AddSingleton<IdentitySeedUserHostedService>();
@@ -227,16 +230,19 @@ app.UseCors();
 app.UseMiddleware<PersistenceReadinessMiddleware>();
 
 app.UseAuthentication();
+app.UseMiddleware<DemoMiddleware>();
 app.UseAuthorization();
 
 app.UseAntiforgery();
 
-// Login and startup pages need CSS/JS before a session exists. Keep uploaded assets protected.
+app.MapDemo();
+// Public startup/demo assets are available before sign-in; uploaded assets remain protected.
 app.MapStaticAssets().Add(endpoint =>
 {
-    if (endpoint is RouteEndpointBuilder route && route.RoutePattern.RawText is { } path
+    if (endpoint is Microsoft.AspNetCore.Routing.RouteEndpointBuilder route && route.RoutePattern.RawText is { } path
         && !path.TrimStart('/').StartsWith("uploads/", StringComparison.OrdinalIgnoreCase)
-        && Path.GetExtension(path) is ".js" or ".css")
+        && (Path.GetExtension(path) is ".js" or ".css"
+            || path.TrimStart('/').StartsWith("images/demo/", StringComparison.Ordinal)))
     {
         endpoint.Metadata.Add(new AllowAnonymousAttribute());
     }

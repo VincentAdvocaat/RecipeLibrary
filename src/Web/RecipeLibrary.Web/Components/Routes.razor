@@ -1,4 +1,4 @@
-@* Always require authentication; anonymous users are redirected to login. *@
+@* App routes require authentication; public pages explicitly allow anonymous access. *@
 @namespace RecipeLibrary.Components
 @using RecipeLibrary.Components.Molecules
 
@@ -12,3 +12,19 @@
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
+
+@if (_interactiveReady)
+{
+    <span hidden data-testid="@UiTestIds.AppInteractiveReady"></span>
+}
+
+@code {
+    private bool _interactiveReady;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+        _interactiveReady = true;
+        StateHasChanged();
+    }
+}

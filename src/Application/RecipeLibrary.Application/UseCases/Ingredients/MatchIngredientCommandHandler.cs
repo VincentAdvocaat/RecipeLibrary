@@ -10,7 +10,8 @@ namespace RecipeLibrary.Application.UseCases.Ingredients;
 public sealed class MatchIngredientCommandHandler(
     IngredientMatcher matcher,
     IIngredientRepository ingredientRepository,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    IDemoContext? demo = null)
     : ICommandHandler<MatchIngredientCommand, MatchIngredientResult>
 {
     public async Task<MatchIngredientResult> HandleAsync(MatchIngredientCommand command, CancellationToken ct = default)
@@ -21,17 +22,21 @@ public sealed class MatchIngredientCommandHandler(
             : command.CultureName;
         var result = await matcher.MatchAsync(rawInput, cultureName, ct);
 
-        await ingredientRepository.AddMatchLogAsync(new IngredientMatchLog
+        if (demo?.IsDemo != true)
         {
-            Id = Guid.NewGuid(),
-            Input = rawInput,
-            NormalizedInput = result.NormalizedInput,
-            MatchedIngredientId = result.Ingredient?.Id,
-            MatchType = result.MatchType.ToString().ToLowerInvariant(),
-            Confidence = result.Confidence,
-            CreatedAt = DateTimeOffset.UtcNow
-        }, ct);
-        await unitOfWork.SaveChangesAsync(ct);
+            await ingredientRepository.AddMatchLogAsync(new IngredientMatchLog
+            {
+                Id = Guid.NewGuid(),
+                Input = rawInput,
+                NormalizedInput = result.NormalizedInput,
+                MatchedIngredientId = result.Ingredient?.Id,
+                MatchType = result.MatchType.ToString().ToLowerInvariant(),
+                Confidence = result.Confidence,
+                CreatedAt = DateTimeOffset.UtcNow
+            }, ct);
+            await unitOfWork.SaveChangesAsync(ct);
+
+        }
 
         return new MatchIngredientResult
         {

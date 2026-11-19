@@ -8,11 +8,13 @@ namespace RecipeLibrary.Application.UseCases.RecipeImages;
 public sealed class UploadRecipeImageCommandHandler(
     IRecipeFileStorage storage,
     RecipeContentModerationService contentModeration,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    IDemoContext? demo = null)
     : ICommandHandler<UploadRecipeImageCommand, UploadRecipeImageResult>
 {
     public async Task<UploadRecipeImageResult> HandleAsync(UploadRecipeImageCommand command, CancellationToken ct = default)
     {
+        if (demo?.IsDemo == true) throw new DemoAccessException("Demo.AccountRequired");
         UploadRecipeImageCommandValidator.ValidateAndThrow(command);
 
         await using var buffer = new MemoryStream();

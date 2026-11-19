@@ -65,7 +65,8 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
         var strategy = dbContext.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
         {
-            await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            await using var transaction = dbContext.Database.CurrentTransaction is null
+                ? await dbContext.Database.BeginTransactionAsync(ct) : null;
             try
             {
                 var existing = await dbContext.ShoppingListGroups
@@ -73,18 +74,18 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
                     .FirstOrDefaultAsync(g => g.OwnerUserId == ownerUserId, ct);
                 if (existing is not null)
                 {
-                    await transaction.CommitAsync(ct);
+                    if (transaction is not null) await transaction.CommitAsync(ct);
                     return existing;
                 }
 
                 var created = await InsertGroupWithPrimaryListAsync(primaryListName, ownerUserId, ct);
                 await dbContext.SaveChangesAsync(ct);
-                await transaction.CommitAsync(ct);
+                if (transaction is not null) await transaction.CommitAsync(ct);
                 return created;
             }
             catch (DbUpdateException)
             {
-                await transaction.RollbackAsync(ct);
+                if (transaction is not null) await transaction.RollbackAsync(ct);
                 dbContext.ChangeTracker.Clear();
 
                 var raced = await dbContext.ShoppingListGroups
@@ -236,7 +237,8 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
             // instances loaded by earlier handlers in the same scoped DbContext.
             dbContext.ChangeTracker.Clear();
 
-            await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            await using var transaction = dbContext.Database.CurrentTransaction is null
+                ? await dbContext.Database.BeginTransactionAsync(ct) : null;
             try
             {
                 var list = await dbContext.ShoppingLists
@@ -276,13 +278,13 @@ public sealed class EfShoppingListRepository(RecipeDbContext dbContext) : IShopp
                 list.UpdatedAt = DateTimeOffset.UtcNow;
 
                 await dbContext.SaveChangesAsync(ct);
-                await transaction.CommitAsync(ct);
+                if (transaction is not null) await transaction.CommitAsync(ct);
 
                 dbContext.ChangeTracker.Clear();
             }
             catch (DbUpdateConcurrencyException)
             {
-                await transaction.RollbackAsync(ct);
+                if (transaction is not null) await transaction.RollbackAsync(ct);
                 dbContext.ChangeTracker.Clear();
                 throw new InvalidOperationException(
                     "Shopping list was modified concurrently. Reload and try again.");

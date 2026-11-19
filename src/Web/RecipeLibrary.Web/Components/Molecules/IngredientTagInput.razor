@@ -3,6 +3,14 @@
 
 @inject IQueryBus QueryBus
 
+@inject IServiceProvider Services
+@{ var isDemo = (Services.GetService(typeof(IDemoContext)) as IDemoContext)?.IsDemo == true; }
+@if (isDemo)
+{
+    <DemoAccountRequired />
+}
+else
+{
 <div class="@CssClass">
     <label class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.IngredientTags.Label"]</label>
     <div class="flex flex-wrap gap-2 mb-2">
@@ -42,6 +50,8 @@
         @L["RecipeCreate.IngredientTags.AddButton"]
     </button>
 </div>
+
+}
 
 @code {
     [Parameter] public IReadOnlyList<string> Tags { get; set; } = [];

@@ -104,7 +104,8 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
         var strategy = dbContext.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
-            await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            await using var transaction = dbContext.Database.CurrentTransaction is null
+                ? await dbContext.Database.BeginTransactionAsync(ct) : null;
             try
             {
                 await dbContext.RecipeIngredients
@@ -144,12 +145,12 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
                         ct);
 
                 await dbContext.SaveChangesAsync(ct);
-                await transaction.CommitAsync(ct);
+                if (transaction is not null) await transaction.CommitAsync(ct);
                 dbContext.ChangeTracker.Clear();
             }
             catch
             {
-                await transaction.RollbackAsync(ct);
+                if (transaction is not null) await transaction.RollbackAsync(ct);
                 dbContext.ChangeTracker.Clear();
                 throw;
             }
@@ -171,7 +172,8 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
         var strategy = dbContext.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
-            await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            await using var transaction = dbContext.Database.CurrentTransaction is null
+                ? await dbContext.Database.BeginTransactionAsync(ct) : null;
             try
             {
                 await dbContext.InstructionSteps
@@ -186,11 +188,11 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
                     .Where(r => r.Id == id)
                     .ExecuteDeleteAsync(ct);
 
-                await transaction.CommitAsync(ct);
+                if (transaction is not null) await transaction.CommitAsync(ct);
             }
             catch
             {
-                await transaction.RollbackAsync(ct);
+                if (transaction is not null) await transaction.RollbackAsync(ct);
                 throw;
             }
         });
