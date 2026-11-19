@@ -13,7 +13,7 @@ function text(tag, value, className) {
 function table(selector, rows) {
     const body = $(selector);
     body.replaceChildren();
-    if (!rows.length) { const row = document.createElement('tr'); const cell = text('td', 'Nog geen meldingen in deze periode.'); cell.colSpan = 7; row.append(cell); body.append(row); return; }
+    if (!rows.length) { const row = document.createElement('tr'); const cell = text('td', 'Nog geen meldingen in deze periode.'); cell.colSpan = body.closest('table').querySelectorAll('thead th').length; row.append(cell); body.append(row); return; }
     for (const values of rows) { const row = document.createElement('tr'); values.forEach(value => row.append(text('td', value))); body.append(row); }
 }
 function top(selector, values, fallback) {
@@ -51,7 +51,7 @@ function render(data) {
     top('#paths', breakdown.paths, '/');
     top('#bots', breakdown.bots, 'Geen herkenbare bot');
     table('#wake-events', events.filter(event => event.kind?.startsWith('database-')).slice(0, 200).map(event => [date(event.at), names[event.kind] || event.kind, event.reason, event.path, event.requestId]));
-    table('#events', events.filter(event => !event.kind?.startsWith('database-')).slice(0, 200).map(event => [date(event.at), names[event.kind] || event.kind, [event.method, event.path].filter(Boolean).join(" "), event.status || '—', event.referrer || 'Direct / onbekend', [event.browser, event.bot].filter(Boolean).join(' / '), event.visitor]));
+    table('#events', events.filter(event => !event.kind?.startsWith('database-')).slice(0, 200).map(event => [date(event.at), names[event.kind] || event.kind, [event.method, event.path].filter(Boolean).join(" "), event.status || '—', event.referrer || 'Direct / onbekend', [event.browser, event.bot].filter(Boolean).join(' / '), event.visitor, event.requestId]));
     $('#updated').textContent = `Bijgewerkt ${date(data.generatedAt)}. Tijden in je lokale tijdzone.`;
     const persistence = data.persistence || {};
     const available = persistence.configured && persistence.available;

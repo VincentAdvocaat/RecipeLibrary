@@ -37,7 +37,7 @@ public sealed class AnalyticsDashboardTests : IAsyncLifetime
                 persistence = new { configured = true, available = true, lastSuccess = DateTimeOffset.UtcNow, buffered = 0, dropped = 0 },
                 hours = new[] { new { hour = DateTimeOffset.UtcNow, counts = new Dictionary<string,int> { ["request"] = 42, ["database-start-requested"] = 1 },
                     paths = new Dictionary<string,int> { ["/robots.txt"] = 42 }, referrers = new Dictionary<string,int> { ["https://example.org"] = 4 }, bots = new Dictionary<string,int> { ["Googlebot-inferred"] = 3 },
-                    events = new[] { new { at = DateTimeOffset.UtcNow, kind = "request", path = "/<script>alert(1)</script>", status = 404, referrer = "https://example.org", browser = "Other", bot = "unknown", visitor = "a123" } }, droppedDetails = 0 } },
+                    events = new[] { new { at = DateTimeOffset.UtcNow, kind = "request", path = "/<script>alert(1)</script>", status = 404, referrer = "https://example.org", browser = "Other", bot = "unknown", visitor = "a123", requestId = "request-correlated-123" } }, droppedDetails = 0 } },
                 limits = new { retentionDays = 31, detailsPerHour = 200 }
             });
         });
@@ -64,6 +64,7 @@ public sealed class AnalyticsDashboardTests : IAsyncLifetime
         await Expect(page.Locator("#stats")).ToContainTextAsync("42");
         await Expect(page.Locator("#referrers")).ToContainTextAsync("https://example.org");
         await Expect(page.Locator("#events")).ToContainTextAsync("/<script>alert(1)</script>");
+        await Expect(page.Locator("#events tr td").Nth(7)).ToHaveTextAsync("request-correlated-123");
         Assert.Equal(0, dialogs);
         await page.ScreenshotAsync(new() { Path = Path.Combine(Path.GetTempPath(), $"RecipeLibrary-analytics-{width}.png"), FullPage = true });
         await page.GetByRole(AriaRole.Button, new() { Name = "Afmelden" }).ClickAsync();
