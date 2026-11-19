@@ -59,6 +59,7 @@ stages:
         dotnet restore tests/RecipeLibrary.Application.Tests/RecipeLibrary.Application.Tests.csproj
         dotnet restore tests/RecipeLibrary.Web.ComponentTests/RecipeLibrary.Web.ComponentTests.csproj
         dotnet restore tests/RecipeLibrary.Web.IntegrationTests/RecipeLibrary.Web.IntegrationTests.csproj
+        dotnet restore tests/RecipeLibrary.Web.E2E.Tests/RecipeLibrary.Web.E2E.Tests.csproj
       displayName: Restore
 
     - script: |
@@ -67,6 +68,7 @@ stages:
         dotnet build tests/RecipeLibrary.Application.Tests/RecipeLibrary.Application.Tests.csproj --configuration $(buildConfiguration) --no-restore
         dotnet build tests/RecipeLibrary.Web.ComponentTests/RecipeLibrary.Web.ComponentTests.csproj --configuration $(buildConfiguration) --no-restore
         dotnet build tests/RecipeLibrary.Web.IntegrationTests/RecipeLibrary.Web.IntegrationTests.csproj --configuration $(buildConfiguration) --no-restore
+        dotnet build tests/RecipeLibrary.Web.E2E.Tests/RecipeLibrary.Web.E2E.Tests.csproj --configuration $(buildConfiguration) --no-restore
       displayName: Build
 
     - script: dotnet test tests/RecipeLibrary.Application.Tests --configuration $(buildConfiguration) --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory $(Agent.TempDirectory)/TestResults/Coverage --settings tests/coverlet.runsettings
