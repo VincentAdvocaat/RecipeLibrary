@@ -20,6 +20,7 @@ public sealed class E2eFixture : IAsyncLifetime
     public TestSeedData Seed { get; private set; } = null!;
     public string BaseUrl { get; private set; } = string.Empty;
     public IBrowser Browser { get; private set; } = null!;
+    public string Diagnostics => _host?.Diagnostics ?? string.Empty;
 
     public async Task InitializeAsync()
     {
