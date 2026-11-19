@@ -34,7 +34,7 @@ public static class ApplicationStartEndpoints
             context.Response.Headers.CacheControl = "no-store";
             var wasReady = readiness.IsReady;
             wake.Request("ExplicitApplicationStart", context.TraceIdentifier);
-            var state = wasReady ? await availability.ProbeForStartAsync(context.RequestAborted) : readiness.State;
+            var state = wasReady ? await availability.ProbeForStartAsync(context.RequestAborted, context.TraceIdentifier) : readiness.State;
             return Results.Json(new { state = state.ToString(), traceId = context.TraceIdentifier }, statusCode: 202);
         }).AllowAnonymous().RequireCors("WelcomeReadiness").RequireRateLimiting("ApplicationStart");
     }

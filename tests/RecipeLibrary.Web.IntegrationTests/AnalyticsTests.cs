@@ -183,6 +183,72 @@ public sealed class AnalyticsTests
         Assert.All(hour.Events, e => { Assert.Equal("user-start", e.Reason); Assert.Equal("request-123", e.RequestId); });
     }
 
+    [Fact]
+    public async Task Hosted_initialization_SQL_events_keep_the_explicit_request_and_attempt()
+    {
+        var recorder = new TrafficRecorder(Config());
+        var observer = new AnalyticsWakeObserver(recorder);
+        var wake = new RecipeLibrary.Web.Services.ApplicationWakeRequest([observer], Microsoft.Extensions.Logging.Abstractions.NullLogger<RecipeLibrary.Web.Services.ApplicationWakeRequest>.Instance);
+        var readiness = new RecipeLibrary.Infrastructure.Persistence.PersistenceReadiness();
+        var interceptor = new TrafficSqlConnectionInterceptor(recorder, new HttpContextAccessor());
+        using var service = new RecipeLibrary.Web.Services.PersistenceWarmupHostedService(new CorrelationInitializer(interceptor),
+            Microsoft.Extensions.Options.Options.Create(new RecipeLibrary.Web.Services.PersistenceWarmupOptions()), readiness,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<RecipeLibrary.Web.Services.PersistenceWarmupHostedService>.Instance, wake);
+        await service.StartAsync(default);
+        wake.Request("ExplicitApplicationStart", "original-http-request");
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (!readiness.HasPermanentlyFailed) await Task.Delay(10, deadline.Token);
+        var store = new MemoryTrafficStore();
+        await new TrafficWriter(recorder, store).FlushAsync(default);
+        var events = Assert.Single(await store.ReadAsync(DateTimeOffset.UtcNow.AddHours(-1), default)).Events;
+        Assert.Contains(events, e => e.Kind == "database-connection-open");
+        Assert.Contains(events, e => e.Kind == "database-start-failure");
+        Assert.All(events, e => Assert.Equal("original-http-request", e.RequestId));
+        Assert.NotEmpty(Assert.Single(events.Select(e => e.AttemptId).Distinct()));
+        Assert.Null(RecipeLibrary.Web.Services.ApplicationWakeContext.Current);
+        await service.StopAsync(default);
+    }
+
+    [Fact]
+    public async Task Resume_probe_keeps_HTTP_correlation_and_reports_failure_category()
+    {
+        var recorder = new TrafficRecorder(Config());
+        var observer = new AnalyticsWakeObserver(recorder);
+        var wake = new RecipeLibrary.Web.Services.ApplicationWakeRequest([observer], Microsoft.Extensions.Logging.Abstractions.NullLogger<RecipeLibrary.Web.Services.ApplicationWakeRequest>.Instance);
+        var readiness = new RecipeLibrary.Infrastructure.Persistence.PersistenceReadiness();
+        readiness.MarkReady();
+        var probe = new CorrelationProbe();
+        var availability = new RecipeLibrary.Web.Services.DatabaseAvailability(readiness, probe, TimeProvider.System,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<RecipeLibrary.Web.Services.DatabaseAvailability>.Instance, wake);
+        await availability.ProbeForStartAsync(default, "resume-http-request");
+        Assert.NotNull(probe.Attempt);
+        var store = new MemoryTrafficStore();
+        await new TrafficWriter(recorder, store).FlushAsync(default);
+        var events = Assert.Single(await store.ReadAsync(DateTimeOffset.UtcNow.AddHours(-1), default)).Events;
+        Assert.All(events, e => { Assert.Equal("resume-http-request", e.RequestId); Assert.Equal(probe.Attempt.AttemptId, e.AttemptId); });
+        Assert.Contains(events, e => e.Kind == "database-probe-failure" && e.Reason == "probe-failed");
+        Assert.Null(RecipeLibrary.Web.Services.ApplicationWakeContext.Current);
+    }
+
+    private sealed class CorrelationInitializer(TrafficSqlConnectionInterceptor interceptor) : RecipeLibrary.Web.Services.IPersistenceInitializer
+    {
+        public async Task InitializeAsync(CancellationToken cancellationToken)
+        {
+            using var connection = new Microsoft.Data.SqlClient.SqlConnection();
+            await interceptor.ConnectionOpenedAsync(connection, null!, cancellationToken);
+            throw new InvalidOperationException("Initializer unavailable");
+        }
+    }
+    private sealed class CorrelationProbe : RecipeLibrary.Web.Services.IDatabaseProbe
+    {
+        public RecipeLibrary.Web.Services.ApplicationWakeEvent? Attempt;
+        public Task CheckAsync(CancellationToken cancellationToken)
+        {
+            Attempt = RecipeLibrary.Web.Services.ApplicationWakeContext.Current;
+            throw new InvalidOperationException("Probe unavailable");
+        }
+    }
+
     private sealed class AmbiguousStore : ITrafficStore
     {
         private readonly MemoryTrafficStore memory = new(); private bool first = true;

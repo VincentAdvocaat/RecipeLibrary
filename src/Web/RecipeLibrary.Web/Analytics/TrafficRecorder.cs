@@ -34,7 +34,7 @@ public sealed class TrafficRecorder(IConfiguration configuration)
         var now = DateTimeOffset.UtcNow;
         var (browser, bot) = TrafficPrivacy.Classify(context.Request.Headers.UserAgent);
         Enqueue(new(now, kind, TrafficPrivacy.Path(page ?? context.Request.Path.Value),
-            TrafficPrivacy.Origin($"{context.Request.Scheme}://{context.Request.Host}"), context.Response.StatusCode,
+            TrafficPrivacy.Origin($"{context.Request.Scheme}://{context.Request.Host}"), kind == "request" ? context.Response.StatusCode : 0,
             TrafficPrivacy.Origin(referrer ?? context.Request.Headers.Referer.ToString()), browser, bot,
             TrafficPrivacy.Visitor(context.Connection.RemoteIpAddress?.ToString(), configuration["Analytics:AdminKey"] ?? "", now),
             TrafficPrivacy.Bound(context.TraceIdentifier, 64), Method: TrafficPrivacy.Bound(context.Request.Method, 8)));
@@ -42,15 +42,18 @@ public sealed class TrafficRecorder(IConfiguration configuration)
     public void RecordSqlConnection(string kind, HttpContext? context, string reason)
     {
         if (kind is not ("database-connection-open" or "database-connection-failure")) return;
-        Enqueue(new(DateTimeOffset.UtcNow, kind, Path: TrafficPrivacy.Path(context?.Request.Path.Value ?? "/background"),
-            RequestId: TrafficPrivacy.Bound(context?.TraceIdentifier, 64), Reason: reason));
+        var attempt = RecipeLibrary.Web.Services.ApplicationWakeContext.Current;
+        Enqueue(new(DateTimeOffset.UtcNow, kind,
+            Path: TrafficPrivacy.Path(context?.Request.Path.Value ?? (attempt is null ? "/background" : "/api/system/start")),
+            RequestId: TrafficPrivacy.Bound(context?.TraceIdentifier ?? attempt?.CorrelationId, 64), Reason: reason,
+            AttemptId: TrafficPrivacy.Bound(attempt?.AttemptId, 64)));
     }
-    public void RecordLifecycle(string kind, string? reason = null, string? correlationId = null)
+    public void RecordLifecycle(string kind, string? reason = null, string? correlationId = null, string? attemptId = null)
     {
         if (!TrafficHour.Kinds.Contains(kind)) return;
         // Reasons are fixed labels, never exception messages or connection strings.
-        var safeReason = reason is "manual" or "user-start" or "userstart" or "startup" or "idle" or "success" or "failure" or "timeout" or "probe" ? reason : "other";
-        Enqueue(new(DateTimeOffset.UtcNow, kind, RequestId: TrafficPrivacy.Bound(correlationId, 64), Reason: safeReason));
+        var safeReason = reason is "manual" or "user-start" or "userstart" or "startup" or "idle" or "success" or "failure" or "timeout" or "probe" or "free-limit-exhausted" or "probe-failed" ? reason : "other";
+        Enqueue(new(DateTimeOffset.UtcNow, kind, RequestId: TrafficPrivacy.Bound(correlationId, 64), Reason: safeReason, AttemptId: TrafficPrivacy.Bound(attemptId, 64)));
     }
 }
 

@@ -24,12 +24,13 @@
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
     <PackageReference Include="MarshalHayes.Tailwind.Standalone" Version="1.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.47.0" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.47.0" PrivateAssets="buildTransitive" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="OpenIddict.AspNetCore" Version="7.6.0" />
   </ItemGroup>
 

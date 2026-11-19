@@ -43,7 +43,7 @@ public sealed class DatabaseAvailability(
         Task.FromResult(startup.IsReady && _checkedAt == DateTimeOffset.MinValue ? startup.State :
             startup.IsReady ? _state : startup.State);
 
-    public async Task<PersistenceWarmupState> ProbeForStartAsync(CancellationToken cancellationToken)
+    public async Task<PersistenceWarmupState> ProbeForStartAsync(CancellationToken cancellationToken, string? correlationId = null)
     {
         if (!startup.IsReady) return startup.State;
 
@@ -53,7 +53,8 @@ public sealed class DatabaseAvailability(
             if (clock.GetUtcNow() - _checkedAt < TimeSpan.FromSeconds(5)) return _state;
 
             var attempt = new ApplicationWakeEvent(Guid.NewGuid().ToString("N"), "ExplicitApplicationStart",
-                clock.GetUtcNow(), System.Diagnostics.Activity.Current?.TraceId.ToString() ?? "", "ProbeStarted");
+                clock.GetUtcNow(), correlationId ?? "", "ProbeStarted");
+            using var wakeContext = ApplicationWakeContext.Push(attempt);
             wake?.Report(attempt);
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(7));
             try
@@ -67,7 +68,7 @@ public sealed class DatabaseAvailability(
             catch (Exception ex)
             {
                 _state = PersistenceWarmupState.Starting;
-                wake?.Report(attempt, "ProbeFailed");
+                wake?.Report(attempt with { Reason = ex is SqlException { Number: 42119 } ? "free-limit-exhausted" : "probe-failed" }, "ProbeFailed");
                 logger.LogWarning(ex, "Database availability check failed. Category={Category}", ex.GetType().Name);
             }
 

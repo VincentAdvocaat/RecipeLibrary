@@ -25,6 +25,7 @@ public sealed class PersistenceWarmupHostedService(
         }
 
         var attempt = await wake.WaitAsync(stoppingToken);
+        using var wakeContext = ApplicationWakeContext.Push(attempt);
         wake.Report(attempt, "Initializing");
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);

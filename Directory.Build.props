@@ -1,6 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <!-- Analytics uses Cosmos SDK's explicit System.Text.Json serializer, including in test hosts. -->
-    <AzureCosmosDisableNewtonsoftJsonCheck>true</AzureCosmosDisableNewtonsoftJsonCheck>
-  </PropertyGroup>
-</Project>

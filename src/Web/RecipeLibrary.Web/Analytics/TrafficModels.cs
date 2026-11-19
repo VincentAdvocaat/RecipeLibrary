@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 namespace RecipeLibrary.Web.Analytics;
 
 public sealed record TrafficEvent(DateTimeOffset At, string Kind, string Path = "", string Host = "", int Status = 0,
-    string Referrer = "", string Browser = "", string Bot = "", string Visitor = "", string RequestId = "", string Reason = "", string Method = "");
+    string Referrer = "", string Browser = "", string Bot = "", string Visitor = "", string RequestId = "", string Reason = "", string Method = "", string AttemptId = "");
 
 public static partial class TrafficPrivacy
 {

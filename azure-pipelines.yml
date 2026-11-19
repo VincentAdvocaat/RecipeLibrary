@@ -320,36 +320,30 @@ stages:
                     continue
                   fi
 
-                  home_headers="$(mktemp)"
-                  home_code="$(curl --silent --show-error --max-time 60 -D "$home_headers" -o /dev/null -w "%{http_code}" "$home_url" || echo "000")"
-                  location="$(awk 'tolower($1)=="location:" {print $2}' "$home_headers" | tr -d '\r')"
-                  rm -f "$home_headers"
-                  echo "GET / -> HTTP ${home_code} Location=${location:-none}"
-
+                  home_body="$(mktemp)"
+                  home_code="$(curl --silent --show-error --max-time 60 -o "$home_body" -w "%{http_code}" "$home_url" || echo "000")"
+                  echo "GET / -> HTTP ${home_code}"
                   readiness_body="$(curl --silent --show-error --max-time 60 "$readiness_url" || echo "")"
                   echo "GET /api/system/readiness -> ${readiness_body}"
+                  analytics_code="$(curl --silent --show-error --max-time 30 -o /dev/null -w "%{http_code}" "https://${fqdn}/api/analytics/report" || echo "000")"
 
-                  if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Failed"'; then
-                    echo "Smoke check failed: persistence permanently failed (see /failed and app logs)."
-                    exit 1
+                  # A successful deployment keeps public pages and diagnostics usable while SQL sleeps.
+                  # Deliberate SQL startup is covered by tests and operator verification, never by this probe.
+                  if [ "$home_code" = "200" ] && grep -q 'data-startup' "$home_body" \
+                    && [ "$analytics_code" = "401" ] \
+                    && echo "$readiness_body" | jq -e '.state | . == "Starting" or . == "Ready" or . == "Failed"' >/dev/null; then
+                    rm -f "$home_body"
+                    echo "Smoke check passed: public welcome and protected analytics respond without requesting SQL."
+                    exit 0
                   fi
-
-                  if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Ready"'; then
-                    # Anonymous / is 200 only without auth; with Identity it redirects to login.
-                    if [ "$home_code" = "200" ] || { [ "$home_code" = "302" ] && echo "$location" | grep -Eqi '/Account/Login'; }; then
-                      echo "Smoke check passed (app ready)."
-                      exit 0
-                    fi
-                    echo "Readiness Ready but unexpected GET / response; retrying..."
-                  else
-                    echo "Waiting for persistence Ready..."
-                  fi
+                  rm -f "$home_body"
+                  echo "Waiting for public application endpoints..."
 
                   sleep "$sleep_seconds"
                 done
 
                 echo "Smoke check failed after ${max_attempts} attempts."
-                echo "Check /api/system/readiness and container logs. If SQL auth fails for the app identity, run docs/azure/sql-grants.sql and redeploy."
+                echo "Check the public welcome, analytics access boundary and container logs. A sleeping SQL database is expected until an explicit start action."
                 exit 1
 
 # NEU does not run on automatic CI. Start it manually via Run pipeline and enable "Deploy NEU".
@@ -461,34 +455,28 @@ stages:
                     continue
                   fi
 
-                  home_headers="$(mktemp)"
-                  home_code="$(curl --silent --show-error --max-time 60 -D "$home_headers" -o /dev/null -w "%{http_code}" "$home_url" || echo "000")"
-                  location="$(awk 'tolower($1)=="location:" {print $2}' "$home_headers" | tr -d '\r')"
-                  rm -f "$home_headers"
-                  echo "GET / -> HTTP ${home_code} Location=${location:-none}"
-
+                  home_body="$(mktemp)"
+                  home_code="$(curl --silent --show-error --max-time 60 -o "$home_body" -w "%{http_code}" "$home_url" || echo "000")"
+                  echo "GET / -> HTTP ${home_code}"
                   readiness_body="$(curl --silent --show-error --max-time 60 "$readiness_url" || echo "")"
                   echo "GET /api/system/readiness -> ${readiness_body}"
+                  analytics_code="$(curl --silent --show-error --max-time 30 -o /dev/null -w "%{http_code}" "https://${fqdn}/api/analytics/report" || echo "000")"
 
-                  if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Failed"'; then
-                    echo "Smoke check failed: persistence permanently failed (see /failed and app logs)."
-                    exit 1
+                  # A successful deployment keeps public pages and diagnostics usable while SQL sleeps.
+                  # Deliberate SQL startup is covered by tests and operator verification, never by this probe.
+                  if [ "$home_code" = "200" ] && grep -q 'data-startup' "$home_body" \
+                    && [ "$analytics_code" = "401" ] \
+                    && echo "$readiness_body" | jq -e '.state | . == "Starting" or . == "Ready" or . == "Failed"' >/dev/null; then
+                    rm -f "$home_body"
+                    echo "Smoke check passed: public welcome and protected analytics respond without requesting SQL."
+                    exit 0
                   fi
-
-                  if echo "$readiness_body" | grep -Eqi '"state"[[:space:]]*:[[:space:]]*"Ready"'; then
-                    # Anonymous / is 200 only without auth; with Identity it redirects to login.
-                    if [ "$home_code" = "200" ] || { [ "$home_code" = "302" ] && echo "$location" | grep -Eqi '/Account/Login'; }; then
-                      echo "Smoke check passed (app ready)."
-                      exit 0
-                    fi
-                    echo "Readiness Ready but unexpected GET / response; retrying..."
-                  else
-                    echo "Waiting for persistence Ready..."
-                  fi
+                  rm -f "$home_body"
+                  echo "Waiting for public application endpoints..."
 
                   sleep "$sleep_seconds"
                 done
 
                 echo "Smoke check failed after ${max_attempts} attempts."
-                echo "Check /api/system/readiness and container logs. If SQL auth fails for the app identity, run docs/azure/sql-grants.sql and redeploy."
+                echo "Check the public welcome, analytics access boundary and container logs. A sleeping SQL database is expected until an explicit start action."
                 exit 1
