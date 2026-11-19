@@ -53,7 +53,8 @@ From repo root:
 
 3. Deploy resources into RG (resource-group scope):
    - Update `infra/params/test.bicepparam` with your real tenant/user values and `containerImageDigest`
-   - `az deployment group create -g rg-recipelibrary-test-sec --template-file infra/main.bicep --parameters infra/params/test.bicepparam`
+   - First provisioning only: `az deployment group create -g rg-recipelibrary-test-sec --mode Incremental --template-file infra/main.bicep --parameters infra/params/test.bicepparam provisionSqlInfrastructure=true`
+   - Ordinary updates: omit `provisionSqlInfrastructure=true`; SQL is reused without rewriting its configuration. Intentional SQL configuration changes require the explicit option and can resume the database.
 
 Record outputs:
 

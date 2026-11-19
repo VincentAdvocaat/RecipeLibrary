@@ -18,7 +18,8 @@ This folder contains Bicep templates to provision a **test** environment on Azur
 ### Files
 
 - `subscription.bicep`: creates the resource group (subscription-scope)
-- `main.bicep`: deploys Container App, SQL, storage, Key Vault into the resource group (resource-group scope)
+- `main.bicep`: deploys Container App, storage and Key Vault, reusing SQL by default (resource-group scope)
+- `sql.bicep`: unchanged SQL server/database/firewall configuration, deployed only with explicit `provisionSqlInfrastructure=true`
 - `cost-guard.bicep`: monthly budget, Action Group, Logic App auto-stop at 80% (deploy separately with Owner)
 - `params/test.bicepparam`: example parameter file for local/manual deploy
 - `params/cost-guard.bicepparam`: example parameters for cost guard deploy
@@ -31,6 +32,13 @@ YouTube Data API / Key Vault setup: see `docs/azure/youtube-keyvault.md`.
 CI/CD on `main` deploys `main.bicep` into an existing resource group via
 `azure-pipelines.yml`. The pipeline builds and pushes a public GHCR image, resolves
 its digest, and passes `containerImageDigest` to Bicep.
+
+For the first deployment into an empty environment, manually enable
+`provisionSqlInfrastructure`. Leave it false for ordinary releases: rewriting SQL
+properties can resume a paused serverless database. Intentional SQL maintenance
+also requires this explicit option. Use Incremental mode to preserve omitted SQL
+resources. The pipeline checks existing SQL free-limit/AutoPause metadata without
+opening a database connection.
 
 Create the group first (`subscription.bicep` is for manual/local use only). Entra
 parameters and GHCR credentials come from Azure DevOps variables — see

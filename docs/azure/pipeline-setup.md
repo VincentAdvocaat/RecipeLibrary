@@ -194,7 +194,7 @@ keys is created by `infra/main.bicep` during deploy (idempotent).
 
 **Stage 1 — infra + first revision (expect unhealthy until SQL grant):**
 
-1. Merge to `main` (or run the pipeline on `main`).
+1. For an empty environment, manually run the pipeline on `main` with `provisionSqlInfrastructure=true`. A routine merge intentionally reuses existing SQL.
 2. Confirm Bicep deploy succeeds and note outputs:
    - `containerAppName`
    - `managedIdentityName` (user-assigned identity name for SQL grants)
@@ -205,7 +205,7 @@ keys is created by `infra/main.bicep` during deploy (idempotent).
 1. Connect to Azure SQL with Entra ID (Azure Data Studio).
 2. Run `docs/azure/sql-grants.sql` using the **managed identity name** from step 2
    (not the Container App name).
-3. Re-run the pipeline on `main` (or restart the Container App revision).
+3. Re-run the pipeline on `main` with `provisionSqlInfrastructure=false` (or restart the Container App revision).
 
 Subsequent pipeline deploys update the immutable image digest; SQL grants persist.
 
