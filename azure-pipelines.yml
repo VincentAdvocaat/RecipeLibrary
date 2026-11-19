@@ -8,6 +8,10 @@ pool:
   vmImage: ubuntu-24.04
 
 parameters:
+- name: enableAnalytics
+  displayName: Enable Free Tier analytics in SEC only
+  type: boolean
+  default: true
 - name: deployNeu
   displayName: Deploy NEU (North Europe) - optional manual deploy
   type: boolean
@@ -196,6 +200,10 @@ stages:
                 fi
                 domain_parameters="$(Agent.TempDirectory)/app-domains.json"
                 jq -n --argjson domains "$domains" '{appCustomDomains: {value: ($domains // [])}}' > "$domain_parameters"
+                if [[ '${{ parameters.enableAnalytics }}' =~ ^[Tt]rue$ ]]; then
+                  # Registration is subscription-scoped; resource creation remains in Bicep.
+                  az provider register --namespace Microsoft.DocumentDB --wait --only-show-errors
+                fi
                 deployment_name="main-$(Build.BuildId)"
                 outputs="$(az deployment group create \
                   --name "$deployment_name" \
@@ -206,6 +214,7 @@ stages:
                     projectName="$(projectName)" \
                     environment="$(environmentName)" \
                     enableWelcome=true \
+                    enableAnalytics=${{ lower(parameters.enableAnalytics) }} \
                     tenantId="$(AZURE_TENANT_ID)" \
                     entraAdminLogin="$(AZURE_ENTRA_ADMIN_LOGIN)" \
                     entraAdminObjectId="$(AZURE_ENTRA_ADMIN_OBJECT_ID)" \
