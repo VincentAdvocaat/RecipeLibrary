@@ -19,11 +19,15 @@ public sealed class LocalizationTests(E2eFixture fixture)
 
         await page.GetByTestId(UiTestIds.LanguageSwitcher).ClickAsync();
         await page.GetByTestId(UiTestIds.LanguageEn).ClickAsync();
+        await Assertions.Expect(page.Locator("html")).ToHaveAttributeAsync("lang", "en");
         await page.GetByTestId(UiTestIds.OverviewReady).WaitForAsync();
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
 
         await page.GetByTestId(UiTestIds.LanguageSwitcher).ClickAsync();
         await page.GetByTestId(UiTestIds.LanguageNl).ClickAsync();
+        await Assertions.Expect(page.Locator("html")).ToHaveAttributeAsync("lang", "nl");
         await page.GetByTestId(UiTestIds.OverviewReady).WaitForAsync();
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
 
         await Assertions.Expect(page.GetByTestId(UiTestIds.AddRecipeFab)).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByTestId(UiTestIds.NavMenu)).ToBeVisibleAsync();

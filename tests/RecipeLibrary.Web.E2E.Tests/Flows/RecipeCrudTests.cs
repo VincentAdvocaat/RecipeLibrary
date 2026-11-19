@@ -100,8 +100,10 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
         page.UseBlazorDefaults();
         await page.GotoAsync($"{fixture.BaseUrl}/recipes/{fixture.Seed.RecipeId}");
 
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
         await page.GetByTestId(UiTestIds.RecipeEdit).ClickAsync();
-        await page.GetByTestId(UiTestIds.RecipeTitle).WaitForAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex($"/recipes/{fixture.Seed.RecipeId}/edit$"));
+        await Assertions.Expect(page.GetByTestId(UiTestIds.RecipeTitle)).ToHaveValueAsync(TestDataSeeder.LasagnaTitle);
         var newTitle = $"Updated {Guid.NewGuid():N}";
         await page.GetByTestId(UiTestIds.RecipeTitle).FillBlazorInputAsync(newTitle);
         await page.SaveRecipeAndWaitForDetailAsync();
@@ -167,7 +169,7 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);
 
-        await page.GetByTestId(UiTestIds.TagInput).FillBlazorInputAsync("weekmenu");
+        await page.GetByTestId(UiTestIds.TagInput).FillAsync("weekmenu");
         await page.GetByTestId(UiTestIds.TagAdd).ClickAsync();
         await Assertions.Expect(page.GetByText("weekmenu")).ToBeVisibleAsync();
     }
