@@ -30,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\src\Mobile\RecipeLibrary.App\Services\RecipeApiClient.cs" Link="Mobile\RecipeApiClient.cs" />
     <None Update="Fixtures\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

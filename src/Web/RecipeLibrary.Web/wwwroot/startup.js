@@ -24,19 +24,43 @@ export function createStartup({ backend, returnUrl, render, navigate,
             const deadline = now() + 300000;
             render('Starting');
             try {
+                const requestUntilAvailable = async (path, options, read = response => response) => {
+                    while (!disposed && now() < deadline) {
+                        try {
+                            const response = await fetcher(new URL(path, backend), {
+                                ...options,
+                                signal: timeoutSignal(Math.max(1, Math.min(10000, deadline - now())))
+                            });
+                            if (disposed) return;
+                            if (!response.ok) {
+                                const error = new Error('Start unavailable');
+                                error.permanent = ![429, 502, 503, 504].includes(response.status);
+                                throw error;
+                            }
+                            const result = await read(response);
+                            if (!disposed && now() < deadline) return result;
+                        } catch (error) {
+                            if (error.permanent) throw error;
+                        }
+                        if (!disposed && now() < deadline) await sleep(Math.min(5000, deadline - now()));
+                    }
+                    throw new Error('Startup deadline');
+                };
                 const sameOrigin = typeof location === 'undefined' || new URL(backend).origin === location.origin;
                 const headers = { 'X-Application-Start': 'user' };
                 if (sameOrigin) {
-                    const tokenResponse = await fetcher(new URL('/api/system/start-token', backend), { cache: 'no-store', credentials: 'same-origin', signal: timeoutSignal(10000) });
-                    if (!tokenResponse.ok) throw new Error('Start unavailable');
-                    headers.RequestVerificationToken = (await tokenResponse.json()).token;
+                    headers.RequestVerificationToken = await requestUntilAvailable('/api/system/start-token',
+                        { cache: 'no-store', credentials: 'same-origin' }, async response => {
+                            const { token } = await response.json();
+                            if (typeof token !== 'string' || !token) throw new Error('Invalid start token');
+                            return token;
+                        });
                 }
-                const sendStart = () => fetcher(new URL('/api/system/start', backend), {
-                    method: 'POST', headers, credentials: sameOrigin ? 'same-origin' : 'omit',
-                    signal: timeoutSignal(10000)
+                if (disposed) return;
+                const sendStart = () => requestUntilAvailable('/api/system/start', {
+                    method: 'POST', headers, credentials: sameOrigin ? 'same-origin' : 'omit'
                 });
-                const startResponse = await sendStart();
-                if (!startResponse.ok) { render('Failed'); return; }
+                await sendStart();
                 while (!disposed && now() < deadline) {
                     try {
                         const response = await fetcher(new URL('/api/system/readiness', backend), {
@@ -62,7 +86,7 @@ export function createStartup({ backend, returnUrl, render, navigate,
                     }
                 }
                 if (!disposed) render('Timeout');
-            } catch { if (!disposed) render('Failed'); } finally { running = false; }
+            } catch { if (!disposed) render(now() >= deadline ? 'Timeout' : 'Failed'); } finally { running = false; }
         }
     };
 }
