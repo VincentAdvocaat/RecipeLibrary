@@ -2,7 +2,7 @@
 
 `infra/analytics.bicep` creates one dedicated Cosmos DB for NoSQL account in Sweden Central, one `analytics` database and one `traffic` container partitioned on `/day`. It can be validated or deployed independently with `accountName` and the existing application's managed identity `principalId` parameters. Deploy only once per subscription, in SEC. The optional NEU deployment keeps analytics disabled.
 
-`main.bicep` defaults `enableAnalytics` to false. The SEC pipeline defaults its `enableAnalytics` parameter to true and registers Microsoft.DocumentDB before deployment. Registration requires subscription permission; pre-register through the resource administrator if the pipeline identity only has resource group permissions. The subscription's unused Free Tier slot is reserved for this account. Deployment must fail if Free Tier cannot be enabled.
+`main.bicep` defaults `enableAnalytics` to false. The SEC pipeline defaults its `enableAnalytics` parameter to true and checks that Microsoft.DocumentDB is registered before deployment. Registration is performed once by a subscription administrator; the resource-group deployment identity is not granted subscription write permissions. The subscription's unused Free Tier slot is reserved for this account. Deployment must fail if Free Tier cannot be enabled.
 
 ## Cost boundaries
 

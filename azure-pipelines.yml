@@ -201,8 +201,11 @@ stages:
                 domain_parameters="$(Agent.TempDirectory)/app-domains.json"
                 jq -n --argjson domains "$domains" '{appCustomDomains: {value: ($domains // [])}}' > "$domain_parameters"
                 if [[ '${{ parameters.enableAnalytics }}' =~ ^[Tt]rue$ ]]; then
-                  # Registration is subscription-scoped; resource creation remains in Bicep.
-                  az provider register --namespace Microsoft.DocumentDB --wait --only-show-errors
+                  # The deployment identity is scoped to the resource group. Registration is a one-time owner task.
+                  if [ "$(az provider show --namespace Microsoft.DocumentDB --query registrationState -o tsv)" != 'Registered' ]; then
+                    echo 'Microsoft.DocumentDB must be registered by a subscription administrator before deployment.' >&2
+                    exit 1
+                  fi
                 fi
                 deployment_name="main-$(Build.BuildId)"
                 outputs="$(az deployment group create \
