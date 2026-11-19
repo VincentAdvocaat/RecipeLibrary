@@ -1,12 +1,19 @@
-// No cookies or persistent browser identifier. Referrer is reduced to its origin by the receiver.
+// Optional measurements have no visitor identifier. The functional cookie only stores an opt-out.
 const root = document.querySelector('[data-startup]');
 const backend = root?.dataset.backend || location.origin;
 let lastPage = '';
 export function recordVisit(event, page = location.pathname) {
+    if (navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl === true ||
+        document.cookie.split(';').some(cookie => cookie.trim() === 'RecipeLibrary.Analytics=off')) return;
     if (location.pathname === '/analytics.html' || location.pathname.startsWith('/analytics/')) return;
-    const payload = JSON.stringify({ event, page, referrer: document.referrer });
+    let referrer = '';
+    try {
+        const source = new URL(document.referrer);
+        if (['http:', 'https:'].includes(source.protocol) && !source.username && !source.password) referrer = source.origin;
+    } catch { }
+    const payload = JSON.stringify({ event, page, referrer });
     fetch(new URL('/api/analytics/visit', backend), {
-        method: 'POST', mode: 'cors', credentials: 'omit',
+        method: 'POST', mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer',
         headers: { 'Content-Type': 'application/json' }, body: payload,
         // A scaled-to-zero backend can take longer to accept its first request.
         // This background request never delays the page or retries a recorded event.

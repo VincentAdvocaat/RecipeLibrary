@@ -91,6 +91,7 @@ public static class TrafficAnalyticsExtensions
         if (!lease.IsAcquired) return Results.StatusCode(429);
         if (!VisitOriginAllowed(context, config)) return Results.StatusCode(403);
         AddCors(context);
+        if (!TrafficPrivacy.OptionalMeasurementsAllowed(context)) return Results.Accepted();
         if (context.Request.ContentLength > 2048) return Results.StatusCode(413);
         if (!context.Request.HasJsonContentType()) return Results.StatusCode(415);
         // Read a fixed buffer even for chunked bodies. Never ask the JSON binder to buffer an unlimited body.
@@ -136,7 +137,7 @@ public static class TrafficAnalyticsExtensions
         var detailBudget = 200;
         var reportHours = hours.OrderByDescending(h => h.Hour).Select(h =>
         {
-            var details = h.Events.OrderByDescending(e => e.At).Take(detailBudget).ToArray();
+            var details = h.Events.OrderByDescending(e => e.At).Take(detailBudget).Select(e => e with { Visitor = "" }).ToArray();
             detailBudget -= details.Length;
             Dictionary<string, long> Top(Dictionary<string, long> values) => values.OrderByDescending(p => p.Value).Take(12).ToDictionary();
             return new { hour = h.Hour, counts = h.Counts, events = details, paths = Top(h.Paths), referrers = Top(h.Referrers), bots = Top(h.Bots), droppedDetails = h.DroppedDetails };

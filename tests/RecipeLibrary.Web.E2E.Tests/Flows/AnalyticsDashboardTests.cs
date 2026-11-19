@@ -64,7 +64,9 @@ public sealed class AnalyticsDashboardTests : IAsyncLifetime
         await Expect(page.Locator("#stats")).ToContainTextAsync("42");
         await Expect(page.Locator("#referrers")).ToContainTextAsync("https://example.org");
         await Expect(page.Locator("#events")).ToContainTextAsync("/<script>alert(1)</script>");
-        await Expect(page.Locator("#events tr td").Nth(7)).ToHaveTextAsync("request-correlated-123");
+        await Expect(page.Locator("#events tr td").Nth(6)).ToHaveTextAsync("request-correlated-123");
+        await Expect(page.Locator("#events")).Not.ToContainTextAsync("a123");
+        await Expect(page.GetByRole(AriaRole.Columnheader, new() { Name = "Pseudoniem" })).ToHaveCountAsync(0);
         Assert.Equal(0, dialogs);
         await page.ScreenshotAsync(new() { Path = Path.Combine(Path.GetTempPath(), $"RecipeLibrary-analytics-{width}.png"), FullPage = true });
         await page.GetByRole(AriaRole.Button, new() { Name = "Afmelden" }).ClickAsync();

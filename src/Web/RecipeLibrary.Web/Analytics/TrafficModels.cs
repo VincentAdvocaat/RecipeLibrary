@@ -1,6 +1,3 @@
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace RecipeLibrary.Web.Analytics;
@@ -26,8 +23,9 @@ public static partial class TrafficPrivacy
     public static string Origin(string? value) => Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
         (uri.Scheme == "https" || uri.Scheme == "http") && string.IsNullOrEmpty(uri.UserInfo)
         ? Bound(uri.GetLeftPart(UriPartial.Authority), 128) : "";
-    public static string Visitor(string? ip, string secret, DateTimeOffset now) => secret.Length < 32 || string.IsNullOrEmpty(ip) ? "" :
-        Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(now.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + "|" + ip)))[..12].ToLowerInvariant();
+    public static bool OptionalMeasurementsAllowed(HttpContext context) =>
+        context.Request.Headers["DNT"] != "1" && context.Request.Headers["Sec-GPC"] != "1" &&
+        context.Request.Cookies["RecipeLibrary.Analytics"] != "off";
     public static (string Browser, string Bot) Classify(string? raw)
     {
         var ua = Bound(raw, 180).ToLowerInvariant();
