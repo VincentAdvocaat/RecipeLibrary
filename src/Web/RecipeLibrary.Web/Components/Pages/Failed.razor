@@ -19,5 +19,5 @@
 @code {
     [SupplyParameterFromQuery(Name = "returnUrl")]
     public string? RequestedReturnUrl { get; set; }
-    private string ReturnUrl => StartupReturnUrl.Normalize(RequestedReturnUrl);
+    private string ReturnUrl => StartupReturnUrl.Normalize(RequestedReturnUrl) is "/" ? "/recipes" : StartupReturnUrl.Normalize(RequestedReturnUrl);
 }

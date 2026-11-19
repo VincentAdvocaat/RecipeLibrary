@@ -17,6 +17,9 @@ public sealed class CookieOrBearerAuthenticationHandler(
 {
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        if (RecipeLibrary.Web.Middleware.PassiveApplicationRequest.IsPassive(Context))
+            return AuthenticateResult.NoResult();
+
         var header = Request.Headers.Authorization.ToString();
         if (!string.IsNullOrEmpty(header)
             && header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))

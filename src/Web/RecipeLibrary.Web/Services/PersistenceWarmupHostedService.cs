@@ -11,7 +11,8 @@ public sealed class PersistenceWarmupHostedService(
     IPersistenceInitializer initializer,
     IOptions<PersistenceWarmupOptions> options,
     IPersistenceReadiness readiness,
-    ILogger<PersistenceWarmupHostedService> logger) : BackgroundService
+    ILogger<PersistenceWarmupHostedService> logger,
+    ApplicationWakeRequest wake) : BackgroundService
 {
     private static readonly TimeSpan InitialDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan MaxDelay = TimeSpan.FromSeconds(15);
@@ -22,6 +23,9 @@ public sealed class PersistenceWarmupHostedService(
         {
             return;
         }
+
+        var attempt = await wake.WaitAsync(stoppingToken);
+        wake.Report(attempt, "Initializing");
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         deadline.CancelAfter(options.Value.Timeout);
@@ -37,6 +41,7 @@ public sealed class PersistenceWarmupHostedService(
                 await initializer.InitializeAsync(warmupToken);
                 warmupToken.ThrowIfCancellationRequested();
                 readiness.MarkReady();
+                wake.Report(attempt, "Ready");
                 var durationSeconds = (TimeProvider.System.GetUtcNow() - startedAt).TotalSeconds;
                 logger.LogInformation(
                     "Application ready. StartupDurationSeconds={StartupDurationSeconds:0.###}",
@@ -50,6 +55,7 @@ public sealed class PersistenceWarmupHostedService(
             catch (OperationCanceledException) when (deadline.IsCancellationRequested)
             {
                 readiness.MarkPermanentlyFailed();
+                wake.Report(attempt, "Failed");
                 logger.LogError("Application failed. Category=WarmupTimeout StartupDurationSeconds={Duration}",
                     (TimeProvider.System.GetUtcNow() - startedAt).TotalSeconds);
                 return;
@@ -57,6 +63,7 @@ public sealed class PersistenceWarmupHostedService(
             catch (Exception ex) when (!SqlTransientExceptionDetector.IsTransient(ex))
             {
                 readiness.MarkPermanentlyFailed();
+                wake.Report(attempt, "Failed");
                 var durationSeconds = (TimeProvider.System.GetUtcNow() - startedAt).TotalSeconds;
                 logger.LogError(
                     ex,
@@ -70,6 +77,7 @@ public sealed class PersistenceWarmupHostedService(
                 if (elapsed >= options.Value.Timeout)
                 {
                     readiness.MarkPermanentlyFailed();
+                    wake.Report(attempt, "Failed");
                     logger.LogError(
                         ex,
                         "Application failed. StartupDurationSeconds={StartupDurationSeconds:0.###}",
@@ -91,6 +99,7 @@ public sealed class PersistenceWarmupHostedService(
                     if (!stoppingToken.IsCancellationRequested)
                     {
                         readiness.MarkPermanentlyFailed();
+                        wake.Report(attempt, "Failed");
                         logger.LogError("Application failed. Category=WarmupTimeout");
                     }
                     return;
@@ -103,6 +112,7 @@ public sealed class PersistenceWarmupHostedService(
         if (!stoppingToken.IsCancellationRequested)
         {
             readiness.MarkPermanentlyFailed();
+            wake.Report(attempt, "Failed");
             logger.LogError("Application failed. Category=WarmupTimeout");
         }
     }

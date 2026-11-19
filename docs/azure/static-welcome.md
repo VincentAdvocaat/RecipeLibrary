@@ -5,12 +5,15 @@
 The public entrance is `https://recipelibrary.vasoftware.nl`. It serves plain HTML,
 CSS and JavaScript from Azure Static Web Apps Free, independently of Container Apps.
 The visitor immediately sees Dutch welcome text, with an English language button.
-The browser polls the backend and replaces the page with
+After the visitor clicks Open the application, the browser requests startup,
+polls passive readiness and replaces the page with
 `https://app-recipelibrary.vasoftware.nl` when SQL is reachable. Until public domain
 binding is complete, deployments use the generated Container Apps hostname instead.
 
-Only visitor requests wake the backend. No timer, Azure health probe or background
-availability check keeps SQL alive. Container Apps still allows zero replicas; SQL
+Opening the landing page does not start SQL. Only the explicit application start
+action requests migrations, seeds or a SQL probe. Ordinary GET/HEAD requests, scans
+and health/readiness requests never request initialization or a SQL probe. This
+is a request boundary, not a guarantee that an automated client cannot click or POST. Container Apps still allows zero replicas; SQL
 still auto-pauses after 60 minutes. Direct app links still incur container startup.
 To share a recipe through the instant entrance, use
 `https://recipelibrary.vasoftware.nl/?returnUrl=%2Frecipes%2FRECIPE_ID`.
@@ -23,16 +26,25 @@ on the new hostname. Cookie Domain must remain unset, never `.vasoftware.nl`.
 
 `GET /api/system/readiness` is anonymous and returns HTTP 200 with
 `{ "state": "Starting|Ready|Failed", "retryAfterSeconds": 5|null, "traceId": "..." }`.
-Responses are `Cache-Control: no-store`. CORS permits GET only from the exact welcome
-custom domain and the generated static site origin, without credentials.
+Responses are `Cache-Control: no-store`. CORS permits GET/POST from the exact welcome custom domain and generated static
+site origin, without credentials. Same-origin browsers obtain a token from
+`GET /api/system/start-token` and POST it in `RequestVerificationToken` to
+`POST /api/system/start`. The trusted cross-origin static site instead supplies
+`X-Application-Start: user`, which requires a successful CORS preflight. Other
+origins and ordinary cross-site form posts are rejected. The start endpoint has
+a process-wide fixed-window limit of 90 requests per minute.
 
 The one-time migration/seeding state is independent of current SQL availability.
-Initial migration and seeding run in a BackgroundService, with a five-minute
-cancellation deadline. `Testing` retains synchronous setup. Once initialization
-succeeds, visitor readiness requests run one shared `SELECT 1` probe, with a
+Initial migration and seeding wait for the first accepted explicit POST and then
+run once in a BackgroundService, with a five-minute cancellation deadline. Concurrent
+requests share this initialization. `Testing` retains synchronous setup. Once initialization
+succeeds, explicit start requests run one shared `SELECT 1` probe, with a
 seven-second cancellation deadline and five-second result cache. EF retries are not
 used for these probes. Temporary SQL failures return `Starting` and can recover
-without restarting the process. There is no recurring SQL probe.
+without restarting the process. Readiness returns only cached state and performs no I/O. The browser may repeat
+the start command while its user-initiated startup loop is running. There is no
+background SQL probe. Demo cleanup exits when disabled and only runs during the
+configured demo lifetime after an explicit start, so idle cleanup does not poll SQL.
 
 Initialization orders schema/catalog setup, the optional Development account seed,
 and the configured admin-role seed before marking Ready. Neither account nor admin
@@ -43,7 +55,7 @@ synchronously for deterministic fixtures.
 
 `/health/live`, `/health/ready` and the `/health` alias check the HTTP process only.
 `/health/database` continues to expose the initial migration state for operators;
-use `/api/system/readiness` for current SQL reachability.
+use `/api/system/readiness` for the cached result of the latest explicit start.
 
 The browser sends one request at a time, with a ten-second timeout and five seconds
 between completed attempts. It stops after five minutes or `Failed`; Retry starts
@@ -52,8 +64,8 @@ correct configuration or redeploy for those failures. Exhausted SQL free allowan
 and intentional hibernation require operator action. Internal exception details
 remain in server logs.
 
-`/starting` and `/failed` use static SSR with the same browser module and no Blazor
-circuit. Startup redirects preserve a validated local `returnUrl`. Non-GET/HEAD
+`/`, `/starting` and `/failed` use static SSR with the same browser module and no Blazor
+circuit. The application overview remains at `/recipes`. Startup redirects preserve a validated local `returnUrl`. Non-GET/HEAD
 requests blocked during startup return 503, never redirect or replay submitted data.
 
 ## First deployment and DNS
@@ -135,7 +147,8 @@ and `az sql db show ... --query status` must report `Paused`. Do not use hiberna
 as a substitute: it deletes compute and will not wake on a visitor request.
 
 Open the welcome URL in a browser with Network recording and Preserve log enabled.
-Record timestamps for visible static content, the first successful HTTP response
+Confirm no start POST occurs until clicking Open the application. Click it and
+record timestamps for visible static content, the first successful HTTP response
 from the backend and the first readiness response with `Ready`. Keep the window open
 and verify automatic navigation to the requested recipe or login with ReturnUrl.
 Record browser, connection, resource states and elapsed times. Do not add overlapping

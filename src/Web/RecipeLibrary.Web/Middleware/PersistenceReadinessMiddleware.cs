@@ -48,7 +48,10 @@ public sealed class PersistenceReadinessMiddleware(RequestDelegate next)
     }
 
     private static bool IsExempt(PathString path) =>
-        path.StartsWithSegments(StartingPath)
+        path == "/"
+        || path == "/api/system/start"
+        || path == "/api/system/start-token"
+        || path.StartsWithSegments(StartingPath)
         || path.StartsWithSegments(FailedPath)
         || path.StartsWithSegments(HealthPath)
         || path.StartsWithSegments(SystemReadinessPath)

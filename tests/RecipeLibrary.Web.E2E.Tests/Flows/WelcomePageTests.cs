@@ -39,12 +39,14 @@ public sealed class WelcomePageTests : IAsyncLifetime
     public async Task OfflineBackend_ShowsWelcomeAndLanguageChoice()
     {
         var page = await _browser.NewPageAsync(new() { ViewportSize = new() { Width = 390, Height = 844 } });
-        await page.RouteAsync("https://backend.example/**", route => route.AbortAsync());
+        var calls = 0;
+        await page.RouteAsync("https://backend.example/**", route => { Interlocked.Increment(ref calls); return route.AbortAsync(); });
         await page.GotoAsync(_url);
         await Expect(page.GetByRole(AriaRole.Heading)).ToHaveTextAsync("Welkom bij RecipeLibrary");
-        await Expect(page.GetByRole(AriaRole.Status)).ToContainTextAsync("automatisch");
+        await Expect(page.GetByRole(AriaRole.Status)).ToContainTextAsync("Klik");
         await page.GetByRole(AriaRole.Button, new() { Name = "English", Exact = true }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Heading)).ToHaveTextAsync("Welcome to RecipeLibrary");
+        Assert.Equal(0, calls);
         var screenshot = Path.Combine(Path.GetTempPath(), "RecipeLibrary-welcome-mobile.png");
         await page.ScreenshotAsync(new() { Path = screenshot, FullPage = true });
         await page.CloseAsync();
@@ -75,6 +77,7 @@ public sealed class WelcomePageTests : IAsyncLifetime
             });
         });
         await page.GotoAsync(_url + "/?returnUrl=%2Frecipes%2F42%3Ftab%3Dingredients");
+        await page.GetByRole(AriaRole.Link, new() { Name = "Naar de applicatie" }).ClickAsync();
         await page.WaitForURLAsync("https://backend.example/recipes/42?tab=ingredients", new() { Timeout = 15000 });
         Assert.Equal(2, calls);
         await page.CloseAsync();
@@ -94,10 +97,11 @@ public sealed class WelcomePageTests : IAsyncLifetime
                 : "{}"
         }));
         await page.GotoAsync(_url + "/?returnUrl=https%3A%2F%2Fevil.example");
+        await page.GetByRole(AriaRole.Link, new() { Name = "Naar de applicatie" }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Status)).ToContainTextAsync("kon niet worden gestart");
         Assert.Equal(1, calls);
         await page.GetByRole(AriaRole.Button, new() { Name = "Opnieuw proberen" }).ClickAsync();
-        await page.WaitForURLAsync("https://backend.example/");
+        await page.WaitForURLAsync("https://backend.example/recipes");
         Assert.Equal(2, calls);
         await page.CloseAsync();
     }
@@ -108,7 +112,7 @@ public sealed class WelcomePageTests : IAsyncLifetime
         var page = await _browser.NewPageAsync(new() { JavaScriptEnabled = false });
         await page.GotoAsync(_url);
         await Expect(page.GetByRole(AriaRole.Link, new() { Name = "Naar de applicatie" }))
-            .ToHaveAttributeAsync("href", "https://backend.example/");
+            .ToHaveAttributeAsync("href", "https://backend.example/recipes");
         await page.CloseAsync();
     }
 

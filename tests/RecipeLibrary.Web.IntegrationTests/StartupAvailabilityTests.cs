@@ -22,7 +22,7 @@ public sealed class StartupAvailabilityTests
         {
             BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false
         });
-        foreach (var path in new[] { "/health/live", "/health/ready", "/api/system/readiness", "/starting", "/failed", "/starting/", "/failed/", "/startup.js", "/app.css" })
+        foreach (var path in new[] { "/", "/health/live", "/health/ready", "/api/system/readiness", "/starting", "/failed", "/starting/", "/failed/", "/startup.js", "/app.css" })
         {
             using var response = await client.GetAsync(path).WaitAsync(TimeSpan.FromSeconds(10));
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -38,15 +38,60 @@ public sealed class StartupAvailabilityTests
                 Assert.DoesNotContain("\"type\":\"server\"", body);
             }
         }
+        foreach (var path in new[] { "/", "/health", "/api/system/readiness", "/robots.txt", "/wp-admin", "/Account/Login", "/demo" })
+        {
+            using var head = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, path));
+            using var get = await client.GetAsync(path);
+        }
         Assert.Equal(0, factory.Probe.Calls);
+        Assert.Equal(0, factory.Initializer.Calls);
+        using var scan = await client.GetAsync("/api/v1/recipes");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, scan.StatusCode);
+        using var rejected = await client.PostAsync("/api/system/start", null);
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        Assert.Equal(0, factory.Initializer.Calls);
+        var tokenBody = await client.GetStringAsync("/api/system/start-token");
+        var token = System.Text.Json.JsonDocument.Parse(tokenBody).RootElement.GetProperty("token").GetString();
+        var starts = await Task.WhenAll(Enumerable.Range(0, 5).Select(async _ =>
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/system/start");
+            request.Headers.Add("RequestVerificationToken", token);
+            return await client.SendAsync(request);
+        }));
+        Assert.All(starts, response => { Assert.Equal(HttpStatusCode.Accepted, response.StatusCode); response.Dispose(); });
+        await WaitUntilAsync(() => factory.Initializer.Calls == 1);
         factory.Initializer.Complete();
         var readiness = factory.Services.GetRequiredService<IPersistenceReadiness>();
         await WaitUntilAsync(() => readiness.IsReady);
         Assert.Contains("\"state\":\"Ready\"", await client.GetStringAsync("/api/system/readiness"));
-        Assert.Equal(1, factory.Probe.Calls);
+        Assert.Equal(0, factory.Probe.Calls);
+        Assert.Single(factory.Observer.Events, e => e.Stage == "Initializing");
+        Assert.All(factory.Observer.Events, e => { Assert.Equal("ExplicitApplicationStart", e.Reason); Assert.NotEmpty(e.CorrelationId); });
+        Assert.Equal(new[] { "Requested", "Initializing", "Ready" }, factory.Observer.Events.Select(e => e.Stage));
         using var upload = await client.GetAsync("/uploads/recipe-images/95eb3480-fdb9-4928-bedd-f6f84e4b31cc.webp");
         Assert.Equal(HttpStatusCode.Redirect, upload.StatusCode);
         Assert.Contains("/Account/Login", upload.Headers.Location!.ToString());
+    }
+
+    [Fact]
+    public async Task PassiveRequests_WithOldIdentityAndDemoCookies_NeverValidateIdentity()
+    {
+        using var factory = new StartupFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false, HandleCookies = false });
+        var options = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationOptions>>().Get(Microsoft.AspNetCore.Identity.IdentityConstants.ApplicationScheme);
+        var identity = new System.Security.Claims.ClaimsIdentity(new[] { new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "old-demo-user") }, Microsoft.AspNetCore.Identity.IdentityConstants.ApplicationScheme);
+        var ticket = new Microsoft.AspNetCore.Authentication.AuthenticationTicket(new System.Security.Claims.ClaimsPrincipal(identity), new Microsoft.AspNetCore.Authentication.AuthenticationProperties { IssuedUtc = DateTimeOffset.UtcNow.AddDays(-1) }, Microsoft.AspNetCore.Identity.IdentityConstants.ApplicationScheme);
+        var cookie = options.TicketDataFormat.Protect(ticket);
+        foreach (var path in new[] { "/", "/starting", "/health", "/api/system/readiness", "/startup.js", "/wp-admin" })
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, path);
+            request.Headers.Add("Cookie", $"{options.Cookie.Name}={cookie}; RecipeLibrary.Demo=1");
+            using var response = await client.SendAsync(request);
+            Assert.True((int)response.StatusCode < 500);
+        }
+        Assert.Equal(0, factory.Stamp.Calls);
+        Assert.Equal(0, factory.Initializer.Calls);
+        Assert.Equal(0, factory.Probe.Calls);
     }
 
     [Theory]
@@ -68,6 +113,41 @@ public sealed class StartupAvailabilityTests
         Assert.False(healthResponse.Headers.Contains("Access-Control-Allow-Origin"));
     }
 
+    [Theory]
+    [InlineData("https://test-welcome.azurestaticapps.net", true, true)]
+    [InlineData("https://test-welcome.azurestaticapps.net", false, false)]
+    [InlineData("https://untrusted.example", true, false)]
+    public async Task Start_RequiresTrustedOriginAndNonSimpleHeader(string origin, bool header, bool accepted)
+    {
+        using var factory = new StartupFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/system/start");
+        request.Headers.Add("Origin", origin);
+        if (header) request.Headers.Add("X-Application-Start", "user");
+        using var response = await client.SendAsync(request);
+        Assert.Equal(accepted ? HttpStatusCode.Accepted : HttpStatusCode.Forbidden, response.StatusCode);
+        if (accepted) await WaitUntilAsync(() => factory.Initializer.Calls == 1);
+        else Assert.Equal(0, factory.Initializer.Calls);
+        Assert.Equal(0, factory.Probe.Calls);
+    }
+
+    [Fact]
+    public async Task Start_RateLimitsBeforeAdditionalDatabaseWork()
+    {
+        using var factory = new StartupFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        for (var i = 0; i < 91; i++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/system/start");
+            request.Headers.Add("Origin", "https://test-welcome.azurestaticapps.net");
+            request.Headers.Add("X-Application-Start", "user");
+            using var response = await client.SendAsync(request);
+            Assert.Equal(i < 90 ? HttpStatusCode.Accepted : HttpStatusCode.TooManyRequests, response.StatusCode);
+        }
+        await WaitUntilAsync(() => factory.Initializer.Calls == 1);
+        Assert.Equal(0, factory.Probe.Calls);
+    }
+
     [Fact]
     public async Task Probe_IsSharedCachedAndRecoversAfterLaterOutage()
     {
@@ -75,19 +155,21 @@ public sealed class StartupAvailabilityTests
         var probe = new Probe();
         var clock = new Clock();
         var service = new DatabaseAvailability(startup, probe, clock, NullLogger<DatabaseAvailability>.Instance);
-        Assert.Equal(PersistenceWarmupState.Starting, await service.GetStateAsync(default));
+        Assert.Equal(PersistenceWarmupState.Starting, await service.ProbeForStartAsync(default));
         Assert.Equal(0, probe.Calls);
         startup.MarkReady();
-        var results = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => service.GetStateAsync(default)));
+        Assert.Equal(PersistenceWarmupState.Ready, await service.GetStateAsync(default));
+        Assert.Equal(0, probe.Calls);
+        var results = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => service.ProbeForStartAsync(default)));
         Assert.All(results, state => Assert.Equal(PersistenceWarmupState.Ready, state));
         Assert.Equal(1, probe.Calls);
         clock.Advance();
         probe.Fail = true;
-        Assert.Equal(PersistenceWarmupState.Starting, await service.GetStateAsync(default));
+        Assert.Equal(PersistenceWarmupState.Starting, await service.ProbeForStartAsync(default));
         Assert.True(startup.IsReady);
         clock.Advance();
         probe.Fail = false;
-        Assert.Equal(PersistenceWarmupState.Ready, await service.GetStateAsync(default));
+        Assert.Equal(PersistenceWarmupState.Ready, await service.ProbeForStartAsync(default));
         Assert.Equal(3, probe.Calls);
         Assert.Equal(1, probe.MaxConcurrent);
     }
@@ -97,7 +179,7 @@ public sealed class StartupAvailabilityTests
     {
         var startup = new PersistenceReadiness();
         using var service = new PersistenceWarmupHostedService(new BrokenInitializer(),
-            Options.Create(new PersistenceWarmupOptions()), startup, NullLogger<PersistenceWarmupHostedService>.Instance);
+            Options.Create(new PersistenceWarmupOptions()), startup, NullLogger<PersistenceWarmupHostedService>.Instance, RequestedWake());
         await service.StartAsync(default);
         await WaitUntilAsync(() => startup.HasPermanentlyFailed);
         await service.StopAsync(default);
@@ -110,7 +192,7 @@ public sealed class StartupAvailabilityTests
         var initializer = new BlockedInitializer();
         using var service = new PersistenceWarmupHostedService(initializer,
             Options.Create(new PersistenceWarmupOptions { Timeout = TimeSpan.FromMilliseconds(50) }),
-            startup, NullLogger<PersistenceWarmupHostedService>.Instance);
+            startup, NullLogger<PersistenceWarmupHostedService>.Instance, RequestedWake());
         await service.StartAsync(default);
         await WaitUntilAsync(() => startup.HasPermanentlyFailed);
         Assert.True(initializer.CancellationObserved);
@@ -149,6 +231,13 @@ public sealed class StartupAvailabilityTests
         Assert.Empty(post.Response.Headers.Location.ToString());
     }
 
+    private static ApplicationWakeRequest RequestedWake()
+    {
+        var wake = new ApplicationWakeRequest([], NullLogger<ApplicationWakeRequest>.Instance);
+        wake.Request("TestExplicitStart", "test-correlation");
+        return wake;
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition)
     {
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -159,6 +248,8 @@ public sealed class StartupAvailabilityTests
     {
         public BlockedInitializer Initializer { get; } = new();
         public Probe Probe { get; } = new();
+        public Observer Observer { get; } = new();
+        public StampValidator Stamp { get; } = new();
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Production");
@@ -172,6 +263,9 @@ public sealed class StartupAvailabilityTests
             builder.UseSetting("ContentModeration:AdminEmails:0", "admin@example.invalid");
             builder.ConfigureServices(services =>
             {
+                services.AddSingleton<IApplicationWakeObserver>(Observer);
+                services.RemoveAll<Microsoft.AspNetCore.Identity.ISecurityStampValidator>();
+                services.AddSingleton<Microsoft.AspNetCore.Identity.ISecurityStampValidator>(Stamp);
                 services.RemoveAll<IPersistenceInitializer>();
                 services.AddSingleton<IPersistenceInitializer>(Initializer);
                 services.RemoveAll<IDatabaseProbe>();
@@ -180,13 +274,31 @@ public sealed class StartupAvailabilityTests
         }
     }
 
+    private sealed class StampValidator : Microsoft.AspNetCore.Identity.ISecurityStampValidator
+    {
+        public int Calls;
+        public Task ValidateAsync(Microsoft.AspNetCore.Authentication.Cookies.CookieValidatePrincipalContext context)
+        {
+            Interlocked.Increment(ref Calls);
+            throw new InvalidOperationException("Passive requests must not validate SQL-backed cookies.");
+        }
+    }
+
+    private sealed class Observer : IApplicationWakeObserver
+    {
+        public System.Collections.Concurrent.ConcurrentQueue<ApplicationWakeEvent> Events { get; } = new();
+        public void Observe(ApplicationWakeEvent wakeEvent) => Events.Enqueue(wakeEvent);
+    }
+
     private sealed class BlockedInitializer : IPersistenceInitializer
     {
         private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int Calls;
         public bool CancellationObserved { get; private set; }
         public void Complete() => _completion.TrySetResult();
         public async Task InitializeAsync(CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref Calls);
             try { await _completion.Task.WaitAsync(cancellationToken); }
             catch (OperationCanceledException) { CancellationObserved = true; throw; }
         }
