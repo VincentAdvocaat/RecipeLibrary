@@ -59,26 +59,41 @@ public sealed class RecipeApiClient
         var startupToken = deadline.Token;
         try
         {
-            // The shared HttpClientHandler retains the antiforgery cookie.
-            using var tokenResponse = await _http.GetAsync("api/system/start-token", startupToken);
-            tokenResponse.EnsureSuccessStatusCode();
-            using var tokenDocument = JsonDocument.Parse(await tokenResponse.Content.ReadAsStringAsync(startupToken));
-            var token = tokenDocument.RootElement.GetProperty("token").GetString();
-            if (string.IsNullOrWhiteSpace(token)) throw new InvalidOperationException("Application start token is missing.");
+            string? token = null;
             while (true)
             {
-                using var start = new HttpRequestMessage(HttpMethod.Post, "api/system/start");
-                start.Headers.Add("RequestVerificationToken", token);
-                start.Headers.Add("X-Application-Start", "user");
-                using var startResponse = await _http.SendAsync(start, startupToken);
-                startResponse.EnsureSuccessStatusCode();
-                using var readiness = await _http.GetAsync("api/system/readiness", startupToken);
-                readiness.EnsureSuccessStatusCode();
-                using var stateDocument = JsonDocument.Parse(await readiness.Content.ReadAsStringAsync(startupToken));
-                var state = stateDocument.RootElement.GetProperty("state").GetString();
-                if (state == "Ready") return;
-                if (state == "Failed") throw new InvalidOperationException("The recipe library could not start. Please try again later.");
-                if (state != "Starting") throw new InvalidOperationException("Unexpected application startup state.");
+                try
+                {
+                    // The shared handler keeps the antiforgery cookie across these requests.
+                    if (token is null)
+                    {
+                        using var tokenResponse = await _http.GetAsync("api/system/start-token", startupToken);
+                        tokenResponse.EnsureSuccessStatusCode();
+                        using var tokenDocument = JsonDocument.Parse(await tokenResponse.Content.ReadAsStringAsync(startupToken));
+                        token = tokenDocument.RootElement.GetProperty("token").GetString();
+                        if (string.IsNullOrWhiteSpace(token)) throw new InvalidOperationException("Application start token is missing.");
+                    }
+                    using var start = new HttpRequestMessage(HttpMethod.Post, "api/system/start");
+                    start.Headers.Add("RequestVerificationToken", token);
+                    start.Headers.Add("X-Application-Start", "user");
+                    using var startResponse = await _http.SendAsync(start, startupToken);
+                    startResponse.EnsureSuccessStatusCode();
+                    using var readiness = await _http.GetAsync("api/system/readiness", startupToken);
+                    readiness.EnsureSuccessStatusCode();
+                    using var stateDocument = JsonDocument.Parse(await readiness.Content.ReadAsStringAsync(startupToken));
+                    var state = stateDocument.RootElement.GetProperty("state").GetString();
+                    if (state == "Ready") return;
+                    if (state == "Failed") throw new InvalidOperationException("The recipe library could not start. Please try again later.");
+                    if (state != "Starting") throw new InvalidOperationException("Unexpected application startup state.");
+                }
+                catch (HttpRequestException error) when (error.StatusCode is null
+                    or System.Net.HttpStatusCode.TooManyRequests or System.Net.HttpStatusCode.BadGateway
+                    or System.Net.HttpStatusCode.ServiceUnavailable or System.Net.HttpStatusCode.GatewayTimeout)
+                {
+                    // Cold ingress and network interruptions share the original bounded deadline.
+                }
+                catch (OperationCanceledException) when (!startupToken.IsCancellationRequested) { }
+                catch (JsonException) { }
                 await Task.Delay(_pollInterval, startupToken);
             }
         }
@@ -91,6 +106,7 @@ public sealed class RecipeApiClient
     public async Task<IReadOnlyList<RecipeOverviewDto>> GetRecipesAsync(CancellationToken ct = default)
     {
         EnsureAuthenticated();
+        await WaitForApplicationAsync(ct);
         var payload = await _http.GetFromJsonAsync<RecipeListDto>("api/v1/recipes", ct)
             ?? throw new InvalidOperationException("Empty recipe list response.");
         return payload.Items;

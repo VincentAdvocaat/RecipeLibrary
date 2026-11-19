@@ -18,6 +18,12 @@ authenticate the same `AspNetUsers` store and the same `OwnerUserId` ownership m
 Legacy browser routes (`/api/upload-recipe-image`, `/ingredients/*`, `/recipes/import*`) remain
 for Blazor; prefer `/api/v1` for new mobile clients.
 
+## Explicit application startup
+
+Production hosts keep SQL asleep until an explicit user action. Before login or a foreground data load, the native client retrieves `/api/system/start-token`, retaining its antiforgery cookie, then posts `/api/system/start` with the returned token in `RequestVerificationToken` and `X-Application-Start: user`. Poll `/api/system/readiness` until `Ready`; a `Starting` response may be followed by another explicit start POST. Keep the original five-minute deadline, respect cancellation and retry temporary ingress failures. A `Failed` response stops the operation without sending credentials. Ordinary GET, HEAD and readiness requests do not start SQL.
+
+The included `RecipeApiClient` performs this handshake for login and recipe loading. Direct API consumers must implement the same protected handshake when the host is cold.
+
 ## Token request (password)
 
 ```http
