@@ -92,6 +92,9 @@ This repo uses a layered structure (`Domain`/`Application`/`Infrastructure`/`Web
 
 ## Infrastructure (Azure, Bicep)
 
+The independent static welcome page, public subdomains, DNS bootstrap and cold-start
+acceptance procedure are documented in [docs/azure/static-welcome.md](docs/azure/static-welcome.md).
+
 This repo provisions a **test** environment in Azure (region: `swedencentral`) using Bicep:
 
 - **Container Apps Consumption**: scale-to-zero, max 1 replica, public GHCR image

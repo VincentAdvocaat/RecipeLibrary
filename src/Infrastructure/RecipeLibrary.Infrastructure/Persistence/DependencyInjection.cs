@@ -24,7 +24,6 @@ public static class PersistenceServiceRegistration
                 // Helpful defaults for transient Azure SQL failures.
                 sql.EnableRetryOnFailure();
             });
-            options.UseOpenIddict();
         });
 
         services.AddScoped<IRecipeRepository, EfRecipeRepository>();

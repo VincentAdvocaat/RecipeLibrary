@@ -1,4 +1,4 @@
-using System.Text;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -75,29 +75,34 @@ public static class OpenIddictServiceCollectionExtensions
         IHostEnvironment environment)
     {
         var signingKey = configuration["OpenIddict:SigningKey"];
-        if (!string.IsNullOrWhiteSpace(signingKey))
-        {
-            var keyBytes = Encoding.UTF8.GetBytes(signingKey);
-            if (keyBytes.Length < 32)
-            {
-                throw new InvalidOperationException(
-                    "OpenIddict:SigningKey must be at least 32 UTF-8 bytes (256 bits).");
-            }
-
-            var key = new SymmetricSecurityKey(keyBytes);
-            options.AddSigningKey(key);
-            options.AddEncryptionKey(key);
-            return;
-        }
-
-        if (environment.IsDevelopment() || environment.IsEnvironment("Testing"))
+        var encryptionKey = configuration["OpenIddict:EncryptionKey"];
+        if (string.IsNullOrWhiteSpace(signingKey) && string.IsNullOrWhiteSpace(encryptionKey)
+            && (environment.IsDevelopment() || environment.IsEnvironment("Testing")))
         {
             options.AddEphemeralEncryptionKey()
                 .AddEphemeralSigningKey();
             return;
         }
 
-        throw new InvalidOperationException(
-            "Missing OpenIddict:SigningKey. Set a stable 32+ character secret (e.g. Key Vault) for non-Development hosts.");
+        options.AddSigningKey(ReadPrivateKey(signingKey, "OpenIddict:SigningKey"));
+        options.AddEncryptionKey(ReadPrivateKey(encryptionKey, "OpenIddict:EncryptionKey"));
+    }
+
+    private static RsaSecurityKey ReadPrivateKey(string? pem, string setting)
+    {
+        if (string.IsNullOrWhiteSpace(pem))
+        {
+            throw new InvalidOperationException($"Missing {setting}. Configure a PEM-encoded RSA private key.");
+        }
+
+        using var rsa = RSA.Create();
+        rsa.ImportFromPem(pem);
+        var parameters = rsa.ExportParameters(includePrivateParameters: true);
+        if (rsa.KeySize < 2048)
+        {
+            throw new InvalidOperationException($"{setting} must be at least 2048 bits.");
+        }
+
+        return new RsaSecurityKey(parameters);
     }
 }

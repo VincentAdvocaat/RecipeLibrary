@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -16,14 +17,19 @@ public sealed class BearerAuthWebApplicationFactory(string connectionString) : W
     {
         builder.UseEnvironment("Testing");
 
+        using var signingKey = RSA.Create(2048);
+        using var encryptionKey = RSA.Create(2048);
+        var signingPem = signingKey.ExportPkcs8PrivateKeyPem();
+        var encryptionPem = encryptionKey.ExportPkcs8PrivateKeyPem();
+
         builder.ConfigureAppConfiguration((_, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:RecipeDb"] = connectionString,
                 ["RecipeFileStorage:LocalBasePath"] = _uploadPath,
-                // Stable key across requests within this factory instance.
-                ["OpenIddict:SigningKey"] = "integration-test-signing-key-32bytes!!",
+                ["OpenIddict:SigningKey"] = signingPem,
+                ["OpenIddict:EncryptionKey"] = encryptionPem,
             });
         });
     }

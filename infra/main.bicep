@@ -41,6 +41,24 @@ param ghcrUsername string
 @description('GitHub PAT (or token) with read:packages used by Container Apps to pull from GHCR.')
 param ghcrPassword string
 
+@description('SEC only: provision the independent static welcome site.')
+param enableWelcome bool = false
+
+@description('Existing hostname/certificate bindings, passed by the pipeline to preserve them on redeploy.')
+param appCustomDomains array = []
+
+resource welcome 'Microsoft.Web/staticSites@2023-12-01' = if (enableWelcome) {
+  name: 'swa-recipelibrary-test-sec'
+  location: 'westeurope'
+  sku: {
+    name: 'Free'
+    tier: 'Free'
+  }
+  properties: {
+    provider: 'Custom'
+  }
+}
+
 var stableSuffix = toLower(uniqueString(subscription().subscriptionId, resourceGroup().id))
 var suffix = (nameSuffix == '') ? stableSuffix : toLower(nameSuffix)
 
@@ -67,6 +85,8 @@ var containerImage = '${ghcrImageRepository}@${containerImageDigest}'
 var dataProtectionBlobUri = 'https://${storageAccount.name}.blob.core.windows.net/dataprotection/keys.xml'
 
 // Key Vault secret names (rotate via Azure CLI without redeploy). Container Apps secret aliases for secretRef.
+var openIddictSigningSecretName = 'OpenIddict-SigningKey'
+var openIddictEncryptionSecretName = 'OpenIddict-EncryptionKey'
 var openAiKeyVaultSecretName = 'RecipeImport-OpenAi-ApiKey'
 var openAiContainerAppSecretName = 'openai-api-key'
 var youTubeKeyVaultSecretName = 'RecipeImport-YouTube-ApiKey'
@@ -342,6 +362,60 @@ resource sqlAllowClientIp 'Microsoft.Sql/servers/firewallRules@2023-05-01-previe
   }
 }
 
+// Keep the same private keys across revisions and provision them only once per vault.
+resource ensureOpenIddictKeys 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
+  name: 'ensure-openiddict-keys'
+  location: location
+  kind: 'AzureCLI'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${keyVaultScriptIdentity.id}': {}
+    }
+  }
+  dependsOn: [
+    scriptKeyVaultSecretsOfficer
+  ]
+  properties: {
+    azCliVersion: '2.67.0'
+    timeout: 'PT10M'
+    retentionInterval: 'PT1H'
+    cleanupPreference: 'OnSuccess'
+    environmentVariables: [
+      {
+        name: 'AZURE_CLIENT_ID'
+        value: keyVaultScriptIdentity.properties.clientId
+      }
+      {
+        name: 'KV_NAME'
+        value: keyVault.name
+      }
+      {
+        name: 'SIGNING_SECRET'
+        value: openIddictSigningSecretName
+      }
+      {
+        name: 'ENCRYPTION_SECRET'
+        value: openIddictEncryptionSecretName
+      }
+    ]
+    scriptContent: '''
+set -euo pipefail
+az login --identity --username "$AZURE_CLIENT_ID" >/dev/null
+umask 077
+key_file="$(mktemp)"
+trap 'rm -f "$key_file"' EXIT
+for name in "$SIGNING_SECRET" "$ENCRYPTION_SECRET"; do
+  existing="$(az keyvault secret list --vault-name "$KV_NAME" --query "[?name=='$name'].name" -o tsv)"
+  if [ -z "$existing" ]; then
+    openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$key_file" 2>/dev/null
+    az keyvault secret set --vault-name "$KV_NAME" --name "$name" --file "$key_file" --output none
+  fi
+done
+'''
+  }
+}
+
 resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: containerAppName
   location: location
@@ -349,6 +423,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
     appKeyVaultSecretsUser
     ensureOpenAiSecret
     ensureYouTubeSecret
+    ensureOpenIddictKeys
   ]
   identity: {
     type: 'UserAssigned'
@@ -363,6 +438,16 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
       // GHCR packages are private by default; Container Apps need registry credentials to pull.
       // OpenAI / YouTube keys are referenced from Key Vault (never stored as plain Container App secret values).
       secrets: [
+        {
+          name: 'openiddict-signing'
+          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/${openIddictSigningSecretName}'
+          identity: appIdentity.id
+        }
+        {
+          name: 'openiddict-encryption'
+          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/${openIddictEncryptionSecretName}'
+          identity: appIdentity.id
+        }
         {
           name: 'ghcr-password'
           value: ghcrPassword
@@ -390,6 +475,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 8080
         transport: 'auto'
         allowInsecure: false
+        customDomains: appCustomDomains
         stickySessions: {
           affinity: 'sticky'
         }
@@ -406,12 +492,28 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
           }
           env: [
             {
+              name: 'OpenIddict__SigningKey'
+              secretRef: 'openiddict-signing'
+            }
+            {
+              name: 'OpenIddict__EncryptionKey'
+              secretRef: 'openiddict-encryption'
+            }
+            {
               name: 'ASPNETCORE_ENVIRONMENT'
               value: 'test'
             }
             {
               name: 'SKIP_SQL_WAIT'
               value: 'true'
+            }
+            {
+              name: 'Welcome__AllowedOrigins__0'
+              value: enableWelcome ? 'https://recipelibrary.vasoftware.nl' : ''
+            }
+            {
+              name: 'Welcome__AllowedOrigins__1'
+              value: enableWelcome ? 'https://${welcome!.properties.defaultHostname}' : ''
             }
             {
               name: 'AZURE_CLIENT_ID'
@@ -520,3 +622,7 @@ output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVault.properties.vaultUri
 output openAiKeyVaultSecretName string = openAiKeyVaultSecretName
 output youTubeKeyVaultSecretName string = youTubeKeyVaultSecretName
+
+output welcomeSiteName string = enableWelcome ? welcome!.name : ''
+output welcomeSiteHostname string = enableWelcome ? welcome!.properties.defaultHostname : ''
+output appDomainVerificationId string = containerApp.properties.customDomainVerificationId

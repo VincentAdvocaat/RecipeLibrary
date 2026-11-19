@@ -21,7 +21,6 @@ public sealed class RecipeDbContextFactory : IDesignTimeDbContextFactory<RecipeD
 
         var builder = new DbContextOptionsBuilder<RecipeDbContext>();
         builder.UseSqlServer(cs, sql => sql.EnableRetryOnFailure());
-        builder.UseOpenIddict();
 
         return new RecipeDbContext(builder.Options);
     }

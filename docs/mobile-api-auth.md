@@ -33,14 +33,16 @@ Refresh:
 grant_type=refresh_token&refresh_token=...&client_id=maui-app
 ```
 
-## Signing keys
+## Token keys
 
 | Environment | Configuration |
 |-------------|---------------|
-| Development / Testing | Ephemeral keys (default), or set `OpenIddict:SigningKey` |
+| Development / Testing | Ephemeral keys by default |
 | Production / multi-instance | **Required:** `OpenIddict:SigningKey` (≥ 32 UTF-8 bytes), e.g. Key Vault secret |
 
-Without a shared signing key, tokens issued on one Container App replica will not validate on another.
+The Azure template creates both keys in Key Vault on first deployment and reuses them across revisions. All replicas must share both keys. Replacing a key without retaining its previous version in the application invalidates tokens that depend on it.
+
+The mobile password flow does not support accounts with two-factor authentication enabled. Refresh also requires a current security stamp and an account that is allowed to sign in and is not locked out.
 
 ## Blazor vs HTTP
 

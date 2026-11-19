@@ -124,6 +124,62 @@ public sealed class ApiV1AuthAndRecipesTests(SqlContainerFixture fixture)
         Assert.Equal(HttpStatusCode.Forbidden, list.StatusCode);
     }
 
+    [Fact]
+    public async Task Token_PasswordGrant_DeniesAccountWithTwoFactorEnabled()
+    {
+        await using var factory = new BearerAuthWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var user = await CreateUserAsync(factory, "twofactor", "twofactor@example.com", Password);
+        using var scope = factory.Services.CreateScope();
+        var manager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        Assert.True((await manager.SetTwoFactorEnabledAsync(user, true)).Succeeded);
+
+        using var content = PasswordGrant(user.UserName!, Password);
+        using var response = await client.PostAsync("/connect/token", content);
+        await AssertInvalidGrantAsync(response);
+    }
+
+    [Theory]
+    [InlineData("security stamp")]
+    [InlineData("lockout")]
+    [InlineData("two-factor")]
+    public async Task Token_Refresh_DeniesAccountAfterSecurityChange(string change)
+    {
+        await using var factory = new BearerAuthWebApplicationFactory(fixture.ConnectionString);
+        using var client = factory.CreateClient();
+        var name = $"refresh{Guid.NewGuid():N}";
+        var user = await CreateUserAsync(factory, name, $"{name}@example.com", Password);
+        var (_, refresh) = await RequestPasswordTokenPairAsync(client, name, Password);
+        Assert.NotNull(refresh);
+
+        using var scope = factory.Services.CreateScope();
+        var manager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var result = change switch
+        {
+            "security stamp" => await manager.UpdateSecurityStampAsync(user),
+            "lockout" => await manager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddMinutes(5)),
+            "two-factor" => await manager.SetTwoFactorEnabledAsync(user, true),
+            _ => throw new ArgumentOutOfRangeException(nameof(change)),
+        };
+        Assert.True(result.Succeeded);
+
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["grant_type"] = "refresh_token",
+            ["refresh_token"] = refresh,
+            ["client_id"] = OpenIddictAppConstants.MauiClientId,
+        });
+        using var response = await client.PostAsync("/connect/token", content);
+        await AssertInvalidGrantAsync(response);
+    }
+
+    private static async Task AssertInvalidGrantAsync(HttpResponseMessage response)
+    {
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("invalid_grant", body.RootElement.GetProperty("error").GetString());
+    }
+
     private static async Task<ApplicationUser> CreateUserAsync(
         BearerAuthWebApplicationFactory factory,
         string userName,
@@ -159,14 +215,7 @@ public sealed class ApiV1AuthAndRecipesTests(SqlContainerFixture fixture)
         string password,
         string? scope = null)
     {
-        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["grant_type"] = "password",
-            ["username"] = userName,
-            ["password"] = password,
-            ["client_id"] = OpenIddictAppConstants.MauiClientId,
-            ["scope"] = scope ?? $"{OpenIddictAppConstants.ApiScope} offline_access",
-        });
+        using var content = PasswordGrant(userName, password, scope);
 
         var response = await client.PostAsync("/connect/token", content);
         var body = await response.Content.ReadAsStringAsync();
@@ -180,4 +229,13 @@ public sealed class ApiV1AuthAndRecipesTests(SqlContainerFixture fixture)
             : null;
         return (access, refresh);
     }
+    private static FormUrlEncodedContent PasswordGrant(string userName, string password, string? scope = null) =>
+        new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["grant_type"] = "password",
+            ["username"] = userName,
+            ["password"] = password,
+            ["client_id"] = OpenIddictAppConstants.MauiClientId,
+            ["scope"] = scope ?? $"{OpenIddictAppConstants.ApiScope} offline_access",
+        });
 }

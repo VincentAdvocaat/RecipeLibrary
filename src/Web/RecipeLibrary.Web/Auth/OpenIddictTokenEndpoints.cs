@@ -37,7 +37,7 @@ public static class OpenIddictTokenEndpoints
 
         if (request.IsRefreshTokenGrantType())
         {
-            return await HandleRefreshAsync(httpContext, request, userManager, signInManager, scopeManager);
+            return await HandleRefreshAsync(httpContext, request, signInManager, scopeManager);
         }
 
         return ForbidOpenIddict(
@@ -66,7 +66,7 @@ public static class OpenIddictTokenEndpoints
             user,
             request.Password ?? string.Empty,
             lockoutOnFailure: true);
-        if (!result.Succeeded)
+        if (!result.Succeeded || await userManager.GetTwoFactorEnabledAsync(user))
         {
             return ForbidOpenIddict(Errors.InvalidGrant, "The username/password couple is invalid.");
         }
@@ -84,7 +84,6 @@ public static class OpenIddictTokenEndpoints
     private static async Task<IResult> HandleRefreshAsync(
         HttpContext httpContext,
         OpenIddictRequest request,
-        UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         IOpenIddictScopeManager scopeManager)
     {
@@ -94,13 +93,15 @@ public static class OpenIddictTokenEndpoints
             return ForbidOpenIddict(Errors.InvalidGrant, "The refresh token is no longer valid.");
         }
 
-        var user = await userManager.GetUserAsync(result.Principal);
+        var user = await signInManager.ValidateSecurityStampAsync(result.Principal);
         if (user is null)
         {
             return ForbidOpenIddict(Errors.InvalidGrant, "The refresh token is no longer valid.");
         }
 
-        if (!await signInManager.CanSignInAsync(user))
+        if (!await signInManager.CanSignInAsync(user)
+            || await signInManager.UserManager.IsLockedOutAsync(user)
+            || await signInManager.UserManager.GetTwoFactorEnabledAsync(user))
         {
             return ForbidOpenIddict(Errors.InvalidGrant, "The user is no longer allowed to sign in.");
         }
@@ -111,7 +112,7 @@ public static class OpenIddictTokenEndpoints
             scopes = result.Principal.GetScopes();
         }
 
-        var principal = await CreatePrincipalAsync(user, scopes, userManager, signInManager, scopeManager);
+        var principal = await CreatePrincipalAsync(user, scopes, signInManager.UserManager, signInManager, scopeManager);
         return Results.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 

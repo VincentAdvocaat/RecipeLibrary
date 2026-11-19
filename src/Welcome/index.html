@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="RecipeLibrary: je recepten op één plek.">
+  <title>RecipeLibrary</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main data-startup data-backend="__BACKEND_URL__" data-language="nl" aria-busy="true">
+    <nav aria-label="Taal / Language"><button data-select-language="nl" lang="nl">Nederlands</button><button data-select-language="en" lang="en">English</button></nav>
+    <p class="brand">RecipeLibrary</p>
+    <h1 data-heading>Welkom bij RecipeLibrary</h1>
+    <p data-message>Je recepten op één plek. We zetten de receptenbibliotheek voor je klaar.</p>
+    <p class="status" role="status" aria-live="polite" data-status>De applicatie wordt gestart. Je gaat automatisch verder zodra alles klaar is.</p>
+    <button data-retry hidden>Opnieuw proberen</button>
+    <p><a data-continue href="__BACKEND_URL__/">Naar de applicatie</a></p>
+    <noscript><p>Open de applicatie via de link hierboven. Het opstarten kan even duren.</p></noscript>
+  </main>
+  <script type="module" src="startup.js"></script>
+</body>
+</html>
