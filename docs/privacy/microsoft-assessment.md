@@ -69,6 +69,10 @@ De broncode op basiscommit `ffbfb34` gebruikt standaard provider OpenAI, model `
 
 Dit betreft directe externe API's, geen aangetoonde Azure OpenAI-deployment. De Microsoft-DPA vormt geen bewijs voor een afzonderlijke OpenAI- of Google-overeenkomst, bewaartermijn, verwerkingslocatie of rechtsgrond. De privacyverklaring moet deze importfuncties afzonderlijk uitleggen als zij beschikbaar blijven. De eigen analyticsstroom mag niet worden voorgesteld als bewijs dat deze andere leveranciers ontbreken. Hun individuele overeenkomsten en eventuele bijzondere accountinstellingen blijven buiten deze Microsoft-controle.
 
+Mitigatie in deze privacywijziging: externe AI-import wordt standaard uitgeschakeld via `enableExternalAi=false` en de UI vraagt AI-fallback niet meer standaard aan. Voor opnieuw inschakelen is een afzonderlijke leveranciers-/doorgiftebeoordeling en kostenbesluit nodig. Gewone import en lokale OCR blijven beschikbaar. Publieke bronimport blijft een door de gebruiker aangevraagde serverhandeling; browsercookies, bezoekerscode en accountgegevens worden daarbij niet doorgestuurd. Onbekende externe afbeeldingen worden expliciete links in plaats van automatische browserrequests. De uiteindelijke releasecontrole moet bevestigen dat de declaratieve AI-instelling ook live is toegepast.
+
+De applicatie vult de standaard Cosmos-TTL aan met een per-item resterende termijn tot het vaste UTC-uur plus 31 dagen. De regressiontest `Merge_is_idempotent_bounded_and_retention_does_not_slide` controleert dit. Zo verlengen gewone updates de kalenderbewaring niet. Eenmalige legacy-redactie moet eveneens de oorspronkelijke vervaldatum aanhouden of verkorten.
+
 ## Wat dit dossier afrondt en wat het niet bewijst
 
 Vastgelegd zijn het accountgebonden MCA-type, de actuele publieke DPA/SCC-verwijzingen en subverwerkerslijst, de geconfigureerde regio's, de aangetroffen loggingconfiguratie en de genoemde retentie-instellingen. Er hoeft voor deze vastlegging geen betaalde dienst, nieuw abonnement of nieuwe toestemming bij Microsoft te worden geactiveerd.

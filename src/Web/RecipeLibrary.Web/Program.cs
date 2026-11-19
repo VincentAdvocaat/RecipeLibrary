@@ -129,7 +129,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
     // SameAsRequest: Secure on HTTPS (incl. forwarded proto); allows HTTP localhost in Development.
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
+builder.Services.AddAntiforgery(options => options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest);
 
 builder.Services.AddRecipeLibraryOpenIddict(builder.Configuration, builder.Environment);
 
@@ -275,12 +278,15 @@ app.UseHttpsRedirection();
 app.UseTrafficAnalytics();
 app.Use(async (context, next) =>
 {
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
     var file = context.Request.Path.Value switch
     {
         "/analytics" or "/analytics/" or "/analytics.html" => "analytics.html",
         "/analytics/dashboard.js" => "analytics/dashboard.js",
         "/analytics/dashboard.css" => "analytics/dashboard.css",
-        "/analytics-privacy.html" => "analytics-privacy.html",
+        "/privacy" or "/privacy/" or "/privacy.html" or "/analytics-privacy.html" => "privacy.html",
+        "/privacy-settings.js" => "privacy-settings.js",
+        "/privacy.css" => "privacy.css",
         _ => null
     };
     if (file is null) { await next(context); return; }

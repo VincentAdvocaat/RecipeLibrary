@@ -22,10 +22,11 @@ public sealed class StartupAvailabilityTests
         {
             BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false
         });
-        foreach (var path in new[] { "/", "/health/live", "/health/ready", "/api/system/readiness", "/starting", "/failed", "/starting/", "/failed/", "/startup.js", "/app.css" })
+        foreach (var path in new[] { "/", "/health/live", "/health/ready", "/api/system/readiness", "/starting", "/failed", "/starting/", "/failed/", "/startup.js", "/app.css", "/privacy", "/privacy/", "/privacy.html", "/analytics-privacy.html", "/privacy-settings.js", "/privacy.css" })
         {
             using var response = await client.GetAsync(path).WaitAsync(TimeSpan.FromSeconds(10));
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("no-referrer", response.Headers.GetValues("Referrer-Policy").Single());
             var body = await response.Content.ReadAsStringAsync();
             if (path == "/api/system/readiness")
             {
@@ -50,7 +51,19 @@ public sealed class StartupAvailabilityTests
         using var rejected = await client.PostAsync("/api/system/start", null);
         Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
         Assert.Equal(0, factory.Initializer.Calls);
-        var tokenBody = await client.GetStringAsync("/api/system/start-token");
+        using (var cookieAuditClient = factory.CreateClient(new WebApplicationFactoryClientOptions
+        { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false, HandleCookies = false }))
+        {
+            using var cookieResponse = await cookieAuditClient.GetAsync("/api/system/start-token");
+            var antiforgeryCookie = cookieResponse.Headers.GetValues("Set-Cookie").Single(v => v.StartsWith(".AspNetCore.Antiforgery."));
+            Assert.Contains("secure", antiforgeryCookie, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("httponly", antiforgeryCookie, StringComparison.OrdinalIgnoreCase);
+            var authCookie = factory.Services.GetRequiredService<IOptionsMonitor<Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationOptions>>()
+                .Get(Microsoft.AspNetCore.Identity.IdentityConstants.ApplicationScheme);
+            Assert.Equal(TimeSpan.FromDays(14), authCookie.ExpireTimeSpan);
+        }
+        using var tokenResponse = await client.GetAsync("/api/system/start-token");
+        var tokenBody = await tokenResponse.Content.ReadAsStringAsync();
         var token = System.Text.Json.JsonDocument.Parse(tokenBody).RootElement.GetProperty("token").GetString();
         var starts = await Task.WhenAll(Enumerable.Range(0, 5).Select(async _ =>
         {

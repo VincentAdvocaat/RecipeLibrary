@@ -51,7 +51,7 @@ stages:
 
     - script: |
         set -euo pipefail
-        node --test tests/welcome/startup.test.mjs
+        node --test tests/welcome/*.test.mjs
         node scripts/build-welcome.mjs
       displayName: Test and build static welcome page
 
@@ -64,6 +64,7 @@ stages:
         dotnet restore tests/RecipeLibrary.Web.ComponentTests/RecipeLibrary.Web.ComponentTests.csproj
         dotnet restore tests/RecipeLibrary.Web.IntegrationTests/RecipeLibrary.Web.IntegrationTests.csproj
         dotnet restore tests/RecipeLibrary.Web.E2E.Tests/RecipeLibrary.Web.E2E.Tests.csproj
+        dotnet restore tools/RecipeLibrary.PrivacyCleanup/RecipeLibrary.PrivacyCleanup.csproj
       displayName: Restore
 
     - script: |
@@ -73,6 +74,7 @@ stages:
         dotnet build tests/RecipeLibrary.Web.ComponentTests/RecipeLibrary.Web.ComponentTests.csproj --configuration $(buildConfiguration) --no-restore
         dotnet build tests/RecipeLibrary.Web.IntegrationTests/RecipeLibrary.Web.IntegrationTests.csproj --configuration $(buildConfiguration) --no-restore
         dotnet build tests/RecipeLibrary.Web.E2E.Tests/RecipeLibrary.Web.E2E.Tests.csproj --configuration $(buildConfiguration) --no-restore
+        dotnet build tools/RecipeLibrary.PrivacyCleanup/RecipeLibrary.PrivacyCleanup.csproj --configuration $(buildConfiguration) --no-restore
       displayName: Build
 
     - script: dotnet test tests/RecipeLibrary.Application.Tests --configuration $(buildConfiguration) --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory $(Agent.TempDirectory)/TestResults/Coverage --settings tests/coverlet.runsettings
@@ -92,8 +94,8 @@ stages:
     - pwsh: ./tests/RecipeLibrary.Web.E2E.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
       displayName: Install Chromium for welcome page tests
 
-    - script: dotnet test tests/RecipeLibrary.Web.E2E.Tests --configuration $(buildConfiguration) --no-build --filter FullyQualifiedName~WelcomePageTests --verbosity normal
-      displayName: Static welcome browser tests
+    - script: dotnet test tests/RecipeLibrary.Web.E2E.Tests --configuration $(buildConfiguration) --no-build --filter 'FullyQualifiedName~WelcomePageTests|FullyQualifiedName~PrivacyPageTests|FullyQualifiedName~AnalyticsDashboardTests' --verbosity normal
+      displayName: Static welcome, privacy and analytics browser tests
 
     - script: dotnet test tests/RecipeLibrary.Web.IntegrationTests --configuration $(buildConfiguration) --no-build --verbosity normal
       displayName: Integration tests
