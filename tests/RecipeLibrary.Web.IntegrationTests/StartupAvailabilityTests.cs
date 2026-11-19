@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -161,6 +162,10 @@ public sealed class StartupAvailabilityTests
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Production");
+            using var signingKey = RSA.Create(2048);
+            using var encryptionKey = RSA.Create(2048);
+            builder.UseSetting("OpenIddict:SigningKey", signingKey.ExportPkcs8PrivateKeyPem());
+            builder.UseSetting("OpenIddict:EncryptionKey", encryptionKey.ExportPkcs8PrivateKeyPem());
             builder.UseSetting("ConnectionStrings:RecipeDb", "Server=localhost;Database=unused;Integrated Security=True;TrustServerCertificate=True");
             builder.UseSetting("Welcome:AllowedOrigins:0", "https://recipelibrary.vasoftware.nl");
             builder.UseSetting("Welcome:AllowedOrigins:1", "https://test-welcome.azurestaticapps.net");
