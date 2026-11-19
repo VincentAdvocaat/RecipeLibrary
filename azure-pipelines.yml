@@ -265,7 +265,8 @@ stages:
                 backend="https://$(containerAppFqdn)"
                 if [ "$binding" = 'SniEnabled' ]; then
                   backend='https://app-recipelibrary.vasoftware.nl'
-                  curl --fail --silent --show-error --max-time 60 "$backend/health/live" -o /dev/null
+                  # Allow the new revision to finish activating before preparing the welcome page.
+                  curl --fail --silent --show-error --retry 4 --retry-all-errors --retry-delay 5 --retry-max-time 300 --connect-timeout 10 --max-time 60 "$backend/health/live" -o /dev/null
                 fi
                 node scripts/build-welcome.mjs "$backend"
                 token="$(az staticwebapp secrets list -g "$rg" -n "$site" --query properties.apiKey -o tsv)"
