@@ -16,6 +16,9 @@
 
 <body>
     <Routes @rendermode="PageRenderMode" />
+    <footer class="mx-auto max-w-5xl p-4 text-sm text-gray-600">
+        <a href="/privacy.html" data-enhance-nav="false">Privacy en cookies / Privacy &amp; cookies</a>
+    </footer>
     @if (!IsStartupPage)
     {
         <ReconnectModal @rendermode="InteractiveServer" />

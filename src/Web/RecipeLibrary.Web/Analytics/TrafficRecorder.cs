@@ -2,7 +2,7 @@ using System.Threading.Channels;
 
 namespace RecipeLibrary.Web.Analytics;
 
-public sealed class TrafficRecorder(IConfiguration configuration)
+public sealed class TrafficRecorder
 {
     private readonly Channel<TrafficEvent> channel = Channel.CreateBounded<TrafficEvent>(new BoundedChannelOptions(512)
     { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = false });
@@ -30,13 +30,13 @@ public sealed class TrafficRecorder(IConfiguration configuration)
     }
     public void RecordEvent(string kind, HttpContext context, string? page = null, string? referrer = null)
     {
-        if (!TrafficHour.Kinds.Contains(kind)) return;
+        if (!TrafficHour.Kinds.Contains(kind) || !TrafficPrivacy.OptionalMeasurementsAllowed(context)) return;
         var now = DateTimeOffset.UtcNow;
         var (browser, bot) = TrafficPrivacy.Classify(context.Request.Headers.UserAgent);
         Enqueue(new(now, kind, TrafficPrivacy.Path(page ?? context.Request.Path.Value),
             TrafficPrivacy.Origin($"{context.Request.Scheme}://{context.Request.Host}"), kind == "request" ? context.Response.StatusCode : 0,
             TrafficPrivacy.Origin(referrer ?? context.Request.Headers.Referer.ToString()), browser, bot,
-            TrafficPrivacy.Visitor(context.Connection.RemoteIpAddress?.ToString(), configuration["Analytics:AdminKey"] ?? "", now),
+            "",
             TrafficPrivacy.Bound(context.TraceIdentifier, 64), Method: TrafficPrivacy.Bound(context.Request.Method, 8)));
     }
     public void RecordSqlConnection(string kind, HttpContext? context, string reason)

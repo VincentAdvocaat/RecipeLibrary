@@ -12,7 +12,7 @@
     }
     <a href="@($"/recipes/{Item.Id}")" class="flex gap-4 flex-1 min-w-0 no-underline text-inherit">
         <div class="w-24 h-24 flex-shrink-0 rounded overflow-hidden">
-            <Image Src="@Item.ImageUrl" Alt="@Item.Title" Square="true" CssClass="w-full h-full" />
+            <Image ShowExternalLink="false" Src="@Item.ImageUrl" Alt="@Item.Title" Square="true" CssClass="w-full h-full" />
         </div>
         <div class="flex-1 min-w-0">
             <Heading Level="3" CssClass="mt-0 mb-1">@Item.Title</Heading>
@@ -23,6 +23,7 @@
             <RecipeMeta PreparationMinutes="@Item.PreparationMinutes" CookingMinutes="@Item.CookingMinutes" Servings="@Item.Servings" DifficultyLevel="@Item.Difficulty" />
         </div>
     </a>
+    <ExternalImageLink Src="@Item.ImageUrl" CssClass="px-4 pb-3" />
 </div>
 
 @code {

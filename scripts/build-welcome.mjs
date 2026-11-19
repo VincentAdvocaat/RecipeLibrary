@@ -17,3 +17,8 @@ await copyFile(path.join(repo, 'src/Web/RecipeLibrary.Web/wwwroot/startup.js'), 
 console.log(`Welcome page built in ${output}`);
 
 await copyFile(path.join(repo, 'src/Web/RecipeLibrary.Web/wwwroot/browserTracker.js'), path.join(output, 'browserTracker.js'));
+for (const name of ['privacy.html', 'privacy.css', 'privacy-settings.js']) {
+    await copyFile(path.join(repo, 'src/Web/RecipeLibrary.Web/wwwroot', name), path.join(output, name));
+}
+// Retain the previous public information URL without maintaining a second notice.
+await copyFile(path.join(repo, 'src/Web/RecipeLibrary.Web/wwwroot/privacy.html'), path.join(output, 'analytics-privacy.html'));

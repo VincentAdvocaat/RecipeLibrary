@@ -62,6 +62,9 @@ resource welcome 'Microsoft.Web/staticSites@2023-12-01' = if (enableWelcome) {
 @description('Enable the single subscription Free Tier analytics account. Keep false for other environments.')
 param enableAnalytics bool = false
 
+@description('Enable external AI only after a separate processor/transfer review and cost approval. Local OCR and ordinary imports remain available.')
+param enableExternalAi bool = false
+
 @secure()
 @description('Dashboard key stored only as a Container App secret. Default rotates on each deployment.')
 param analyticsAdminKey string = newGuid()
@@ -582,7 +585,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'RecipeImport__Ai__Enabled'
-              value: 'true'
+              value: enableExternalAi ? 'true' : 'false'
             }
             {
               name: 'RecipeImport__Ai__ApiKey'

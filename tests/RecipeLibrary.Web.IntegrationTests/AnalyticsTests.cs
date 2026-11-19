@@ -22,17 +22,6 @@ public sealed class AnalyticsTests
         Assert.Empty(TrafficPrivacy.Origin("https://user:password@example.com/"));
         Assert.Empty(TrafficPrivacy.Origin("javascript:alert(1)"));
     }
-    [Fact]
-    public void Daily_pseudonym_is_bounded_and_rotates()
-    {
-        var now = DateTimeOffset.UtcNow;
-        var secret = new string('k', 32);
-        var a = TrafficPrivacy.Visitor("192.0.2.1", secret, now);
-        Assert.Equal(12, a.Length);
-        Assert.Equal(a, TrafficPrivacy.Visitor("192.0.2.1", secret, now));
-        Assert.NotEqual(a, TrafficPrivacy.Visitor("192.0.2.1", secret, now.AddDays(1)));
-        Assert.Empty(TrafficPrivacy.Visitor("192.0.2.1", "short", now));
-    }
     [Theory]
     [InlineData(null, "key")]
     [InlineData("short", "short")]
@@ -76,7 +65,7 @@ public sealed class AnalyticsTests
     [Fact]
     public async Task Recorder_bounds_queue_and_persists_only_safe_fields()
     {
-        var recorder = new TrafficRecorder(Config(("Analytics:AdminKey", new string('k', 32))));
+        var recorder = new TrafficRecorder();
         var ctx = new DefaultHttpContext(); ctx.Request.Path = "/login"; ctx.Request.QueryString = new("?email=private@example.com");
         ctx.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.1"); ctx.Request.Headers.Authorization = "Bearer SECRET";
         ctx.Request.Headers.Cookie = "private=SECRET";
@@ -92,7 +81,7 @@ public sealed class AnalyticsTests
     [Fact]
     public async Task Failed_store_does_not_throw_into_recording_pipeline()
     {
-        var recorder = new TrafficRecorder(Config()); var writer = new TrafficWriter(recorder, new FailedStore());
+        var recorder = new TrafficRecorder(); var writer = new TrafficWriter(recorder, new FailedStore());
         recorder.RecordLifecycle("database-start-failure", "password=SECRET");
         await writer.FlushAsync(default);
         Assert.False(writer.Available); Assert.Equal(1, recorder.Dropped); Assert.Equal(0, recorder.Buffered);
@@ -133,7 +122,7 @@ public sealed class AnalyticsTests
     [Fact]
     public async Task Ambiguous_write_retry_does_not_double_count()
     {
-        var recorder = new TrafficRecorder(Config()); var store = new AmbiguousStore();
+        var recorder = new TrafficRecorder(); var store = new AmbiguousStore();
         var writer = new TrafficWriter(recorder, store);
         recorder.RecordLifecycle("database-probe", "probe");
         await writer.FlushAsync(default);
@@ -170,7 +159,7 @@ public sealed class AnalyticsTests
     [Fact]
     public async Task Wake_observer_correlates_explicit_starts_and_failures_without_private_error_text()
     {
-        var recorder = new TrafficRecorder(Config());
+        var recorder = new TrafficRecorder();
         var observer = new AnalyticsWakeObserver(recorder);
         var attempt = new RecipeLibrary.Web.Services.ApplicationWakeEvent("attempt", "ExplicitApplicationStart", DateTimeOffset.UtcNow, "request-123", "Requested");
         observer.Observe(attempt);
@@ -186,7 +175,7 @@ public sealed class AnalyticsTests
     [Fact]
     public async Task Hosted_initialization_SQL_events_keep_the_explicit_request_and_attempt()
     {
-        var recorder = new TrafficRecorder(Config());
+        var recorder = new TrafficRecorder();
         var observer = new AnalyticsWakeObserver(recorder);
         var wake = new RecipeLibrary.Web.Services.ApplicationWakeRequest([observer], Microsoft.Extensions.Logging.Abstractions.NullLogger<RecipeLibrary.Web.Services.ApplicationWakeRequest>.Instance);
         var readiness = new RecipeLibrary.Infrastructure.Persistence.PersistenceReadiness();
@@ -212,7 +201,7 @@ public sealed class AnalyticsTests
     [Fact]
     public async Task Resume_probe_keeps_HTTP_correlation_and_reports_failure_category()
     {
-        var recorder = new TrafficRecorder(Config());
+        var recorder = new TrafficRecorder();
         var observer = new AnalyticsWakeObserver(recorder);
         var wake = new RecipeLibrary.Web.Services.ApplicationWakeRequest([observer], Microsoft.Extensions.Logging.Abstractions.NullLogger<RecipeLibrary.Web.Services.ApplicationWakeRequest>.Instance);
         var readiness = new RecipeLibrary.Infrastructure.Persistence.PersistenceReadiness();

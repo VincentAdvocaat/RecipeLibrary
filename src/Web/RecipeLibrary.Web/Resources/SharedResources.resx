@@ -374,4 +374,6 @@
   <data name="Demo.Close" xml:space="preserve"><value>Tip sluiten</value></data>
   <data name="Demo.Error" xml:space="preserve"><value>Deze pagina kon niet worden geladen. Probeer de pagina opnieuw te openen.</value></data>
   <data name="Demo.ReloadAction" xml:space="preserve"><value>Pagina herladen</value></data>
+  <data name="Image.OpenExternal" xml:space="preserve"><value>Afbeelding openen bij {0}</value></data>
+  <data name="Image.NotLoaded" xml:space="preserve"><value>Afbeelding niet geladen</value></data>
 </root>
