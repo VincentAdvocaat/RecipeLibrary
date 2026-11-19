@@ -47,4 +47,3 @@ De zakelijke contactidentiteit is overgenomen uit de bestaande zakelijke afzende
 Cookievrij is geen synoniem voor volledig anoniem. Ook zonder IP-pseudoniem blijven verzoeknummers/tijden mogelijk persoonsgegevens. Demoquotalimieten zijn een aparte verwerking. Geen belofte van uitsluitende EU-verwerking, perfecte anonimiteit of onmiddellijke fysieke verwijdering tijdens SQL-pauze. De privacytekst maakt die grenzen zichtbaar.
 
 Voor vrijgave: relevante backend-/browser-/componenttests, publieke statische privacyroute zonder SQL, functionele uitschakelcookie op beide hosts, DNT/GPC, legacyrapportredactie, echte API401 en beheerrapport200, cookie-Secure-attribuut, externe AI uit en eenmalige opschoning van oude Visitor-velden. De concrete post-deployment resultaten worden bij de PR vastgelegd; de nulmeting hierboven mag daarvoor niet als vervanging gelden.
-

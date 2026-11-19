@@ -27,4 +27,3 @@ Bij een mogelijk datalek: beperk toegang, stop de betreffende gegevensstroom waa
 ## Periodieke controle en wijzigingen
 
 Controleer jaarlijks en na relevante wijzigingen de cookie-/netwerkstromen, bereikbaarheid van het privacycontact, bewaartermijnen, operatorrechten en Microsoft-subverwerkers-/DPA-wijzigingen. Herzie eerder bij incidenten, accountprofilering, een andere regio/provider, externe AI, derdepartijbeelden, gepersonaliseerde campagnelinks, tracking of langere bewaring. Houd de informatie op beide hosts gelijk en neem privacybestanden mee in de statische build. Het privacydocument vervangt deze operationele verantwoordelijkheid niet.
-
