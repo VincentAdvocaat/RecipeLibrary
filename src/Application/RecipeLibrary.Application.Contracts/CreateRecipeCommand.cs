@@ -2,6 +2,8 @@ namespace RecipeLibrary.Application.Contracts;
 
 public sealed class CreateRecipeCommand : ICommand<CreateRecipeResult>
 {
+    public Guid? HouseholdId { get; init; }
+
     public string Title { get; init; } = string.Empty;
 
     public int PreparationTimeMinutes { get; init; }
@@ -54,6 +56,9 @@ public sealed class CreateRecipeInstructionStepDto
 
 public sealed class GetRecipeListQuery : IQuery<GetRecipeListResult>
 {
+    public Guid? HouseholdId { get; init; }
+    public Guid? SharingTargetHouseholdId { get; init; }
+
     public string? Search { get; init; }
 
     /// <summary>
@@ -67,6 +72,7 @@ public sealed record GetRecipeListResult(IReadOnlyList<RecipeOverviewItem> Items
 public sealed class RecipeOverviewItem
 {
     public Guid Id { get; init; }
+    public bool AlreadyShared { get; init; }
     public string Title { get; init; } = string.Empty;
     public string? Description { get; init; }
     public string? ImageUrl { get; init; }
@@ -110,6 +116,7 @@ public sealed class GetRecipeByIdQuery : IQuery<GetRecipeByIdResult?>
 public sealed class GetRecipeByIdResult
 {
     public Guid Id { get; init; }
+    public Guid? HouseholdId { get; init; }
     public string Title { get; init; } = string.Empty;
     public string? Description { get; init; }
     public string? ImageUrl { get; init; }

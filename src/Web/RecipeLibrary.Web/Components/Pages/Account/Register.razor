@@ -7,6 +7,7 @@
 @using System.Text.RegularExpressions
 @using Microsoft.AspNetCore.Components.Endpoints
 @using Microsoft.AspNetCore.Identity
+@using RecipeLibrary.Application.Security
 @using RecipeLibrary.Infrastructure.Identity
 
 @inject UserManager<ApplicationUser> UserManager
@@ -62,11 +63,18 @@
 
     <p class="text-sm text-gray-600">
         @L["Auth.Register.HasAccount"]
-        <a href="Account/Login" class="font-medium text-gray-900 hover:underline">@L["Auth.Login.Link"]</a>
+        <a href="@LoginHref" class="font-medium text-gray-900 hover:underline">@L["Auth.Login.Link"]</a>
     </p>
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    private string? ReturnUrl { get; set; }
+
+    private string SafeReturnUrl => LocalRedirect.Normalize(ReturnUrl, fallback: "/recipes");
+    private string LoginHref => string.IsNullOrWhiteSpace(ReturnUrl)
+        ? "Account/Login" : $"Account/Login?returnUrl={Uri.EscapeDataString(SafeReturnUrl)}";
+
     [SupplyParameterFromForm]
     private RegisterModel Input { get; set; } = default!;
 
@@ -103,7 +111,7 @@
 
         RecipeLibrary.Web.Demo.DemoEndpoints.ClearBrowserState(HttpAccessor.HttpContext!);
         await SignInManager.SignInAsync(user, isPersistent: true);
-        Navigation.NavigateTo("/recipes", forceLoad: true);
+        Navigation.NavigateTo(SafeReturnUrl, forceLoad: true);
     }
 
     private string MapCreateErrors(IEnumerable<IdentityError> errors)

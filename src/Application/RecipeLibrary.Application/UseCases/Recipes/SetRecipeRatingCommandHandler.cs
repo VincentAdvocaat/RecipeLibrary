@@ -16,12 +16,7 @@ public sealed class SetRecipeRatingCommandHandler(
         ArgumentOutOfRangeException.ThrowIfNegative(command.Stars);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(command.Stars, 5);
 
-        if (!await recipeRepository.IsRecipeAccessibleAsync(userId, command.RecipeId, ct))
-        {
-            return new SetRecipeRatingResult(false);
-        }
-
-        await recipeRepository.SetRatingAsync(userId, command.RecipeId, command.Stars, ct);
-        return new SetRecipeRatingResult(true);
+        var saved = await recipeRepository.TrySetRatingAsync(userId, command.RecipeId, command.Stars, ct);
+        return new SetRecipeRatingResult(saved);
     }
 }

@@ -3,16 +3,20 @@
 @inject IQueryBus QueryBus
 @inject ICommandBus CommandBus
 @inject ShoppingListSessionService ShoppingSession
+@inject IDemoContext DemoContext
+@inject ILogger<RecipeOverview> Logger
 
-<PageTitle>@L["RecipeOverview.PageTitle"]</PageTitle>
+<PageTitle>@OverviewTitle</PageTitle>
 
 <div class="min-h-screen bg-gray-100" data-testid="@UiTestIds.OverviewReady">
     <div class="container mx-auto p-4 max-w-5xl @( _selectMode ? "pb-24" : "" )">
         @if (_viewMode == ViewToggle.ViewModeKind.List)
         {
-            <RecipeOverviewHeader Title="@L["RecipeOverview.PageTitle"]"
+            <RecipeOverviewHeader Title="@OverviewTitle"
+                                  IsHouseholdLibrary="@(ActiveHouseholdId != null)"
                                   ShowViewToggleInHeader="false"
                                   ShoppingBadgeCount="@_badgeCount" />
+            @RenderLibrarySwitcher()
             <SearchFilterBar SearchQuery="@_searchQuery"
                              SearchQueryChanged="@OnSearchQueryChanged"
                              ViewMode="@_viewMode"
@@ -22,11 +26,13 @@
         }
         else
         {
-            <RecipeOverviewHeader Title="@L["RecipeOverview.PageTitle"]"
+            <RecipeOverviewHeader Title="@OverviewTitle"
+                                  IsHouseholdLibrary="@(ActiveHouseholdId != null)"
                                   ShowViewToggleInHeader="true"
                                   ViewMode="@_viewMode"
                                   ViewModeChanged="@OnViewModeChanged"
                                   ShoppingBadgeCount="@_badgeCount" />
+            @RenderLibrarySwitcher()
             <SearchViewBar SearchQuery="@_searchQuery"
                            SearchQueryChanged="@OnSearchQueryChanged"
                            ViewMode="@_viewMode"
@@ -42,20 +48,51 @@
                         @onclick="StartSelectMode">
                     @L["RecipeOverview.SelectMode.Button"]
                 </button>
+                @if (_household is not null && ActiveHouseholdId is null)
+                {
+                    <button type="button"
+                            class="px-3 py-1.5 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
+                            @onclick="StartShareMode">
+                        @L["Household.Share.Start"]
+                    </button>
+                }
             }
             else
             {
                 <button type="button"
                         class="px-3 py-1.5 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
+                        disabled="@_sharing"
                         @onclick="CancelSelectMode">
                     @L["RecipeOverview.SelectMode.CancelButton"]
                 </button>
+                @if (_shareMode)
+                {
+                    <button type="button"
+                            class="px-3 py-1.5 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            disabled="@(_sharing || _loadingRecipes || !_items.Any(item => !item.AlreadyShared))"
+                            @onclick="SelectShareableRecipes">
+                        @SelectAllShareableLabel
+                    </button>
+                }
             }
         </div>
 
         @if (_statusMessage is not null)
         {
-            <p class="mb-4 text-sm text-green-700" data-testid="@UiTestIds.RecipeSelectionStatus">@_statusMessage</p>
+            <p role="status" class="mb-4 text-sm text-green-700" data-testid="@UiTestIds.RecipeSelectionStatus">@_statusMessage</p>
+        }
+
+        @if (_shareError is not null)
+        {
+            <p role="alert" class="mb-4 text-sm text-red-700">@_shareError</p>
+        }
+
+        @if (_items.Count == 0 && ActiveHouseholdId is not null && !_loadingRecipes)
+        {
+            <p class="text-sm text-gray-600">
+                @(string.IsNullOrWhiteSpace(_searchQuery) && _selectedCategory is null
+                    ? L["Household.Recipes.Empty"] : L["Household.Recipes.NoResults"])
+            </p>
         }
 
         @if (_viewMode == ViewToggle.ViewModeKind.List)
@@ -65,6 +102,7 @@
                 {
                     <RecipeListItem Item="@item"
                                     SelectMode="@_selectMode"
+                                    SelectionDisabled="@(_sharing || (_shareMode && item.AlreadyShared))"
                                     IsSelected="@_selectedRecipeIds.Contains(item.Id)"
                                     OnSelectionChanged="@(e => ToggleRecipeSelection(item.Id, e))" />
                 }
@@ -77,6 +115,7 @@
                 {
                     <RecipeCard Item="@item"
                                 SelectMode="@_selectMode"
+                                SelectionDisabled="@(_sharing || (_shareMode && item.AlreadyShared))"
                                 IsSelected="@_selectedRecipeIds.Contains(item.Id)"
                                 OnSelectionChanged="@(e => ToggleRecipeSelection(item.Id, e))" />
                 }
@@ -88,34 +127,100 @@
     {
         <div class="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white shadow-lg">
             <div class="container mx-auto max-w-5xl px-4 py-3 flex justify-end">
-                <button type="button"
-                        data-testid="@UiTestIds.AddSelectedToList"
-                        class="px-4 py-2 rounded bg-gray-800 text-white text-sm font-medium disabled:opacity-50"
-                        disabled="@(_selectedRecipeIds.Count == 0)"
-                        @onclick="AddSelectedToShoppingListAsync">
-                    @L["RecipeOverview.AddSelectedToShoppingList", _selectedRecipeIds.Count]
-                </button>
+                @if (_shareMode)
+                {
+                    <button type="button"
+                            class="px-4 py-2 rounded bg-gray-800 text-white text-sm font-medium disabled:opacity-50"
+                            disabled="@(_sharing || _selectedRecipeIds.Count == 0)"
+                            @onclick="ShareRecipesAsync">
+                        @ShareButtonLabel
+                    </button>
+                }
+                else
+                {
+                    <button type="button"
+                            data-testid="@UiTestIds.AddSelectedToList"
+                            class="px-4 py-2 rounded bg-gray-800 text-white text-sm font-medium disabled:opacity-50"
+                            disabled="@(_selectedRecipeIds.Count == 0)"
+                            @onclick="AddSelectedToShoppingListAsync">
+                        @L["RecipeOverview.AddSelectedToShoppingList", _selectedRecipeIds.Count]
+                    </button>
+                }
             </div>
         </div>
     }
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "library")] private string? Library { get; set; }
+
+    private HouseholdSummary? _household;
+    private Guid? ActiveHouseholdId => Library == "household" ? _household?.Id : null;
+    private string OverviewTitle => ActiveHouseholdId is null ? L["RecipeOverview.PageTitle"] : L["Household.Recipes"];
+    private Guid? _displayedHouseholdId;
     private string? _searchQuery;
     private int? _selectedCategory;
     private ViewToggle.ViewModeKind _viewMode = ViewToggle.ViewModeKind.List;
     private IReadOnlyList<RecipeOverviewItem> _items = [];
     private bool _selectMode;
+    private bool _shareMode;
+    private bool _sharing;
+    private bool _loadingRecipes;
+    private int _recipeLoadVersion;
+    private string? _shareError;
     private HashSet<Guid> _selectedRecipeIds = [];
     private int _badgeCount;
     private string? _statusMessage;
     private Guid _defaultShoppingListId;
+    private string ShareButtonLabel => _sharing ? L["Household.Share.Pending"]
+        : _selectedRecipeIds.Count == 1 ? L["Household.Share.SubmitOne"]
+        : L["Household.Share.Submit", _selectedRecipeIds.Count];
+
+    private string SelectAllShareableLabel
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_searchQuery) && _selectedCategory is null)
+            {
+                return L["Household.Share.SelectAll"];
+            }
+
+            var count = _items.Count(item => !item.AlreadyShared);
+            return count == 1 ? L["Household.Share.SelectOneResult"] : L["Household.Share.SelectResults", count];
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadRecipesAsync();
         await LoadBadgeAsync();
     }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ++_recipeLoadVersion;
+        _items = [];
+        _loadingRecipes = true;
+        if (!DemoContext.IsDemo)
+        {
+            _household = await QueryBus.QueryAsync<GetHouseholdQuery, HouseholdSummary?>(new());
+        }
+
+        if (_displayedHouseholdId != ActiveHouseholdId)
+        {
+            CancelSelectMode();
+            _statusMessage = null;
+            _displayedHouseholdId = ActiveHouseholdId;
+        }
+
+        await LoadRecipesAsync();
+    }
+
+    private RenderFragment RenderLibrarySwitcher() => @<text>
+        @if (_household is not null)
+        {
+            <LibrarySwitcher Path="/recipes" HouseholdName="@_household.Name" ShowHousehold="@(ActiveHouseholdId != null)" />
+        }
+    </text>;
 
     private async Task LoadBadgeAsync()
     {
@@ -144,26 +249,75 @@
 
     private async Task LoadRecipesAsync()
     {
+        var version = ++_recipeLoadVersion;
+        _loadingRecipes = true;
         var query = new GetRecipeListQuery
         {
+            HouseholdId = ActiveHouseholdId,
+            SharingTargetHouseholdId = ActiveHouseholdId is null ? _household?.Id : null,
             Search = string.IsNullOrWhiteSpace(_searchQuery) ? null : _searchQuery.Trim(),
             Category = _selectedCategory,
         };
         var result = await QueryBus.QueryAsync<GetRecipeListQuery, GetRecipeListResult>(query);
-        _items = result.Items;
+        if (version == _recipeLoadVersion)
+        {
+            _items = result.Items;
+            _loadingRecipes = false;
+        }
     }
 
     private void StartSelectMode()
     {
         _selectMode = true;
+        _shareMode = false;
         _selectedRecipeIds.Clear();
         _statusMessage = null;
+        _shareError = null;
+    }
+
+    private void StartShareMode()
+    {
+        StartSelectMode();
+        _shareMode = true;
     }
 
     private void CancelSelectMode()
     {
         _selectMode = false;
+        _shareMode = false;
         _selectedRecipeIds.Clear();
+        _shareError = null;
+    }
+
+    private void SelectShareableRecipes() =>
+        _selectedRecipeIds.UnionWith(_items.Where(item => !item.AlreadyShared).Select(item => item.Id));
+
+    private async Task ShareRecipesAsync()
+    {
+        if (_sharing || _household is null || _selectedRecipeIds.Count == 0)
+        {
+            return;
+        }
+
+        _sharing = true;
+        _shareError = null;
+        try
+        {
+            var result = await CommandBus.SendAsync<ShareRecipesWithHouseholdCommand, ShareRecipesWithHouseholdResult>(
+                new(_household.Id, _selectedRecipeIds.ToArray()));
+            CancelSelectMode();
+            _statusMessage = L["Household.Share.Result", result.Shared, result.AlreadyShared, result.Unavailable];
+            await LoadRecipesAsync();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Logger.LogWarning(ex, "Sharing recipes with a household failed.");
+            _shareError = L["Household.Share.Error"];
+        }
+        finally
+        {
+            _sharing = false;
+        }
     }
 
     private void ToggleRecipeSelection(Guid recipeId, ChangeEventArgs e)

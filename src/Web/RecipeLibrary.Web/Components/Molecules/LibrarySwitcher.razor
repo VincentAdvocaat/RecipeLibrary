@@ -1,0 +1,30 @@
+@namespace RecipeLibrary.Components.Molecules
+
+<div class="mb-4 flex flex-wrap items-center gap-2">
+    <nav class="inline-flex overflow-hidden rounded border border-gray-300" aria-label="@L["Household.LibraryLabel"]">
+        <a href="@Path"
+           aria-current="@(!ShowHousehold ? "page" : null)"
+           class="inline-flex items-center px-3 py-2 text-sm no-underline @LinkClass(!ShowHousehold)">
+            @L["Household.Personal"]
+        </a>
+        <a href="@(Path + "?library=household")"
+           aria-current="@(ShowHousehold ? "page" : null)"
+           class="inline-flex items-center px-3 py-2 text-sm no-underline @LinkClass(ShowHousehold)">
+            @L["Household.Title"]
+        </a>
+    </nav>
+    @if (ShowHousehold)
+    {
+        <span class="min-w-0 break-words text-sm text-gray-600">@HouseholdName</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Path { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string HouseholdName { get; set; } = string.Empty;
+    [Parameter] public bool ShowHousehold { get; set; }
+
+    private static string LinkClass(bool selected) => selected
+        ? "bg-gray-200 text-gray-900 font-medium"
+        : "bg-white text-gray-600 hover:bg-gray-50";
+}

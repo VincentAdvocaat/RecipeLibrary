@@ -41,7 +41,7 @@ public interface IRecipeRepository
 
     /// <summary>
     /// Images inherit ownership via the Recipe relation. Pending uploads (not yet linked to any recipe)
-    /// are readable by any authenticated caller; linked images only by the owning user.
+    /// are readable by authenticated callers. A linked image requires access to an associated recipe.
     /// </summary>
     Task<bool> IsRecipeImageAccessibleAsync(
         string ownerUserId,

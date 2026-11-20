@@ -3,6 +3,7 @@ namespace RecipeLibrary.Application.Contracts;
 public sealed class GetPantryItemsQuery : IQuery<GetPantryItemsResult>
 {
     public Guid ShoppingListGroupId { get; init; }
+    public Guid? HouseholdId { get; init; }
 }
 
 public sealed class GetPantryItemsResult
@@ -22,6 +23,7 @@ public sealed class PantryItemDto
 public sealed class UpsertPantryItemCommand : ICommand<UpsertPantryItemResult>
 {
     public Guid ShoppingListGroupId { get; init; }
+    public Guid? HouseholdId { get; init; }
 
     public Guid? CanonicalIngredientId { get; init; }
 
@@ -33,6 +35,7 @@ public sealed record UpsertPantryItemResult(bool Upserted, Guid ItemId);
 public sealed class RemovePantryItemCommand : ICommand<RemovePantryItemResult>
 {
     public Guid ShoppingListGroupId { get; init; }
+    public Guid? HouseholdId { get; init; }
 
     public Guid ItemId { get; init; }
 }

@@ -566,6 +566,63 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.ToTable("DemoStartQuotas");
                 });
 
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.Household", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ManagerUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Households");
+                });
+
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.HouseholdInvitation", b =>
+                {
+                    b.Property<string>("TokenHash")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("TokenHash");
+
+                    b.HasIndex("HouseholdId");
+
+                    b.ToTable("HouseholdInvitations");
+                });
+
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.HouseholdMember", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("HouseholdId");
+
+                    b.ToTable("HouseholdMembers");
+                });
+
             modelBuilder.Entity("RecipeLibrary.Domain.Entities.Ingredient", b =>
                 {
                     b.Property<Guid>("Id")
@@ -922,6 +979,9 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.Property<int>("Difficulty")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("HouseholdId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
@@ -951,6 +1011,9 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.Property<int>("Servings")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("SharedFromRecipeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -964,6 +1027,10 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.HasIndex("ModerationStatus");
 
                     b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("HouseholdId", "SharedFromRecipeId")
+                        .IsUnique()
+                        .HasFilter("[HouseholdId] IS NOT NULL AND [SharedFromRecipeId] IS NOT NULL");
 
                     b.ToTable("Recipes");
                 });
@@ -1289,6 +1356,32 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.HouseholdInvitation", b =>
+                {
+                    b.HasOne("RecipeLibrary.Domain.Entities.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.HouseholdMember", b =>
+                {
+                    b.HasOne("RecipeLibrary.Domain.Entities.Household", "Household")
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RecipeLibrary.Infrastructure.Identity.ApplicationUser", null)
+                        .WithOne()
+                        .HasForeignKey("RecipeLibrary.Domain.Entities.HouseholdMember", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Household");
+                });
+
             modelBuilder.Entity("RecipeLibrary.Domain.Entities.Ingredient", b =>
                 {
                     b.HasOne("RecipeLibrary.Domain.Entities.CanonicalIngredient", "IngredientDefinition")
@@ -1402,6 +1495,14 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Ingredient");
+                });
+
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.Recipe", b =>
+                {
+                    b.HasOne("RecipeLibrary.Domain.Entities.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("RecipeLibrary.Domain.Entities.RecipeRating", b =>

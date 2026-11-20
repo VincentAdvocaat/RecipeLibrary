@@ -28,6 +28,7 @@ public sealed class GetRecipeByIdQueryHandler(
         return new GetRecipeByIdResult
         {
             Id = recipe.Id,
+            HouseholdId = recipe.HouseholdId,
             Title = recipe.Title.Value,
             Description = recipe.Description,
             ImageUrl = recipe.ImageUrl,

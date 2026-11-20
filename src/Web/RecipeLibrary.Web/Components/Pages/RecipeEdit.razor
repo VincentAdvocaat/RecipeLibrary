@@ -17,7 +17,8 @@
 
 <div class="min-h-screen bg-gray-100">
     <div class="container mx-auto p-4 max-w-5xl">
-        <RecipeOverviewHeader Title="@L["RecipeEdit.PageTitle"]" />
+        <RecipeOverviewHeader Title="@L["RecipeEdit.PageTitle"]" IsHouseholdLibrary="@(_householdId != null)" />
+        <div class="mb-4"><RecipeLibraryLabel HouseholdId="@_householdId" /></div>
 
         <EditForm Model="_vm" FormName="create-recipe" Enhance="false" OnSubmit="HandleSubmit">
             <DataAnnotationsValidator />
@@ -201,6 +202,7 @@
 
     private readonly CreateRecipeVm _vm = new();
     private string? _imageUrl;
+    private Guid? _householdId;
     private bool _isSaving;
     private string? _statusMessage;
     private bool _saveSucceeded;
@@ -230,6 +232,7 @@
             return;
         }
 
+        _householdId = recipe.HouseholdId;
         _vm.Title = recipe.Title;
         _vm.Description = recipe.Description;
         _vm.PreparationTimeMinutes = recipe.PreparationMinutes;
@@ -278,7 +281,7 @@
 
     private void OnCancel()
     {
-        Navigation.NavigateTo("/recipes");
+        Navigation.NavigateTo(_householdId is null ? "/recipes" : "/recipes?library=household");
     }
 
     private void AddIngredient()

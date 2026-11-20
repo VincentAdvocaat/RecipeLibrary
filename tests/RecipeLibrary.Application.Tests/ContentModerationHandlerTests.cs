@@ -66,7 +66,10 @@ public sealed class ContentModerationHandlerTests
     [Fact]
     public async Task Create_WhenImageNeedsReview_EscalatesApprovedText()
     {
-        var recipeRepo = new CreateRecipeCommandHandlerTests_Fake();
+        var recipeRepo = new CreateRecipeCommandHandlerTests_Fake
+        {
+            AccessibleImageFileName = "flagged.png",
+        };
         var store = new TestContentModeration.FakeContentModerationStore();
         var imageUrl = "/api/recipe-images/flagged.png";
         store.Events.Add(new ContentModerationEvent
@@ -104,6 +107,62 @@ public sealed class ContentModerationHandlerTests
 
         Assert.Equal(ModerationStatus.NeedsReview, recipeRepo.AddedRecipe!.ModerationStatus);
         Assert.Contains(store.Events, e => e.RecipeId == recipeRepo.AddedRecipe.Id && e.Kind == ContentModerationKind.Image);
+    }
+
+    [Fact]
+    public async Task Create_WhenAppImageIsInaccessible_ThrowsAndDoesNotPersist()
+    {
+        var recipeRepo = new CreateRecipeCommandHandlerTests_Fake();
+        var sut = CreateCreateSut(recipeRepo, TestContentModeration.Disabled());
+        var minimal = MinimalCreateCommand();
+        var command = new CreateRecipeCommand
+        {
+            Title = minimal.Title,
+            ImageUrl = "/api/recipe-images/other-household.png",
+            Ingredients = minimal.Ingredients,
+            InstructionSteps = minimal.InstructionSteps,
+        };
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => sut.HandleAsync(command));
+
+        Assert.Equal("imageUrl", exception.ParamName);
+        Assert.Null(recipeRepo.AddedRecipe);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Create_RechecksHouseholdMembershipInsideTransaction(bool stillMember)
+    {
+        var unit = new HouseholdTransactionUnitOfWork();
+        var calls = 0;
+        var households = new HouseholdMembershipStub(() =>
+        {
+            calls++;
+            Assert.Equal(calls > 1, unit.Active);
+            return calls == 1 || stillMember;
+        });
+        var repo = new CreateRecipeCommandHandlerTests_Fake();
+        var sut = CreateCreateSut(repo, TestContentModeration.Disabled(), households, unit);
+        var minimal = MinimalCreateCommand();
+        var command = new CreateRecipeCommand
+        {
+            HouseholdId = Guid.NewGuid(), Title = minimal.Title,
+            Ingredients = minimal.Ingredients, InstructionSteps = minimal.InstructionSteps,
+        };
+        if (stillMember)
+        {
+            await sut.HandleAsync(command);
+            Assert.NotNull(repo.AddedRecipe);
+            Assert.True(unit.Committed);
+        }
+        else
+        {
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sut.HandleAsync(command));
+            Assert.Null(repo.AddedRecipe);
+            Assert.False(unit.Committed);
+        }
+        Assert.Equal(2, calls);
     }
 
     [Fact]
@@ -253,7 +312,9 @@ public sealed class ContentModerationHandlerTests
 
     private static CreateRecipeCommandHandler CreateCreateSut(
         CreateRecipeCommandHandlerTests_Fake recipeRepo,
-        RecipeLibrary.Application.ContentModeration.RecipeContentModerationService moderation)
+        RecipeLibrary.Application.ContentModeration.RecipeContentModerationService moderation,
+        IHouseholdRepository? households = null,
+        IUnitOfWork? unitOfWork = null)
     {
         var ingredientRepo = new CreatingIngredientRepository();
         var normalizer = new IngredientTextNormalizer();
@@ -264,8 +325,9 @@ public sealed class ContentModerationHandlerTests
             new IngredientMatcher(ingredientRepo, normalizer, new IngredientSimilarityScorer()),
             new IngredientLineResolver(new IngredientNameParser()),
             new FixedCurrentUser(TestUserId),
-            new NoOpUnitOfWork(),
-            moderation);
+            unitOfWork ?? new NoOpUnitOfWork(),
+            moderation,
+            households: households);
     }
 
     private static UpdateRecipeCommandHandler CreateUpdateSut(
@@ -300,6 +362,7 @@ public sealed class ContentModerationHandlerTests
     private sealed class CreateRecipeCommandHandlerTests_Fake : IRecipeRepository
     {
         public Recipe? AddedRecipe { get; private set; }
+        public string? AccessibleImageFileName { get; init; }
 
         public Task AddAsync(Recipe recipe, CancellationToken ct = default)
         {
@@ -338,7 +401,7 @@ public sealed class ContentModerationHandlerTests
             string ownerUserId,
             string fileName,
             CancellationToken ct = default) =>
-            Task.FromResult(false);
+            Task.FromResult(ownerUserId == TestUserId && fileName == AccessibleImageFileName);
 
         public Task UpdateAsync(string ownerUserId, Recipe recipe, CancellationToken ct = default) =>
             Task.CompletedTask;

@@ -381,4 +381,44 @@
   <data name="RecipeRating.OneStar" xml:space="preserve"><value>1 ster</value></data>
   <data name="RecipeRating.Stars" xml:space="preserve"><value>{0} sterren</value></data>
   <data name="RecipeRating.SaveFailed" xml:space="preserve"><value>De beoordeling kon niet worden opgeslagen. Probeer het opnieuw.</value></data>
+  <data name="Household.Title" xml:space="preserve"><value>Huishouden</value></data>
+  <data name="Household.Personal" xml:space="preserve"><value>Persoonlijk</value></data>
+  <data name="Household.LibraryLabel" xml:space="preserve"><value>Bibliotheek</value></data>
+  <data name="Household.Name" xml:space="preserve"><value>Naam van het huishouden</value></data>
+  <data name="Household.Create" xml:space="preserve"><value>Maak huishouden aan</value></data>
+  <data name="Household.Recipes" xml:space="preserve"><value>Gedeelde recepten</value></data>
+  <data name="Household.Members" xml:space="preserve"><value>Leden</value></data>
+  <data name="Household.You" xml:space="preserve"><value>jij</value></data>
+  <data name="Household.Manager" xml:space="preserve"><value>Beheerder</value></data>
+  <data name="Household.Transfer" xml:space="preserve"><value>Draag beheer over</value></data>
+  <data name="Household.Transfer.Confirm" xml:space="preserve"><value>Wil je het beheer overdragen aan {0}?</value></data>
+  <data name="Household.Remove" xml:space="preserve"><value>Verwijder lid</value></data>
+  <data name="Household.Remove.Confirm" xml:space="preserve"><value>Wil je {0} uit het huishouden verwijderen?</value></data>
+  <data name="Household.Leave" xml:space="preserve"><value>Verlaat huishouden</value></data>
+  <data name="Household.Leave.Confirm" xml:space="preserve"><value>Wil je het huishouden verlaten? Je verliest toegang tot de gedeelde recepten en voorraad.</value></data>
+  <data name="Household.Error" xml:space="preserve"><value>De wijziging is niet opgeslagen. Vernieuw de pagina en probeer het opnieuw.</value></data>
+  <data name="Household.AccessLost" xml:space="preserve"><value>Je hebt geen toegang tot dit huishouden.</value></data>
+  <data name="Household.Invite.Create" xml:space="preserve"><value>Maak uitnodigingslink</value></data>
+  <data name="Household.Invite.Link" xml:space="preserve"><value>Uitnodigingslink (7 dagen geldig, één keer te gebruiken)</value></data>
+  <data name="Household.Invite.Copy" xml:space="preserve"><value>Kopieer link</value></data>
+  <data name="Household.Invite.Copied" xml:space="preserve"><value>Uitnodigingslink gekopieerd.</value></data>
+  <data name="Household.Invite.CopyError" xml:space="preserve"><value>Automatisch kopiëren is niet gelukt. Je kunt de link in het veld selecteren en kopiëren.</value></data>
+  <data name="Household.Join.Title" xml:space="preserve"><value>Uitnodiging voor een huishouden</value></data>
+  <data name="Household.Join.Submit" xml:space="preserve"><value>Accepteer uitnodiging</value></data>
+  <data name="Household.Join.Joined" xml:space="preserve"><value>Je bent nu lid van het huishouden.</value></data>
+  <data name="Household.Join.AlreadyMember" xml:space="preserve"><value>Je bent al lid van een huishouden.</value></data>
+  <data name="Household.Join.Invalid" xml:space="preserve"><value>Deze uitnodigingslink is verlopen of al gebruikt. Vraag een nieuwe link aan de beheerder.</value></data>
+  <data name="Household.Recipes.Empty" xml:space="preserve"><value>Deel recepten uit je persoonlijke bibliotheek of voeg hier een recept toe.</value></data>
+  <data name="Household.Recipes.NoResults" xml:space="preserve"><value>Geen recepten gevonden.</value></data>
+  <data name="Household.Pantry.Intro" xml:space="preserve"><value>Voeg ingrediënten toe die jullie meestal in huis hebben. Die worden overgeslagen als je huishoudrecepten aan je boodschappenlijst toevoegt.</value></data>
+  <data name="Household.Share.Start" xml:space="preserve"><value>Delen met huishouden</value></data>
+  <data name="Household.Share.AlreadyShared" xml:space="preserve"><value>Al gedeeld</value></data>
+  <data name="Household.Share.SelectAll" xml:space="preserve"><value>Selecteer alles</value></data>
+  <data name="Household.Share.SelectOneResult" xml:space="preserve"><value>Selecteer 1 resultaat</value></data>
+  <data name="Household.Share.SelectResults" xml:space="preserve"><value>Selecteer alle {0} resultaten</value></data>
+  <data name="Household.Share.Pending" xml:space="preserve"><value>Recepten delen…</value></data>
+  <data name="Household.Share.Submit" xml:space="preserve"><value>Deel {0} recepten</value></data>
+  <data name="Household.Share.SubmitOne" xml:space="preserve"><value>Deel 1 recept</value></data>
+  <data name="Household.Share.Result" xml:space="preserve"><value>Gedeeld: {0}. Al gedeeld: {1}. Niet beschikbaar: {2}.</value></data>
+  <data name="Household.Share.Error" xml:space="preserve"><value>Delen is niet gelukt. Je selectie staat nog klaar. Probeer het opnieuw.</value></data>
 </root>

@@ -47,7 +47,7 @@
 
     <p class="text-sm text-gray-600">
         @L["Auth.Login.NoAccount"]
-        <a href="Account/Register" class="font-medium text-gray-900 hover:underline">@L["Auth.Register.Link"]</a>
+        <a href="@RegisterHref" class="font-medium text-gray-900 hover:underline">@L["Auth.Register.Link"]</a>
     </p>
 
     <p class="text-sm text-gray-600">
@@ -58,6 +58,8 @@
 @code {
     [SupplyParameterFromQuery(Name = "returnUrl")]
     private string? ReturnUrl { get; set; }
+    private string RegisterHref => string.IsNullOrWhiteSpace(ReturnUrl)
+        ? "Account/Register" : $"Account/Register?returnUrl={Uri.EscapeDataString(GetSafeReturnUrl())}";
 
     [SupplyParameterFromForm]
     private LoginModel Input { get; set; } = default!;

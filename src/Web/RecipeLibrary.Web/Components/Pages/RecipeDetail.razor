@@ -19,7 +19,8 @@ else if (_recipe is not null)
         <div class="container mx-auto p-4 max-w-4xl">
             <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div class="flex flex-col gap-2">
-                    <AppNavLink Href="/recipes">@L["RecipeDetail.BackToOverview"]</AppNavLink>
+                    <AppNavLink Href="@OverviewHref">@L["RecipeDetail.BackToOverview"]</AppNavLink>
+                    <RecipeLibraryLabel HouseholdId="@_recipe.HouseholdId" />
                     <Heading Level="1" CssClass="m-0">@_recipe.Title</Heading>
                 </div>
                 <div class="flex items-center gap-3">
@@ -161,6 +162,7 @@ else if (_recipe is not null)
     [Parameter] public Guid RecipeId { get; set; }
 
     private GetRecipeByIdResult? _recipe;
+    private string OverviewHref => _recipe?.HouseholdId is null ? "/recipes" : "/recipes?library=household";
     private IReadOnlyList<string> _ingredientTags = [];
     private IReadOnlyList<ShoppingListDto> _shoppingLists = [];
     private Guid _targetShoppingListId;
@@ -251,6 +253,6 @@ else if (_recipe is not null)
     {
         await CommandBus.SendAsync<DeleteRecipeCommand, DeleteRecipeResult>(
             new DeleteRecipeCommand { RecipeId = RecipeId });
-        Navigation.NavigateTo("/recipes");
+        Navigation.NavigateTo(OverviewHref);
     }
 }

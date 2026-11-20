@@ -23,29 +23,36 @@
 
 <div class="min-h-screen bg-gray-100">
     <div class="container mx-auto p-4 max-w-5xl space-y-4">
-        <RecipeOverviewHeader Title="@L["RecipeCreate.PageTitle"]" />
-
-        <RecipeCreateModeSwitcher Mode="_mode" ModeChanged="OnModeChanged" />
-
-        @if (DemoContext.IsDemo && _mode != RecipeCreateMode.Manual)
+        <RecipeOverviewHeader Title="@L["RecipeCreate.PageTitle"]" IsHouseholdLibrary="@(_householdId != null)" />
+        @if (Library == "household" && _householdId is null)
         {
-            <DemoAccountRequired />
-        }
-        else if (_mode == RecipeCreateMode.Text)
-        {
-            @RenderTextImport()
-        }
-        else if (_mode == RecipeCreateMode.Photo)
-        {
-            @RenderPhotoImport()
-        }
-        else if (_mode == RecipeCreateMode.Url)
-        {
-            @RenderUrlImport()
+            <p class="text-sm text-gray-700">@(_libraryResolved ? L["Household.AccessLost"] : L["RecipeDetail.Loading"])</p>
         }
         else
         {
-            @RenderManualForm()
+            <RecipeLibraryLabel HouseholdId="@_householdId" />
+            <RecipeCreateModeSwitcher Mode="_mode" ModeChanged="OnModeChanged" />
+
+            @if (DemoContext.IsDemo && _mode != RecipeCreateMode.Manual)
+            {
+                <DemoAccountRequired />
+            }
+            else if (_mode == RecipeCreateMode.Text)
+            {
+                @RenderTextImport()
+            }
+            else if (_mode == RecipeCreateMode.Photo)
+            {
+                @RenderPhotoImport()
+            }
+            else if (_mode == RecipeCreateMode.Url)
+            {
+                @RenderUrlImport()
+            }
+            else
+            {
+                @RenderManualForm()
+            }
         }
     </div>
 </div>
@@ -109,6 +116,20 @@
 
     [SupplyParameterFromQuery(Name = "mode")]
     public string? ModeQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "library")] private string? Library { get; set; }
+    private Guid? _householdId;
+    private bool _libraryResolved;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _householdId = null;
+        _libraryResolved = false;
+        _householdId = Library == "household" && !DemoContext.IsDemo
+            ? (await QueryBus.QueryAsync<GetHouseholdQuery, HouseholdSummary?>(new()))?.Id
+            : null;
+        _libraryResolved = true;
+    }
 
     protected override void OnInitialized()
     {
@@ -760,7 +781,7 @@
         StateHasChanged();
     }
 
-    private void OnCancel() => Navigation.NavigateTo("/recipes");
+    private void OnCancel() => Navigation.NavigateTo(_householdId is null ? "/recipes" : "/recipes?library=household");
 
     private void AddIngredient()
     {
@@ -877,6 +898,7 @@
         {
             var command = new CreateRecipeCommand
             {
+                HouseholdId = _householdId,
                 Title = _vm.Title,
                 Description = string.IsNullOrWhiteSpace(_vm.Description) ? null : _vm.Description.Trim(),
                 ImageUrl = string.IsNullOrWhiteSpace(_imageUrl) ? null : _imageUrl.Trim(),

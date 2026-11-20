@@ -29,12 +29,14 @@ public static class PersistenceServiceRegistration
         services.AddScoped<EfRecipeRepository>();
         services.AddScoped<IRecipeRepository>(sp => sp.GetRequiredService<EfRecipeRepository>());
         services.AddScoped<IRecipeRatingRepository>(sp => sp.GetRequiredService<EfRecipeRepository>());
+        services.AddScoped<IHouseholdRecipeRepository>(sp => sp.GetRequiredService<EfRecipeRepository>());
         services.AddScoped<IIngredientRepository, EfIngredientRepository>();
         services.AddScoped<IShoppingListRepository, EfShoppingListRepository>();
         services.AddScoped<IShoppingListAccess>(sp => sp.GetRequiredService<IShoppingListRepository>());
         services.AddScoped<IShoppingListQueries>(sp => sp.GetRequiredService<IShoppingListRepository>());
         services.AddScoped<IShoppingListCommands>(sp => sp.GetRequiredService<IShoppingListRepository>());
         services.AddScoped<IPantryRepository, EfPantryRepository>();
+        services.AddScoped<IHouseholdRepository, EfHouseholdRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddScoped<IIngredientUnitConversionStore, EfIngredientUnitConversionStore>();
         services.AddScoped<IngredientCatalogSeeder>();

@@ -91,3 +91,6 @@ public sealed class ShoppingListE2eCollection : ICollectionFixture<E2eFixture>;
 
 [CollectionDefinition(nameof(LocalizationE2eCollection))]
 public sealed class LocalizationE2eCollection : ICollectionFixture<E2eFixture>;
+
+[CollectionDefinition(nameof(HouseholdE2eCollection))]
+public sealed class HouseholdE2eCollection : ICollectionFixture<E2eFixture>;

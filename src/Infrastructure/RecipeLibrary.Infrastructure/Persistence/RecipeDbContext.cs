@@ -13,6 +13,9 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
     public DbSet<DemoSaveAttempt> DemoSaveAttempts => Set<DemoSaveAttempt>();
     public DbSet<DemoStartQuota> DemoStartQuotas => Set<DemoStartQuota>();
     public DbSet<DemoSession> DemoSessions => Set<DemoSession>();
+    public DbSet<Household> Households => Set<Household>();
+    public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
+    public DbSet<HouseholdInvitation> HouseholdInvitations => Set<HouseholdInvitation>();
 
     public DbSet<Recipe> Recipes => Set<Recipe>();
     public DbSet<RecipeRating> RecipeRatings => Set<RecipeRating>();
@@ -63,6 +66,29 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<Household>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            b.Property(x => x.ManagerUserId).HasMaxLength(IdentityOwnerIds.MaxLength).IsRequired();
+        });
+        modelBuilder.Entity<HouseholdMember>(b =>
+        {
+            b.HasKey(x => x.UserId);
+            b.Property(x => x.UserId).HasMaxLength(IdentityOwnerIds.MaxLength);
+            b.HasOne<ApplicationUser>().WithOne().HasForeignKey<HouseholdMember>(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(x => x.Household).WithMany().HasForeignKey(x => x.HouseholdId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<HouseholdInvitation>(b =>
+        {
+            b.HasKey(x => x.TokenHash);
+            b.Property(x => x.TokenHash).HasMaxLength(64).IsUnicode(false);
+            b.HasOne<Household>().WithMany().HasForeignKey(x => x.HouseholdId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         var recipeTitleConverter = new ValueConverter<RecipeTitle, string>(
             v => v.Value,
             v => new RecipeTitle(v));
@@ -88,6 +114,11 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
                 .IsRequired();
 
             b.HasIndex(x => x.OwnerUserId);
+            b.HasOne<Household>().WithMany().HasForeignKey(x => x.HouseholdId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.HouseholdId, x.SharedFromRecipeId })
+                .IsUnique()
+                .HasFilter("[HouseholdId] IS NOT NULL AND [SharedFromRecipeId] IS NOT NULL");
 
             b.Property(x => x.Title)
                 .HasConversion(recipeTitleConverter)

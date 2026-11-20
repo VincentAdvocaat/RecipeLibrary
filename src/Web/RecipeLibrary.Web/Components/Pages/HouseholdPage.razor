@@ -1,0 +1,257 @@
+@page "/household"
+@inject IQueryBus QueryBus
+@inject ICommandBus CommandBus
+@inject IDemoContext DemoContext
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject ILogger<HouseholdPage> Logger
+
+<PageTitle>@L["Household.Title"]</PageTitle>
+
+<div class="min-h-screen bg-gray-100">
+    <div class="container mx-auto max-w-5xl p-4">
+        <RecipeOverviewHeader Title="@L["Household.Title"]" />
+
+        @if (DemoContext.IsDemo)
+        {
+            <p class="text-sm text-gray-700">@L["Demo.AccountRequired"]</p>
+            <AppNavLink Href="@($"/Account/Register?returnUrl={Uri.EscapeDataString("/" + Navigation.ToBaseRelativePath(Navigation.Uri))}")">
+                @L["Demo.Register"]
+            </AppNavLink>
+        }
+        else
+        {
+            <section class="space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+                @if (_message is not null)
+                {
+                    <p role="status" class="text-sm text-green-700">@_message</p>
+                }
+                @if (_error is not null)
+                {
+                    <p role="alert" class="text-sm text-red-700">@_error</p>
+                }
+
+                @if (_loading)
+                {
+                    <p class="text-sm text-gray-600">@L["RecipeDetail.Loading"]</p>
+                }
+                else if (!string.IsNullOrEmpty(Invitation))
+                {
+                    <Heading Level="2">@L["Household.Join.Title"]</Heading>
+                    <button type="button" class="@PrimaryButton" disabled="@_busy" @onclick="JoinAsync">
+                        @L["Household.Join.Submit"]
+                    </button>
+                    <AppNavLink Href="/household">@L["RecipeOverview.SelectMode.CancelButton"]</AppNavLink>
+                }
+                else if (_details is null)
+                {
+                    <label for="household-name" class="block text-sm font-medium text-gray-700">@L["Household.Name"]</label>
+                    <div class="flex flex-wrap gap-2">
+                        <input id="household-name" maxlength="100" @bind="_name" @bind:event="oninput"
+                               @onkeydown="CreateOnEnterAsync"
+                               class="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2" />
+                        <button type="button" class="@PrimaryButton"
+                                disabled="@(_busy || string.IsNullOrWhiteSpace(_name))" @onclick="CreateAsync">
+                            @L["Household.Create"]
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <Heading Level="2" CssClass="break-words">@_details.Household.Name</Heading>
+                    <div class="flex flex-wrap gap-4">
+                        <AppNavLink Href="/recipes?library=household">@L["Household.Recipes"]</AppNavLink>
+                        <AppNavLink Href="/pantry?library=household">@L["Nav.Pantry"]</AppNavLink>
+                    </div>
+                    @if (_details.Household.CanManage)
+                    {
+                        <button type="button" class="@PrimaryButton" disabled="@_busy" @onclick="MakeInvitationAsync">
+                            @L["Household.Invite.Create"]
+                        </button>
+                        @if (_invitationUrl is not null)
+                        {
+                            <div class="space-y-2">
+                                <label for="household-invite-link" class="block text-sm text-gray-700">@L["Household.Invite.Link"]</label>
+                                <div class="flex flex-wrap gap-2">
+                                    <input id="household-invite-link" class="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2"
+                                           readonly value="@_invitationUrl" />
+                                    <button type="button" class="@SecondaryButton" @onclick="CopyInvitationAsync">@L["Household.Invite.Copy"]</button>
+                                </div>
+                            </div>
+                        }
+                    }
+                    <Heading Level="3">@L["Household.Members"]</Heading>
+                    <ul class="divide-y divide-gray-100">
+                        @foreach (var member in _details.Members)
+                        {
+                            <li class="flex flex-wrap items-center justify-between gap-2 py-2" @key="member.UserId">
+                                <span class="min-w-0 break-words text-sm">
+                                    @member.Name
+                                    @if (member.IsYou)
+                                    {
+                                        <span class="text-gray-600">(@L["Household.You"])</span>
+                                    }
+                                    @if (member.IsManager)
+                                    {
+                                        <span class="text-gray-600">· @L["Household.Manager"]</span>
+                                    }
+                                </span>
+                                @if (_details.Household.CanManage && !member.IsYou)
+                                {
+                                    <div class="flex flex-wrap gap-2">
+                                        <button type="button" class="@SecondaryButton" disabled="@_busy"
+                                                @onclick="@( () => Confirm(L["Household.Transfer.Confirm", member.Name], () => TransferAsync(member.UserId)) )">
+                                            @L["Household.Transfer"]
+                                        </button>
+                                        <button type="button" class="@SecondaryButton" disabled="@_busy"
+                                                @onclick="@( () => Confirm(L["Household.Remove.Confirm", member.Name], () => RemoveAsync(member.UserId)) )">
+                                            @L["Household.Remove"]
+                                        </button>
+                                    </div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                    @if (!_details.Household.CanManage)
+                    {
+                        <button type="button" class="@SecondaryButton" disabled="@_busy"
+                                @onclick="@( () => Confirm(L["Household.Leave.Confirm"], LeaveAsync) )">
+                            @L["Household.Leave"]
+                        </button>
+                    }
+                    @if (_confirmation is { } confirmation)
+                    {
+                        <ConfirmPanel Message="@confirmation.Message" OnYes="ConfirmChangeAsync" OnNo="() => _confirmation = null" />
+                    }
+                }
+            </section>
+        }
+    </div>
+</div>
+
+@code {
+    private const string PrimaryButton = "rounded bg-gray-800 px-3 py-2 text-sm font-medium text-white disabled:opacity-50";
+    private const string SecondaryButton = "rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 disabled:opacity-50";
+    [SupplyParameterFromQuery(Name = "invite")] private string? Invitation { get; set; }
+
+    private HouseholdDetails? _details;
+    private string _name = string.Empty;
+    private bool _loading = true;
+    private bool _busy;
+    private string? _invitationUrl;
+    private string? _message;
+    private string? _error;
+    private (string Message, Func<Task> Action)? _confirmation;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!DemoContext.IsDemo)
+        {
+            await LoadAsync();
+        }
+        _loading = false;
+    }
+
+    private async Task LoadAsync() =>
+        _details = await QueryBus.QueryAsync<GetHouseholdDetailsQuery, HouseholdDetails?>(new());
+
+    private Task CreateOnEnterAsync(KeyboardEventArgs args) =>
+        args.Key == "Enter" && !string.IsNullOrWhiteSpace(_name) ? CreateAsync() : Task.CompletedTask;
+
+    private Task CreateAsync() => ChangeAsync(() => CommandBus.SendAsync<CreateHouseholdCommand, bool>(new(_name)));
+
+    private Task RemoveAsync(string id) => ChangeAsync(() => CommandBus.SendAsync<RemoveHouseholdMemberCommand, bool>(new(id)));
+
+    private Task TransferAsync(string id) => ChangeAsync(() =>
+        CommandBus.SendAsync<TransferHouseholdManagementCommand, bool>(new(id)));
+
+    private Task LeaveAsync() => ChangeAsync(() => CommandBus.SendAsync<LeaveHouseholdCommand, bool>(new()));
+
+    private Task ChangeAsync(Func<Task<bool>> change) => RunAsync(async () =>
+    {
+        if (!await change())
+        {
+            _error = L["Household.Error"];
+        }
+        _invitationUrl = null;
+        await LoadAsync();
+    });
+
+    private Task MakeInvitationAsync() => RunAsync(async () =>
+    {
+        var token = await CommandBus.SendAsync<CreateHouseholdInvitationCommand, string?>(new());
+        if (token is null)
+        {
+            _error = L["Household.Error"];
+            await LoadAsync();
+            return;
+        }
+
+        _invitationUrl = Navigation.ToAbsoluteUri($"/household?invite={token}").ToString();
+    });
+
+    private async Task CopyInvitationAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", _invitationUrl);
+            _message = L["Household.Invite.Copied"];
+        }
+        catch (JSException)
+        {
+            _error = L["Household.Invite.CopyError"];
+        }
+    }
+
+    private Task JoinAsync() => RunAsync(async () =>
+    {
+        var result = await CommandBus.SendAsync<JoinHouseholdCommand, JoinHouseholdResult>(new(Invitation ?? string.Empty));
+        if (result == JoinHouseholdResult.Joined)
+        {
+            await LoadAsync();
+            _message = L["Household.Join.Joined"];
+            Navigation.NavigateTo("/household", replace: true);
+        }
+        else
+        {
+            _error = result == JoinHouseholdResult.AlreadyInHousehold
+                ? L["Household.Join.AlreadyMember"] : L["Household.Join.Invalid"];
+        }
+    });
+
+    private void Confirm(string message, Func<Task> action) => _confirmation = (message, action);
+
+    private async Task ConfirmChangeAsync()
+    {
+        var confirmation = _confirmation;
+        _confirmation = null;
+        if (confirmation is { } change)
+        {
+            await change.Action();
+        }
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        _error = _message = null;
+        try
+        {
+            await action();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Logger.LogWarning(ex, "Household operation failed.");
+            _error = L["Household.Error"];
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

@@ -1,7 +1,6 @@
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Pantry;
-using RecipeLibrary.Application.ShoppingLists;
 
 namespace RecipeLibrary.Application.UseCases.Pantry;
 
@@ -10,37 +9,36 @@ public sealed class UpsertPantryItemCommandHandler(
     IShoppingListRepository shoppingListRepository,
     ICurrentUser userContext,
     PantryIngredientMerger merger,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    IHouseholdRepository? households = null)
     : ICommandHandler<UpsertPantryItemCommand, UpsertPantryItemResult>
 {
     public async Task<UpsertPantryItemResult> HandleAsync(
         UpsertPantryItemCommand command,
         CancellationToken ct = default)
     {
-        await ShoppingListAccessGuard.EnsureGroupAccessAsync(
-            shoppingListRepository,
-            command.ShoppingListGroupId,
-            userContext.UserId,
-            ct);
-
-        var displayName = (command.DisplayName ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(displayName))
+        Guid itemId = default;
+        async Task UpsertAsync(CancellationToken operationCt)
         {
-            throw new ArgumentException("Display name is required.");
+            var ownerKey = await PantryOwnerKey.ResolveForLibraryAsync(shoppingListRepository, households,
+                userContext.UserId, command.ShoppingListGroupId, command.HouseholdId, operationCt);
+            var displayName = (command.DisplayName ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(displayName))
+                throw new ArgumentException("Display name is required.");
+
+            var existingItems = await repository.GetByOwnerKeyAsync(ownerKey, operationCt);
+            var item = merger.EnsurePresent(existingItems, command.CanonicalIngredientId, displayName, ownerKey);
+            await repository.UpsertAsync(item, operationCt);
+            itemId = item.Id;
         }
 
-        var ownerKey = PantryOwnerKey.Resolve(userContext.UserId, command.ShoppingListGroupId);
-        var existingItems = await repository.GetByOwnerKeyAsync(ownerKey, ct);
-
-        var item = merger.EnsurePresent(
-            existingItems,
-            command.CanonicalIngredientId,
-            displayName,
-            ownerKey);
-
-        await repository.UpsertAsync(item, ct);
-        await unitOfWork.SaveChangesAsync(ct);
-
-        return new UpsertPantryItemResult(true, item.Id);
+        if (command.HouseholdId.HasValue)
+            await unitOfWork.ExecuteInSerializableTransactionAsync(UpsertAsync, ct);
+        else
+        {
+            await UpsertAsync(ct);
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        return new UpsertPantryItemResult(true, itemId);
     }
 }

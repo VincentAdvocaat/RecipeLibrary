@@ -9,6 +9,8 @@
                    data-testid="@UiTestIds.SelectRecipe(Item.Id)"
                    class="rounded border-gray-300"
                    checked="@IsSelected"
+                   disabled="@SelectionDisabled"
+                   aria-label="@Item.Title"
                    @onchange="OnSelectionChanged" />
         </div>
     }
@@ -19,6 +21,10 @@
             </div>
             <div class="flex-1 min-w-0 p-4 flex flex-col">
                 <Heading Level="3" CssClass="mt-0 mb-1">@Item.Title</Heading>
+                @if (Item.AlreadyShared)
+                {
+                    <span class="text-xs font-medium text-gray-600">@L["Household.Share.AlreadyShared"]</span>
+                }
                 @if (!string.IsNullOrEmpty(Item.Description))
                 {
                     <p class="text-sm text-gray-600 mb-2 line-clamp-2">@Item.Description</p>
@@ -37,6 +43,7 @@
     [Parameter, EditorRequired] public RecipeOverviewItem Item { get; set; } = null!;
     [Parameter] public bool SelectMode { get; set; }
     [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public bool SelectionDisabled { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnSelectionChanged { get; set; }
     [Parameter] public string? CssClass { get; set; }
 }

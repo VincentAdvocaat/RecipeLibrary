@@ -1,0 +1,7 @@
+@namespace RecipeLibrary.Components.Molecules
+
+<p class="text-sm text-gray-600">@(HouseholdId is null ? L["Household.Personal"] : L["Household.Title"])</p>
+
+@code {
+    [Parameter] public Guid? HouseholdId { get; set; }
+}
