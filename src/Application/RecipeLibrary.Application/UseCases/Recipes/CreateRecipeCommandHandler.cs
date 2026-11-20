@@ -86,8 +86,20 @@ public sealed class CreateRecipeCommandHandler(
             recipe.InstructionSteps.Add(step);
         }
 
-        await recipeRepository.AddAsync(recipe, ct);
-        await unitOfWork.SaveChangesAsync(ct);
+        if (command.HouseholdId is { } targetHouseholdId)
+        {
+            await unitOfWork.ExecuteInSerializableTransactionAsync(async transactionCt =>
+            {
+                if (!await households!.IsMemberAsync(ownerUserId, targetHouseholdId, transactionCt))
+                    throw new UnauthorizedAccessException("Household access is required.");
+                await recipeRepository.AddAsync(recipe, transactionCt);
+            }, ct);
+        }
+        else
+        {
+            await recipeRepository.AddAsync(recipe, ct);
+            await unitOfWork.SaveChangesAsync(ct);
+        }
         return new CreateRecipeResult(recipeId);
     }
 

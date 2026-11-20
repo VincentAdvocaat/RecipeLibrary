@@ -1,7 +1,12 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
+using RecipeLibrary.Application.Ingredients;
+using RecipeLibrary.Application.Pantry;
+using RecipeLibrary.Application.UseCases.Pantry;
 using RecipeLibrary.Application.UseCases.Recipes;
 using RecipeLibrary.Domain.Entities;
 using RecipeLibrary.Domain.ValueObjects;
@@ -15,6 +20,95 @@ namespace RecipeLibrary.Web.IntegrationTests;
 [Collection(nameof(SqlContainerCollection))]
 public sealed class HouseholdPersistenceTests(SqlContainerFixture fixture)
 {
+    [Fact]
+    public async Task ConcurrentHouseholdPantryUpserts_KeepOneItem()
+    {
+        await using var scope = fixture.Factory.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var db = services.GetRequiredService<RecipeDbContext>();
+        var user = Guid.NewGuid().ToString();
+        db.Users.Add(new ApplicationUser { Id = user });
+        await db.SaveChangesAsync();
+        var households = services.GetRequiredService<IHouseholdRepository>();
+        Assert.True(await households.CreateAsync(user, "Concurrent pantry", default));
+        var household = (await households.GetAsync(user, default))!;
+        async Task<UpsertPantryItemResult> UpsertAsync()
+        {
+            await using var operationScope = fixture.Factory.Services.CreateAsyncScope();
+            var provider = operationScope.ServiceProvider;
+            var handler = new UpsertPantryItemCommandHandler(
+                provider.GetRequiredService<IPantryRepository>(), provider.GetRequiredService<IShoppingListRepository>(),
+                new FixedCurrentUser(user), new PantryIngredientMerger(new IngredientTextNormalizer()),
+                provider.GetRequiredService<IUnitOfWork>(), provider.GetRequiredService<IHouseholdRepository>());
+            return await handler.HandleAsync(new UpsertPantryItemCommand { HouseholdId = household.Id, DisplayName = "Salt" });
+        }
+        var results = await Task.WhenAll(UpsertAsync(), UpsertAsync());
+        Assert.Equal(results[0].ItemId, results[1].ItemId);
+        Assert.Single(await db.PantryItems.Where(item => item.OwnerUserId == PantryOwnerKey.ForHousehold(household.Id)).ToListAsync());
+    }
+
+    [Fact]
+    public async Task SerializableUnitOfWork_RollsBackNewTrackedItemsAndCanRunAgain()
+    {
+        await using var scope = fixture.Factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<RecipeDbContext>();
+        var unit = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var owner = $"household:{Guid.NewGuid():D}";
+        var id = Guid.NewGuid();
+        var pending = new PantryItem { Id = Guid.NewGuid(), OwnerUserId = "pending:" + owner, DisplayName = "Pepper" };
+        db.PantryItems.Add(pending);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unit.ExecuteInSerializableTransactionAsync(async ct =>
+        {
+            Assert.Equal(IsolationLevel.Serializable, db.Database.CurrentTransaction!.GetDbTransaction().IsolationLevel);
+            db.PantryItems.Add(new PantryItem { Id = id, OwnerUserId = owner, DisplayName = "Salt" });
+            await db.SaveChangesAsync(ct);
+            throw new InvalidOperationException("Simulated operation failure");
+        }));
+        Assert.DoesNotContain(db.ChangeTracker.Entries<PantryItem>(), entry => entry.Entity.Id == id);
+        Assert.Equal(EntityState.Added, db.Entry(pending).State);
+        Assert.False(await db.PantryItems.AnyAsync(item => item.Id == pending.Id));
+        Assert.False(await db.PantryItems.AnyAsync(item => item.Id == id));
+        await unit.ExecuteInSerializableTransactionAsync(ct =>
+        {
+            db.PantryItems.Add(new PantryItem { Id = id, OwnerUserId = owner, DisplayName = "Salt" });
+            return Task.CompletedTask;
+        });
+        Assert.Single(await db.PantryItems.Where(item => item.OwnerUserId == owner).ToListAsync());
+        Assert.Equal(EntityState.Unchanged, db.Entry(pending).State);
+    }
+
+    [Fact]
+    public async Task SerializableMembershipRead_BlocksConcurrentMemberRemovalUntilCommit()
+    {
+        await using var scope = fixture.Factory.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var db = services.GetRequiredService<RecipeDbContext>();
+        var manager = Guid.NewGuid().ToString();
+        var member = Guid.NewGuid().ToString();
+        db.Users.AddRange(new ApplicationUser { Id = manager }, new ApplicationUser { Id = member });
+        await db.SaveChangesAsync();
+        var households = services.GetRequiredService<IHouseholdRepository>();
+        Assert.True(await households.CreateAsync(manager, "Transaction test", default));
+        var household = (await households.GetAsync(manager, default))!;
+        var token = Guid.NewGuid().ToString();
+        var now = DateTimeOffset.UtcNow;
+        Assert.True(await households.CreateInvitationAsync(manager, token, now.AddHours(1), default));
+        Assert.Equal(JoinHouseholdResult.Joined, await households.JoinAsync(member, token, now, default));
+        Task<bool>? removal = null;
+        await using var otherScope = fixture.Factory.Services.CreateAsyncScope();
+        var otherHouseholds = otherScope.ServiceProvider.GetRequiredService<IHouseholdRepository>();
+        await services.GetRequiredService<IUnitOfWork>().ExecuteInSerializableTransactionAsync(async ct =>
+        {
+            Assert.True(await households.IsMemberAsync(member, household.Id, ct));
+            removal = otherHouseholds.RemoveMemberAsync(manager, member, ct);
+            await Task.Delay(200, ct);
+            Assert.False(removal.IsCompleted);
+            Assert.True(await households.IsMemberAsync(member, household.Id, ct));
+        });
+        Assert.True(await removal!.WaitAsync(TimeSpan.FromSeconds(10)));
+        Assert.False(await households.IsMemberAsync(member, household.Id, default));
+    }
+
     [Fact]
     public async Task HouseholdCopiesDeduplicateAndMembersRateIndependently()
     {

@@ -76,14 +76,24 @@ public sealed class HouseholdTests(E2eFixture fixture)
 
         await member.GotoAsync($"{fixture.BaseUrl}/pantry?library=household");
         await WaitForInteractivityAsync(member);
-        await member.GetByTestId(UiTestIds.PantryAddName).FillBlazorInputAsync("Huishoudolie");
+        var pantryInput = member.GetByTestId(UiTestIds.PantryAddName);
+        await pantryInput.FillBlazorInputAsync("Gehakt");
+        await Expect(pantryInput).ToHaveValueAsync("Gehakt");
         await member.GetByTestId(UiTestIds.PantryAddSubmit).ClickAsync();
-        await Expect(member.GetByText("Huishoudolie", new() { Exact = true })).ToBeVisibleAsync();
+        await Expect(member.GetByRole(AriaRole.Listitem).Filter(new() { HasText = "Gehakt" })).ToBeVisibleAsync();
         await manager.GotoAsync($"{fixture.BaseUrl}/pantry?library=household");
-        await Expect(manager.GetByText("Huishoudolie", new() { Exact = true })).ToBeVisibleAsync();
+        await Expect(manager.GetByRole(AriaRole.Listitem).Filter(new() { HasText = "Gehakt" })).ToBeVisibleAsync();
         await manager.GotoAsync($"{fixture.BaseUrl}/pantry");
         await manager.GetByTestId(UiTestIds.PantryAddForm).WaitForAsync();
-        await Expect(manager.GetByText("Huishoudolie", new() { Exact = true })).ToHaveCountAsync(0);
+        await Expect(manager.GetByText("Gehakt", new() { Exact = true })).ToHaveCountAsync(0);
+
+        await manager.GotoAsync(sharedRecipeUrl);
+        await WaitForInteractivityAsync(manager);
+        await manager.GetByTestId(UiTestIds.AddToShoppingList).ClickAsync();
+        await Expect(manager.GetByTestId(UiTestIds.RecipeAddedToListStatus)).ToBeVisibleAsync();
+        await manager.GotoShoppingListAsync(fixture.BaseUrl);
+        await Expect(manager.GetByText("Tomaten", new() { Exact = true })).ToBeVisibleAsync();
+        await Expect(manager.GetByText(new Regex("^Gehakt"))).ToHaveCountAsync(0);
 
         await using var outsiderContext = await fixture.Browser.NewContextAsync();
         var outsider = await outsiderContext.NewPageAsync();

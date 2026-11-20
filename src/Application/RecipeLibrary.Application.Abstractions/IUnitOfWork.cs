@@ -15,4 +15,8 @@ public interface IUnitOfWork
     /// (compatible with EF retry strategy), then saves and commits.
     /// </summary>
     Task ExecuteInTransactionAsync(Func<CancellationToken, Task> action, CancellationToken ct = default);
+
+    /// <summary>Protects authorization reads and dependent writes with serializable isolation.</summary>
+    Task ExecuteInSerializableTransactionAsync(Func<CancellationToken, Task> action, CancellationToken ct = default) =>
+        ExecuteInTransactionAsync(action, ct);
 }

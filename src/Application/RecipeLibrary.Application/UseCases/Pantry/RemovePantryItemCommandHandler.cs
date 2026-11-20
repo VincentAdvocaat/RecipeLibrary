@@ -16,10 +16,21 @@ public sealed class RemovePantryItemCommandHandler(
         RemovePantryItemCommand command,
         CancellationToken ct = default)
     {
-        var ownerKey = await PantryOwnerKey.ResolveForLibraryAsync(shoppingListRepository, households,
-            userContext.UserId, command.ShoppingListGroupId, command.HouseholdId, ct);
-        var removed = await repository.RemoveAsync(command.ItemId, ownerKey, ct);
-        await unitOfWork.SaveChangesAsync(ct);
+        var removed = false;
+        async Task RemoveAsync(CancellationToken operationCt)
+        {
+            var ownerKey = await PantryOwnerKey.ResolveForLibraryAsync(shoppingListRepository, households,
+                userContext.UserId, command.ShoppingListGroupId, command.HouseholdId, operationCt);
+            removed = await repository.RemoveAsync(command.ItemId, ownerKey, operationCt);
+        }
+
+        if (command.HouseholdId.HasValue)
+            await unitOfWork.ExecuteInSerializableTransactionAsync(RemoveAsync, ct);
+        else
+        {
+            await RemoveAsync(ct);
+            await unitOfWork.SaveChangesAsync(ct);
+        }
         return new RemovePantryItemResult(removed);
     }
 }
