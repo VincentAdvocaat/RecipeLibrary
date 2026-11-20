@@ -62,6 +62,7 @@ stages:
     - script: |
         set -euo pipefail
         az bicep build --file infra/main.bicep --outfile "$(Agent.TempDirectory)/main.json"
+        python3 -m unittest discover -s tests/infra -p "test_*.py"
         SQL_DEPLOYMENT_TEMPLATE="$(Agent.TempDirectory)/main.json" node --test tests/infra/*.test.mjs
       displayName: Validate SQL deployment isolation and free limits
 
@@ -204,6 +205,10 @@ stages:
                 echo "Verifying resource group exists (pipeline does not create RGs)..."
                 az group show --name "$(resourceGroupName)" >/dev/null
 
+                # Reject an unexpected existing SQL plan before ARM enables cron/startup SQL I/O.
+                python3 scripts/check-basic-sql.py "$(resourceGroupName)" "$(projectName)" "$(environmentName)" \
+                  --allow-initial ${{ lower(parameters.provisionSqlInfrastructure) }}
+
                 # ARM replaces customDomains. Carry forward existing certificate bindings.
                 current_app="$(az containerapp list -g "$(resourceGroupName)" --query "[?starts_with(name, 'ca-rl-')].name | [0]" -o tsv)"
                 domains='[]'
@@ -245,7 +250,7 @@ stages:
                   echo "SQL database missing or inaccessible. For initial provisioning, manually enable provisionSqlInfrastructure; do not enable it for routine releases."
                   exit 1
                 fi
-                if ! echo "$sql_settings" | jq -e '.sku.tier == "Basic" and .sku.name == "Basic" and .sku.capacity == 5 and .maxSizeBytes <= 2147483648 and .useFreeLimit != true' >/dev/null; then
+                if ! echo "$sql_settings" | jq -e '.sku.tier == "Basic" and .sku.name == "Basic" and .sku.capacity == 5 and .maxSizeBytes <= 2147483648 and .useFreeLimit != true and .status == "Online"' >/dev/null; then
                   echo "Expected approved SQL Basic 5 DTU / <=2 GiB. Run the reviewed SQL conversion procedure first; routine releases never change the database tier."
                   exit 1
                 fi

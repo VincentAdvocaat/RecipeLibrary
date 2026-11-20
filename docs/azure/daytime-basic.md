@@ -52,23 +52,33 @@ The free offer cannot be restored to this database. This is the approved move
 to Basic, not the previously declined temporary paid-overage experiment.
 
 Review and run conversion before merging the app rollout: SEC's deployment
-validation requires Basic 5 DTU / <=2 GiB and rejects an unexpected plan instead
-of upgrading SQL automatically. Ordinary releases still skip the SQL module.
-Intentional provisioning retains `provisionSqlInfrastructure=true`; for manual
-SEC Bicep calls also pass `useBasicSql=true`. Other environments default to the
+management-only preflight requires Online Basic 5 DTU / <=2 GiB before ARM
+enables the warm schedule or startup initialization. It rejects unexpected existing
+plans even when provisioning is enabled. The post-deployment check remains.
+Ordinary releases still skip the SQL module.
+A missing server or database is allowed only with explicit initial provisioning
+through `provisionSqlInfrastructure=true`; this never bypasses the existing-plan
+check. For manual SEC Bicep calls also pass `useBasicSql=true`. Other environments default to the
 free-serverless configuration. Never use Complete deployment mode.
 
 ## Cost guard and verification
 
 Basic costs approximately EUR 4.50/month excluding VAT at the quoted regional
-rate. With twelve daytime warm hours and little traffic, estimate approximately
-EUR 6–8/month for SQL plus this small container, depending on remaining shared
-free grants. Other services, active compute and requests can add charges.
+rate. With `minReplicas=0`, the cron floor of one replica uses active billing
+throughout scheduled time, including time without requests. For a 30-day month at
+twelve hours/day, 0.25 vCPU and 0.5 GiB, using EUR 0.000022/vCPU-second and
+EUR 0.000003/GiB-second, estimate approximately EUR 8.40 total with all shared
+monthly free grants available, or EUR 13.50 without them. This includes Basic's
+EUR 4.50. The one-minute prewarm margin, cooldown, nighttime visitors, requests
+and other services can add charges.
 
 Update the existing resource-group budget from EUR 5 to EUR 12 without changing
 its receivers or thresholds: warning at 50%, existing app-stop action at 80%,
 and actual/forecast notices at 100%. Budgets are delayed alerts/actions, not a
 hard spending cap; stopping the app does not remove Basic's fixed SQL bill.
+The EUR 12 budget remains the target. Its 80% app-stop threshold is EUR 9.60,
+so it can interrupt daytime availability if other apps consume the shared free
+grants. Do not automatically raise the budget.
 No paid scheduler or new analytics service is required.
 
 Before release: compiled ARM tests for both SQL plans, default-off SQL deployment,
