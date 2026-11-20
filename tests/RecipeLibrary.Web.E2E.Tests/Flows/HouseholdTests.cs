@@ -30,7 +30,9 @@ public sealed class HouseholdTests(E2eFixture fixture)
         await manager.GetByTestId(UiTestIds.SearchInput).FillBlazorInputAsync("Lasagna");
         await Expect(manager.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("^Selecteer") }))
             .ToHaveTextAsync("Selecteer 1 resultaat");
-        await Button(manager, "Selecteer 1 resultaat").PressAsync("Enter");
+        var selectResult = Button(manager, "Selecteer 1 resultaat");
+        await Expect(selectResult).ToBeEnabledAsync();
+        await selectResult.PressAsync("Enter");
         await Button(manager, "Deel 1 recept").ClickAsync();
         await Expect(manager.GetByText("Al gedeeld", new() { Exact = true })).ToBeVisibleAsync();
 
