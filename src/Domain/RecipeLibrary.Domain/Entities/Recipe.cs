@@ -51,5 +51,7 @@ public sealed class Recipe
     public ICollection<Ingredient> Ingredients { get; set; } = new List<Ingredient>();
 
     public ICollection<InstructionStep> InstructionSteps { get; set; } = new List<InstructionStep>();
+
+    public ICollection<RecipeRating> Ratings { get; } = new List<RecipeRating>();
 }
 

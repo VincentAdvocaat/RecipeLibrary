@@ -11,6 +11,32 @@ namespace RecipeLibrary.Web.E2E.Tests.Flows;
 public sealed class RecipeCrudTests(E2eFixture fixture)
 {
     [Fact]
+    public async Task RecipeRatingPersistsAfterReloadAndCanBeCleared()
+    {
+        await using var context = await fixture.NewAuthenticatedContextAsync();
+        var page = await context.NewPageAsync();
+        page.UseBlazorDefaults();
+        await page.GotoAsync($"{fixture.BaseUrl}/recipes/{fixture.Seed.RecipeId}");
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
+
+        var picker = page.GetByTestId(UiTestIds.RecipeRating);
+        var unrated = picker.GetByTestId(UiTestIds.RecipeRatingOption(0));
+        var fourStars = picker.GetByTestId(UiTestIds.RecipeRatingOption(4));
+        await Assertions.Expect(unrated).ToHaveAttributeAsync("aria-pressed", "true");
+        await fourStars.FocusAsync();
+        await fourStars.PressAsync("Enter");
+        await Assertions.Expect(fourStars).ToHaveAttributeAsync("aria-pressed", "true");
+
+        await page.ReloadAsync();
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
+        await Assertions.Expect(fourStars).ToHaveAttributeAsync("aria-pressed", "true");
+        await unrated.ClickAsync();
+        await Assertions.Expect(unrated).ToHaveAttributeAsync("aria-pressed", "true");
+        await page.ReloadAsync();
+        await Assertions.Expect(unrated).ToHaveAttributeAsync("aria-pressed", "true");
+    }
+
+    [Fact]
     public async Task CreateMinimalRecipe_RedirectsToDetail()
     {
         var title = $"E2E Recipe {Guid.NewGuid():N}";

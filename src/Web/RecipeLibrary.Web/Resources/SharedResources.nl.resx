@@ -376,4 +376,9 @@
   <data name="Demo.ReloadAction" xml:space="preserve"><value>Pagina herladen</value></data>
   <data name="Image.OpenExternal" xml:space="preserve"><value>Afbeelding openen bij {0}</value></data>
   <data name="Image.NotLoaded" xml:space="preserve"><value>Afbeelding niet geladen</value></data>
+  <data name="RecipeRating.Label" xml:space="preserve"><value>Mijn beoordeling</value></data>
+  <data name="RecipeRating.Unrated" xml:space="preserve"><value>Onbeoordeeld (0 sterren)</value></data>
+  <data name="RecipeRating.OneStar" xml:space="preserve"><value>1 ster</value></data>
+  <data name="RecipeRating.Stars" xml:space="preserve"><value>{0} sterren</value></data>
+  <data name="RecipeRating.SaveFailed" xml:space="preserve"><value>De beoordeling kon niet worden opgeslagen. Probeer het opnieuw.</value></data>
 </root>

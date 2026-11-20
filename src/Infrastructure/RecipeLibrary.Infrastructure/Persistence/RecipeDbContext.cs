@@ -15,6 +15,7 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
     public DbSet<DemoSession> DemoSessions => Set<DemoSession>();
 
     public DbSet<Recipe> Recipes => Set<Recipe>();
+    public DbSet<RecipeRating> RecipeRatings => Set<RecipeRating>();
     public DbSet<Ingredient> RecipeIngredients => Set<Ingredient>();
     public DbSet<InstructionStep> InstructionSteps => Set<InstructionStep>();
     public DbSet<CanonicalIngredient> Ingredients => Set<CanonicalIngredient>();
@@ -130,6 +131,17 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
             b.HasMany(x => x.InstructionSteps)
                 .WithOne()
                 .HasForeignKey(x => x.RecipeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RecipeRating>(b =>
+        {
+            b.ToTable(t => t.HasCheckConstraint("CK_RecipeRatings_Stars", "[Stars] BETWEEN 1 AND 5"));
+            b.HasKey(x => new { x.RecipeId, x.UserId });
+            b.Property(x => x.UserId).HasMaxLength(IdentityOwnerIds.MaxLength);
+            b.HasOne<Recipe>().WithMany(x => x.Ratings).HasForeignKey(x => x.RecipeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

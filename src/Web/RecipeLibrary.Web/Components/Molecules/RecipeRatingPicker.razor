@@ -1,0 +1,86 @@
+@inject ICommandBus CommandBus
+@inject ILogger<RecipeRatingPicker> Logger
+
+<fieldset class="space-y-1" data-testid="@UiTestIds.RecipeRating">
+    <legend class="text-sm font-medium text-gray-900">@L["RecipeRating.Label"]</legend>
+    <div class="flex flex-wrap items-center gap-1">
+        @for (var index = 1; index <= 5; index++)
+        {
+            var stars = index;
+            var label = stars == 1 ? L["RecipeRating.OneStar"] : L["RecipeRating.Stars", stars];
+            <button type="button"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded border text-2xl text-gray-800 hover:bg-gray-100 @SelectionClass(stars)"
+                    data-testid="@UiTestIds.RecipeRatingOption(stars)"
+                    aria-label="@label"
+                    aria-pressed="@Pressed(stars)"
+                    aria-disabled="@Busy"
+                    @onclick="() => SaveAsync(stars)">
+                <span aria-hidden="true">@(_stars >= stars ? "★" : "☆")</span>
+            </button>
+        }
+        <button type="button"
+                class="min-h-10 rounded border px-3 text-sm text-gray-800 hover:bg-gray-100 @SelectionClass(0)"
+                data-testid="@UiTestIds.RecipeRatingOption(0)"
+                aria-pressed="@Pressed(0)"
+                aria-disabled="@Busy"
+                @onclick="() => SaveAsync(0)">
+            @L["RecipeRating.Unrated"]
+        </button>
+    </div>
+    @if (_saveFailed)
+    {
+        <p class="text-sm text-red-700" role="alert">@L["RecipeRating.SaveFailed"]</p>
+    }
+</fieldset>
+
+@code {
+    [Parameter, EditorRequired] public Guid RecipeId { get; set; }
+
+    [Parameter] public int? InitialRating { get; set; }
+
+    private int _stars;
+    private bool _saving;
+    private bool _saveFailed;
+
+    protected override void OnInitialized() => _stars = InitialRating ?? 0;
+
+    private string Busy => _saving ? "true" : "false";
+
+    private string Pressed(int stars) => _stars == stars ? "true" : "false";
+
+    private string SelectionClass(int stars) =>
+        _stars == stars ? "border-gray-800 bg-gray-100" : "border-transparent";
+
+    private async Task SaveAsync(int stars)
+    {
+        if (_saving)
+        {
+            return;
+        }
+
+        _saving = true;
+        _saveFailed = false;
+        try
+        {
+            var result = await CommandBus.SendAsync<SetRecipeRatingCommand, SetRecipeRatingResult>(
+                new SetRecipeRatingCommand(RecipeId, stars));
+            if (result.Saved)
+            {
+                _stars = stars;
+            }
+            else
+            {
+                _saveFailed = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not save recipe rating for {RecipeId}.", RecipeId);
+            _saveFailed = true;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

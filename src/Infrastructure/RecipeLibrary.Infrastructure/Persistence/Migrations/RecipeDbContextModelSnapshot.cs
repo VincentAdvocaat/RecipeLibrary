@@ -968,6 +968,28 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.ToTable("Recipes");
                 });
 
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.RecipeRating", b =>
+                {
+                    b.Property<Guid>("RecipeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Stars")
+                        .HasColumnType("int");
+
+                    b.HasKey("RecipeId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RecipeRatings", t =>
+                        {
+                            t.HasCheckConstraint("CK_RecipeRatings_Stars", "[Stars] BETWEEN 1 AND 5");
+                        });
+                });
+
             modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingList", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1382,6 +1404,21 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.Navigation("Ingredient");
                 });
 
+            modelBuilder.Entity("RecipeLibrary.Domain.Entities.RecipeRating", b =>
+                {
+                    b.HasOne("RecipeLibrary.Domain.Entities.Recipe", null)
+                        .WithMany("Ratings")
+                        .HasForeignKey("RecipeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RecipeLibrary.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingList", b =>
                 {
                     b.HasOne("RecipeLibrary.Domain.Entities.ShoppingListGroup", "Group")
@@ -1444,6 +1481,8 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.Navigation("Ingredients");
 
                     b.Navigation("InstructionSteps");
+
+                    b.Navigation("Ratings");
                 });
 
             modelBuilder.Entity("RecipeLibrary.Domain.Entities.ShoppingList", b =>

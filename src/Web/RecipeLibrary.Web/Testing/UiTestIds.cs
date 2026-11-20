@@ -40,6 +40,8 @@ public static class UiTestIds
 
     public const string RecipeEdit = "recipe-edit";
     public const string RecipeDelete = "recipe-delete";
+    public const string RecipeRating = "recipe-rating";
+    public static string RecipeRatingOption(int stars) => $"recipe-rating-{stars}";
     public const string DeleteConfirmYes = "delete-confirm-yes";
     public const string DeleteConfirmNo = "delete-confirm-no";
     public const string AddToShoppingList = "add-to-shopping-list";

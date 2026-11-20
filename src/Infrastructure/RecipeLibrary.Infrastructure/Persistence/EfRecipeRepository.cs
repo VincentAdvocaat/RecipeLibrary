@@ -5,7 +5,7 @@ using RecipeLibrary.Domain.ValueObjects;
 
 namespace RecipeLibrary.Infrastructure.Persistence;
 
-public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepository
+public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepository, IRecipeRatingRepository
 {
     public async Task AddAsync(Recipe recipe, CancellationToken ct = default)
     {
@@ -53,7 +53,37 @@ public sealed class EfRecipeRepository(RecipeDbContext dbContext) : IRecipeRepos
             .AsNoTracking()
             .Include(r => r.Ingredients)
             .Include(r => r.InstructionSteps)
+            .Include(r => r.Ratings.Where(rating => rating.UserId == ownerUserId))
             .FirstOrDefaultAsync(r => r.Id == id, ct);
+    }
+
+    public Task<bool> IsRecipeAccessibleAsync(string userId, Guid recipeId, CancellationToken ct = default) =>
+        OwnedRecipes(userId).AnyAsync(r => r.Id == recipeId, ct);
+
+    public async Task SetRatingAsync(string userId, Guid recipeId, int stars, CancellationToken ct = default)
+    {
+        if (stars == 0)
+        {
+            await dbContext.RecipeRatings
+                .Where(r => r.RecipeId == recipeId && r.UserId == userId)
+                .ExecuteDeleteAsync(ct);
+            return;
+        }
+
+        // Hold the key range until the statement finishes so concurrent first ratings
+        // for this user and recipe cannot both take the insert path.
+        await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(
+            token => dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+                MERGE [RecipeRatings] WITH (HOLDLOCK) AS rating
+                USING (VALUES ({recipeId}, {userId}, {stars})) AS incoming ([RecipeId], [UserId], [Stars])
+                    ON rating.[RecipeId] = incoming.[RecipeId] AND rating.[UserId] = incoming.[UserId]
+                WHEN MATCHED THEN
+                    UPDATE SET [Stars] = incoming.[Stars]
+                WHEN NOT MATCHED THEN
+                    INSERT ([RecipeId], [UserId], [Stars])
+                    VALUES (incoming.[RecipeId], incoming.[UserId], incoming.[Stars]);
+                """, token),
+            ct);
     }
 
     public async Task<IReadOnlyList<Recipe>> GetByIdsAsync(

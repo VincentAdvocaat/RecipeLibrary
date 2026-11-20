@@ -19,7 +19,7 @@ public sealed class DemoOperationRunner(
 
     public static bool IsAllowed(object operation) => operation is
         DemoReadOperation or GetRecipeListQuery or GetRecipeByIdQuery or GetRecipeIngredientTagsQuery or
-        CreateRecipeCommand or UpdateRecipeCommand or DeleteRecipeCommand or
+        CreateRecipeCommand or UpdateRecipeCommand or DeleteRecipeCommand or SetRecipeRatingCommand or
         SearchIngredientsQuery or SearchTagsQuery or MatchIngredientCommand or
         EnsureShoppingListGroupCommand or GetNextShoppingListNameQuery or GetShoppingListSummaryQuery or
         AddRecipesToShoppingListCommand or ToggleShoppingListItemCommand or RemoveShoppingListItemCommand or

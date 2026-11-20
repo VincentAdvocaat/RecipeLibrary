@@ -49,6 +49,8 @@ else if (_recipe is not null)
                         <RecipeMeta PreparationMinutes="@_recipe.PreparationMinutes" CookingMinutes="@_recipe.CookingMinutes" Servings="@_recipe.Servings" DifficultyLevel="@_recipe.Difficulty" />
                     </div>
 
+                    <RecipeRatingPicker @key="_recipe.Id" RecipeId="_recipe.Id" InitialRating="_recipe.MyRating" />
+
                     @if (_recipe.Ingredients.Count > 0)
                     {
                         <RecipeIngredientList Items="@_recipe.Ingredients" />
