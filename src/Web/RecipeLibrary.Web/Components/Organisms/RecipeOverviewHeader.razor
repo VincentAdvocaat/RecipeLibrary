@@ -38,10 +38,10 @@
                         <AppNavLink Href="/recipes"
                                     CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
                                     data-testid="@UiTestIds.NavRecipes">@L["Nav.MyRecipes"]</AppNavLink>
-                        <AppNavLink Href="/recipes/create"
+                        <AppNavLink Href="@CreateRecipeHref"
                                     CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
                                     data-testid="@UiTestIds.NavCreate">@L["Nav.AddRecipe"]</AppNavLink>
-                        <AppNavLink Href="/recipes/import"
+                        <AppNavLink Href="@ImportRecipeHref"
                                     CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
                                     data-testid="@UiTestIds.NavImport">@L["Nav.ImportRecipe"]</AppNavLink>
                         <a href="/shopping-list"
@@ -59,6 +59,8 @@
                         <AppNavLink Href="/pantry"
                                     CssClass="block px-3 py-2 no-underline hover:bg-gray-50"
                                     data-testid="@UiTestIds.NavPantry">@L["Nav.Pantry"]</AppNavLink>
+                        <AppNavLink Href="/household"
+                                    CssClass="block px-3 py-2 no-underline hover:bg-gray-50">@L["Household.Title"]</AppNavLink>
                         <AuthorizeView Roles="@ContentModerationOptions.AdminRoleName">
                             <Authorized>
                                 <AppNavLink Href="/admin/moderation"
@@ -74,7 +76,7 @@
         <div class="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
             @if (ShowAddRecipeFab)
             {
-                <a href="/recipes/create"
+                <a href="@CreateRecipeHref"
                    data-testid="@UiTestIds.AddRecipeFab"
                    class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-800 bg-gray-800 text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1"
                    aria-label="@L["Nav.AddRecipe"]"
@@ -104,6 +106,10 @@
     [Parameter] public EventCallback<ViewToggle.ViewModeKind> ViewModeChanged { get; set; }
     [Parameter] public string? CssClass { get; set; }
     [Parameter] public int ShoppingBadgeCount { get; set; }
+    [Parameter] public bool IsHouseholdLibrary { get; set; }
+
+    private string CreateRecipeHref => IsHouseholdLibrary ? "/recipes/create?library=household" : "/recipes/create";
+    private string ImportRecipeHref => IsHouseholdLibrary ? "/recipes/create?library=household&mode=text" : "/recipes/import";
 
     private bool ShowAddRecipeFab
     {

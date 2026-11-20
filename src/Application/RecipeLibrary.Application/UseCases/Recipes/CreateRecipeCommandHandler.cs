@@ -17,12 +17,19 @@ public sealed class CreateRecipeCommandHandler(
     ICurrentUser currentUser,
     IUnitOfWork unitOfWork,
     RecipeContentModerationService contentModeration,
-    IDemoContext? demo = null)
+    IDemoContext? demo = null,
+    IHouseholdRepository? households = null)
     : ICommandHandler<CreateRecipeCommand, CreateRecipeResult>
 {
     public async Task<CreateRecipeResult> HandleAsync(CreateRecipeCommand command, CancellationToken ct = default)
     {
         var ownerUserId = RequireUserId(currentUser);
+        if (command.HouseholdId is { } householdId
+            && (demo?.IsDemo == true || households is null || !await households.IsMemberAsync(ownerUserId, householdId, ct)))
+        {
+            throw new UnauthorizedAccessException("Household access is required.");
+        }
+
         CreateRecipeCommandValidator.ValidateAndThrow(command);
 
         var title = (command.Title ?? string.Empty).Trim();
@@ -39,11 +46,13 @@ public sealed class CreateRecipeCommandHandler(
 
         var description = (command.Description ?? string.Empty).Trim();
         var imageUrl = (command.ImageUrl ?? string.Empty).Trim();
+        await RecipeImageAccess.EnsureCanAttachAsync(recipeRepository, ownerUserId, imageUrl, ct);
 
         var recipe = new Recipe
         {
             Id = recipeId,
             OwnerUserId = ownerUserId,
+            HouseholdId = command.HouseholdId,
             Title = new RecipeTitle(title),
             Description = string.IsNullOrEmpty(description) ? null : description,
             ImageUrl = string.IsNullOrEmpty(imageUrl) ? null : imageUrl,

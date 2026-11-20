@@ -7,14 +7,19 @@
 
 @inject ICommandBus CommandBus
 @inject IQueryBus QueryBus
-@inject PantrySessionService PantrySession
 @inject ShoppingListSessionService ShoppingSession
+@inject IDemoContext DemoContext
 
 <PageTitle>@L["Pantry.PageTitle"]</PageTitle>
 
 <div class="min-h-screen bg-gray-100" data-testid="@UiTestIds.PantryReady">
     <div class="container mx-auto p-4 max-w-5xl">
-        <RecipeOverviewHeader Title="@L["Pantry.PageTitle"]" ShoppingBadgeCount="@_badgeCount" />
+        <RecipeOverviewHeader Title="@L["Pantry.PageTitle"]" ShoppingBadgeCount="@_badgeCount"
+                              IsHouseholdLibrary="@(ActiveHouseholdId != null)" />
+        @if (_household is not null)
+        {
+            <LibrarySwitcher Path="/pantry" HouseholdName="@_household.Name" ShowHousehold="@(ActiveHouseholdId != null)" />
+        }
 
         @if (_loading)
         {
@@ -23,7 +28,14 @@
         else
         {
             <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 space-y-4">
-                <p class="text-sm text-gray-600">@L["Pantry.Intro.Message"]</p>
+                <p class="text-sm text-gray-600">
+                    @(ActiveHouseholdId is null ? L["Pantry.Intro.Message"] : L["Household.Pantry.Intro"])
+                </p>
+
+                @if (_accessError)
+                {
+                    <p role="alert" class="text-sm text-red-700">@L["Household.AccessLost"]</p>
+                }
 
                 <div class="rounded border border-gray-200 bg-gray-50 p-4 space-y-3" data-testid="@UiTestIds.PantryAddForm">
                     <Heading Level="3" CssClass="m-0 text-sm font-semibold text-gray-800">@L["Pantry.AddItem.SectionLabel"]</Heading>
@@ -40,7 +52,7 @@
                             <button type="button"
                                     data-testid="@UiTestIds.PantryAddSubmit"
                                     class="px-3 py-2 rounded bg-gray-800 text-white text-sm disabled:opacity-50"
-                                    disabled="@string.IsNullOrWhiteSpace(_addItemName)"
+                                    disabled="@(_saving || string.IsNullOrWhiteSpace(_addItemName))"
                                     @onclick="AddItemAsync">
                                 @L["Pantry.AddItem.Button"]
                             </button>
@@ -88,6 +100,11 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "library")] private string? Library { get; set; }
+    private HouseholdSummary? _household;
+    private Guid? ActiveHouseholdId => Library == "household" ? _household?.Id : null;
+    private bool _accessError;
+    private bool _saving;
     private bool _loading = true;
     private int _badgeCount;
     private Guid _groupId;
@@ -98,16 +115,37 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var group = await ShoppingSession.GetOrCreateGroupAsync();
+        _groupId = group.GroupId;
+        _badgeCount = await ShoppingSession.GetUncheckedCountAsync(_groupId);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _accessError = false;
+        _household = DemoContext.IsDemo
+            ? null
+            : await QueryBus.QueryAsync<GetHouseholdQuery, HouseholdSummary?>(new());
+        ResetAddForm();
         await ReloadAsync();
     }
 
     private async Task ReloadAsync()
     {
-        _groupId = await PantrySession.GetGroupIdAsync();
-        var group = await ShoppingSession.GetOrCreateGroupAsync();
-        _badgeCount = await ShoppingSession.GetUncheckedCountAsync(group.GroupId);
-        var result = await QueryBus.QueryAsync<GetPantryItemsQuery, GetPantryItemsResult>(
-            new GetPantryItemsQuery { ShoppingListGroupId = _groupId });
+        GetPantryItemsResult result;
+        try
+        {
+            result = await QueryBus.QueryAsync<GetPantryItemsQuery, GetPantryItemsResult>(
+                new GetPantryItemsQuery { ShoppingListGroupId = _groupId, HouseholdId = ActiveHouseholdId });
+        }
+        catch (UnauthorizedAccessException) when (ActiveHouseholdId is not null)
+        {
+            _accessError = true;
+            _household = null;
+            result = await QueryBus.QueryAsync<GetPantryItemsQuery, GetPantryItemsResult>(
+                new GetPantryItemsQuery { ShoppingListGroupId = _groupId });
+        }
         _items = result.Items;
         _loading = false;
     }
@@ -141,29 +179,53 @@
 
     private async Task AddItemAsync()
     {
-        if (string.IsNullOrWhiteSpace(_addItemName))
+        if (_saving || string.IsNullOrWhiteSpace(_addItemName))
         {
             return;
         }
 
-        await CommandBus.SendAsync<UpsertPantryItemCommand, UpsertPantryItemResult>(
-            new UpsertPantryItemCommand
-            {
-                ShoppingListGroupId = _groupId,
-                CanonicalIngredientId = _addItemCanonicalId,
-                DisplayName = _addItemName.Trim(),
-            });
+        _saving = true;
+        try
+        {
+            await CommandBus.SendAsync<UpsertPantryItemCommand, UpsertPantryItemResult>(
+                new UpsertPantryItemCommand
+                {
+                    ShoppingListGroupId = _groupId,
+                    HouseholdId = ActiveHouseholdId,
+                    CanonicalIngredientId = _addItemCanonicalId,
+                    DisplayName = _addItemName.Trim(),
+                });
+            ResetAddForm();
+        }
+        catch (UnauthorizedAccessException) when (ActiveHouseholdId is not null)
+        {
+            _accessError = true;
+        }
+        finally
+        {
+            _saving = false;
+        }
+        await ReloadAsync();
+    }
 
+    private void ResetAddForm()
+    {
         _addItemName = string.Empty;
         _addItemCanonicalId = null;
         _addItemSuggestions = [];
-        await ReloadAsync();
     }
 
     private async Task RemoveItemAsync(Guid itemId)
     {
-        await CommandBus.SendAsync<RemovePantryItemCommand, RemovePantryItemResult>(
-            new RemovePantryItemCommand { ShoppingListGroupId = _groupId, ItemId = itemId });
+        try
+        {
+            await CommandBus.SendAsync<RemovePantryItemCommand, RemovePantryItemResult>(
+                new RemovePantryItemCommand { ShoppingListGroupId = _groupId, HouseholdId = ActiveHouseholdId, ItemId = itemId });
+        }
+        catch (UnauthorizedAccessException) when (ActiveHouseholdId is not null)
+        {
+            _accessError = true;
+        }
         await ReloadAsync();
     }
 }

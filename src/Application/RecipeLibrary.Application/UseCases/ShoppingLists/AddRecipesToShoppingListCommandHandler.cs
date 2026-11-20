@@ -37,6 +37,11 @@ public sealed class AddRecipesToShoppingListCommandHandler(
             userContext.UserId ?? throw new UnauthorizedAccessException("Authentication is required."),
             command.RecipeIds,
             ct);
+        var libraryIds = recipes.Select(recipe => recipe.HouseholdId).Distinct().ToArray();
+        if (libraryIds.Length > 1)
+        {
+            throw new ArgumentException("Select recipes from a single library.");
+        }
         var lines = new List<ShoppingListIngredientLine>();
 
         foreach (var recipe in recipes)
@@ -56,7 +61,9 @@ public sealed class AddRecipesToShoppingListCommandHandler(
             }
         }
 
-        var ownerKey = PantryOwnerKey.Resolve(userContext.UserId, list.GroupId);
+        var ownerKey = libraryIds.FirstOrDefault() is { } householdId
+            ? PantryOwnerKey.ForHousehold(householdId)
+            : PantryOwnerKey.Resolve(userContext.UserId, list.GroupId);
         var pantryItems = await pantryRepository.GetByOwnerKeyAsync(ownerKey, ct);
         if (pantryItems.Count > 0)
         {

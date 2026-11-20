@@ -5,7 +5,7 @@
     <span class="absolute left-3 text-gray-400 pointer-events-none">
         <Icon Name="@Icon.IconName.Search" CssClass="w-5 h-5" />
     </span>
-    <TextInput @bind-Value="Value"
+    <TextInput Value="@Value" ValueChanged="@ValueChanged"
                Placeholder="@(Placeholder ?? L["Search.Recipes.Placeholder"])"
                CssClass="pl-10"
                data-testid="@UiTestIds.SearchInput" />

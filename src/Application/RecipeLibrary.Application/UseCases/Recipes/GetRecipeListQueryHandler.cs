@@ -8,7 +8,8 @@ namespace RecipeLibrary.Application.UseCases.Recipes;
 
 public sealed class GetRecipeListQueryHandler(
     IRecipeRepository recipeRepository,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    IHouseholdRecipeRepository? householdRecipes = null)
     : IQueryHandler<GetRecipeListQuery, GetRecipeListResult>
 {
     public async Task<GetRecipeListResult> HandleAsync(GetRecipeListQuery query, CancellationToken ct = default)
@@ -22,16 +23,25 @@ public sealed class GetRecipeListQueryHandler(
             category = (RecipeCategory)value;
         }
 
-        var recipes = await recipeRepository.GetListAsync(ownerUserId, query.Search, category, ct);
-        var items = recipes.Select(MapToOverviewItem).ToList();
+        var recipes = query.HouseholdId is { } householdId
+            ? await RequireHouseholdRepository().GetHouseholdListAsync(ownerUserId, householdId, query.Search, category, ct)
+            : await recipeRepository.GetListAsync(ownerUserId, query.Search, category, ct);
+        var sharedIds = query.SharingTargetHouseholdId is { } target
+            ? await RequireHouseholdRepository().GetSharedSourceIdsAsync(ownerUserId, target, ct)
+            : null;
+        var items = recipes.Select(recipe => MapToOverviewItem(recipe, sharedIds?.Contains(recipe.Id) == true)).ToList();
         return new GetRecipeListResult(items);
     }
 
-    private static RecipeOverviewItem MapToOverviewItem(Recipe recipe)
+    private IHouseholdRecipeRepository RequireHouseholdRepository() =>
+        householdRecipes ?? throw new InvalidOperationException("Household recipe storage is unavailable.");
+
+    private static RecipeOverviewItem MapToOverviewItem(Recipe recipe, bool alreadyShared)
     {
         return new RecipeOverviewItem
         {
             Id = recipe.Id,
+            AlreadyShared = alreadyShared,
             Title = recipe.Title.Value,
             Description = recipe.Description,
             ImageUrl = recipe.ImageUrl,

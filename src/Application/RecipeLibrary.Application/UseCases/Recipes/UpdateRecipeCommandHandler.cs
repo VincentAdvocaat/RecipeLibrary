@@ -52,6 +52,10 @@ public sealed class UpdateRecipeCommandHandler(
             : Difficulty.Unknown;
         var description = (command.Description ?? string.Empty).Trim();
         var imageUrl = (command.ImageUrl ?? string.Empty).Trim();
+        if (imageUrl != existing.ImageUrl)
+        {
+            await RecipeImageAccess.EnsureCanAttachAsync(recipeRepository, ownerUserId, imageUrl, ct);
+        }
 
         var builtIngredients = await RecipeIngredientBuilder.BuildAsync(
             existing.Id,
@@ -68,7 +72,8 @@ public sealed class UpdateRecipeCommandHandler(
         var recipe = new Recipe
         {
             Id = existing.Id,
-            OwnerUserId = ownerUserId,
+            OwnerUserId = existing.OwnerUserId,
+            HouseholdId = existing.HouseholdId,
             Title = new RecipeTitle(title),
             Description = string.IsNullOrEmpty(description) ? null : description,
             ImageUrl = string.IsNullOrEmpty(imageUrl) ? null : imageUrl,

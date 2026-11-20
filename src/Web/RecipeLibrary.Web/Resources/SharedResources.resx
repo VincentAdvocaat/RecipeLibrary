@@ -381,4 +381,44 @@
   <data name="RecipeRating.OneStar" xml:space="preserve"><value>1 star</value></data>
   <data name="RecipeRating.Stars" xml:space="preserve"><value>{0} stars</value></data>
   <data name="RecipeRating.SaveFailed" xml:space="preserve"><value>Could not save the rating. Please try again.</value></data>
+  <data name="Household.Title" xml:space="preserve"><value>Household</value></data>
+  <data name="Household.Personal" xml:space="preserve"><value>Personal</value></data>
+  <data name="Household.LibraryLabel" xml:space="preserve"><value>Library</value></data>
+  <data name="Household.Name" xml:space="preserve"><value>Household name</value></data>
+  <data name="Household.Create" xml:space="preserve"><value>Create household</value></data>
+  <data name="Household.Recipes" xml:space="preserve"><value>Shared recipes</value></data>
+  <data name="Household.Members" xml:space="preserve"><value>Members</value></data>
+  <data name="Household.You" xml:space="preserve"><value>you</value></data>
+  <data name="Household.Manager" xml:space="preserve"><value>Manager</value></data>
+  <data name="Household.Transfer" xml:space="preserve"><value>Transfer management</value></data>
+  <data name="Household.Transfer.Confirm" xml:space="preserve"><value>Transfer management to {0}?</value></data>
+  <data name="Household.Remove" xml:space="preserve"><value>Remove member</value></data>
+  <data name="Household.Remove.Confirm" xml:space="preserve"><value>Remove {0} from the household?</value></data>
+  <data name="Household.Leave" xml:space="preserve"><value>Leave household</value></data>
+  <data name="Household.Leave.Confirm" xml:space="preserve"><value>Leave the household? You will lose access to its recipes and pantry.</value></data>
+  <data name="Household.Error" xml:space="preserve"><value>The change was not saved. Refresh the page and try again.</value></data>
+  <data name="Household.AccessLost" xml:space="preserve"><value>You do not have access to this household.</value></data>
+  <data name="Household.Invite.Create" xml:space="preserve"><value>Create invitation link</value></data>
+  <data name="Household.Invite.Link" xml:space="preserve"><value>Invitation link (valid for 7 days and one use)</value></data>
+  <data name="Household.Invite.Copy" xml:space="preserve"><value>Copy link</value></data>
+  <data name="Household.Invite.Copied" xml:space="preserve"><value>Invitation link copied.</value></data>
+  <data name="Household.Invite.CopyError" xml:space="preserve"><value>Automatic copying failed. Select and copy the link from the field.</value></data>
+  <data name="Household.Join.Title" xml:space="preserve"><value>Household invitation</value></data>
+  <data name="Household.Join.Submit" xml:space="preserve"><value>Accept invitation</value></data>
+  <data name="Household.Join.Joined" xml:space="preserve"><value>You have joined the household.</value></data>
+  <data name="Household.Join.AlreadyMember" xml:space="preserve"><value>You already belong to a household.</value></data>
+  <data name="Household.Join.Invalid" xml:space="preserve"><value>This invitation link has expired or been used. Ask the household manager for a new link.</value></data>
+  <data name="Household.Recipes.Empty" xml:space="preserve"><value>Share recipes from your personal library or add one here.</value></data>
+  <data name="Household.Recipes.NoResults" xml:space="preserve"><value>No recipes found.</value></data>
+  <data name="Household.Pantry.Intro" xml:space="preserve"><value>Add ingredients you usually have at home. These are skipped when you add household recipes to your shopping list.</value></data>
+  <data name="Household.Share.Start" xml:space="preserve"><value>Share with household</value></data>
+  <data name="Household.Share.AlreadyShared" xml:space="preserve"><value>Already shared</value></data>
+  <data name="Household.Share.SelectAll" xml:space="preserve"><value>Select all</value></data>
+  <data name="Household.Share.SelectOneResult" xml:space="preserve"><value>Select 1 result</value></data>
+  <data name="Household.Share.SelectResults" xml:space="preserve"><value>Select all {0} results</value></data>
+  <data name="Household.Share.Pending" xml:space="preserve"><value>Sharing recipes…</value></data>
+  <data name="Household.Share.Submit" xml:space="preserve"><value>Share {0} recipes</value></data>
+  <data name="Household.Share.SubmitOne" xml:space="preserve"><value>Share 1 recipe</value></data>
+  <data name="Household.Share.Result" xml:space="preserve"><value>Shared: {0}. Already shared: {1}. Unavailable: {2}.</value></data>
+  <data name="Household.Share.Error" xml:space="preserve"><value>Sharing failed. Your selection is still available. Try again.</value></data>
 </root>
