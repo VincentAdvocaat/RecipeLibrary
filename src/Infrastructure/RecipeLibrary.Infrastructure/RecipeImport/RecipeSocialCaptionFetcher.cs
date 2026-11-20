@@ -1,4 +1,3 @@
-using RecipeLibrary.Infrastructure.RecipeImport;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
@@ -7,7 +6,7 @@ using RecipeLibrary.Application.Abstractions;
 namespace RecipeLibrary.Infrastructure.RecipeImport;
 
 /// <summary>
-/// Reads recipe captions from Instagram oEmbed and YouTube (Data API v3, then InnerTube).
+/// Reads public recipe text from supported social post formats and APIs.
 /// </summary>
 public sealed class RecipeSocialCaptionFetcher(
     IHttpClientFactory httpClientFactory,
@@ -51,64 +50,140 @@ public sealed class RecipeSocialCaptionFetcher(
 
     private async Task<string?> FetchInstagramCaptionAsync(string canonicalPostUrl, CancellationToken ct)
     {
-        var oembedUrl =
-            "https://www.instagram.com/api/v1/oembed/?url=" + Uri.EscapeDataString(canonicalPostUrl);
-
-        var json = await SendGetAsync(oembedUrl, ct);
-        if (string.IsNullOrWhiteSpace(json))
+        var page = await SendGetAsync(canonicalPostUrl, "text/html", ct);
+        var caption = page is null ? null : PublicRecipeCaption.Instagram(page);
+        if (PublicRecipeCaption.HasIngredientsAndSteps(caption))
         {
-            return null;
+            return caption;
         }
 
-        return TryParseInstagramOEmbedTitle(json);
+        var embedPage = await SendGetAsync(canonicalPostUrl + "embed/captioned/", "text/html", ct);
+        var embeddedCaption = embedPage is null ? null : PublicRecipeCaption.Instagram(embedPage);
+        if (PublicRecipeCaption.HasIngredientsAndSteps(embeddedCaption)
+            || (embeddedCaption?.Length ?? 0) > (caption?.Length ?? 0))
+        {
+            return embeddedCaption;
+        }
+
+        if (caption is not null)
+        {
+            return caption;
+        }
+
+        var oembedUrl = "https://www.instagram.com/api/v1/oembed/?url=" + Uri.EscapeDataString(canonicalPostUrl);
+        var json = await SendGetAsync(oembedUrl, "application/json", ct);
+        return json is null ? null : TryParseInstagramOEmbedTitle(json);
     }
 
     private async Task<string?> FetchYouTubeDescriptionAsync(string videoId, CancellationToken ct)
     {
+        string? title = null;
         if (TryGetConfiguredYouTubeApiKey(options.Value.YouTube.ApiKey, out var apiKey))
         {
             try
             {
-                var fromDataApi = await FetchYouTubeDataApiDescriptionAsync(videoId, apiKey, ct);
-                if (!string.IsNullOrWhiteSpace(fromDataApi))
+                var json = await SendGetAsync(YouTubeApiUrl("videos", $"part=snippet&id={videoId}", apiKey), "application/json", ct);
+                if (json is not null)
                 {
-                    return fromDataApi;
+                    using var document = JsonDocument.Parse(json);
+                    if (GetDataApiVideoSnippet(document.RootElement) is { } snippet)
+                    {
+                        title = ReadString(snippet, "title");
+                        var description = ReadString(snippet, "description");
+                        if (!PublicRecipeCaption.HasIngredientsAndSteps(description)
+                            && ReadString(snippet, "channelId") is { } channelId)
+                        {
+                            var combined = await TryGetCreatorRecipeAsync(videoId, apiKey, channelId, title, description, ct);
+                            if (combined is not null)
+                            {
+                                return combined;
+                            }
+                        }
+
+                        if (description is not null)
+                        {
+                            return description;
+                        }
+                    }
                 }
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            catch (JsonException)
             {
-                throw;
-            }
-            catch (Exception)
-            {
-                // Data API timeout/network/malformed JSON: continue to InnerTube.
+                // A malformed response may still have a public video page with valid metadata.
             }
         }
 
-        return await FetchYouTubeInnerTubeDescriptionAsync(videoId, ct);
+        var player = await FetchYouTubeInnerTubeDescriptionAsync(videoId, ct);
+        if (player.Description is not null)
+        {
+            return player.Description;
+        }
+
+        var page = await SendGetAsync($"https://www.youtube.com/watch?v={videoId}", "text/html", ct);
+        return (page is null ? null : PublicRecipeCaption.YouTube(page, videoId)) ?? title ?? player.Title;
     }
 
-    private async Task<string?> FetchYouTubeDataApiDescriptionAsync(
-        string videoId,
-        string apiKey,
-        CancellationToken ct)
+    private async Task<string?> TryGetCreatorRecipeAsync(
+        string videoId, string apiKey, string channelId, string? title, string? description, CancellationToken ct)
     {
-        var endpoint =
-            "https://www.googleapis.com/youtube/v3/videos"
-            + "?part=snippet"
-            + "&id=" + Uri.EscapeDataString(videoId)
-            + "&key=" + Uri.EscapeDataString(apiKey);
-
-        var json = await SendGetAsync(endpoint, ct);
-        if (string.IsNullOrWhiteSpace(json))
+        var payload = await SendGetAsync(
+            YouTubeApiUrl("commentThreads", $"part=snippet&videoId={videoId}&maxResults=20&order=relevance&textFormat=plainText", apiKey),
+            "application/json", ct);
+        if (payload is null)
         {
             return null;
         }
 
-        return TryParseYouTubeDataApiSnippet(json);
+        try
+        {
+            return FindCreatorRecipe(payload, channelId, title, description);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
-    private async Task<string?> FetchYouTubeInnerTubeDescriptionAsync(string videoId, CancellationToken ct)
+    internal static string? FindCreatorRecipe(string json, string channelId, string? title, string? description)
+    {
+        using var document = JsonDocument.Parse(json);
+        if (document.RootElement.ValueKind != JsonValueKind.Object
+            || !document.RootElement.TryGetProperty("items", out var items) || items.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        foreach (var item in items.EnumerateArray())
+        {
+            if (!TryGetObject(item, "snippet", out var thread)
+                || !TryGetObject(thread, "topLevelComment", out var comment)
+                || !TryGetObject(comment, "snippet", out var snippet)
+                || !TryGetObject(snippet, "authorChannelId", out var author)
+                || ReadString(author, "value") != channelId
+                || ReadString(snippet, "textDisplay") is not { } text)
+            {
+                continue;
+            }
+
+            if (PublicRecipeCaption.HasIngredientsAndSteps(text))
+            {
+                return string.IsNullOrWhiteSpace(title) ? text : $"{title}\n\n{text}";
+            }
+
+            var combined = $"{description}\n\n{text}".Trim();
+            if (PublicRecipeCaption.HasIngredientsAndSteps(combined))
+            {
+                return combined;
+            }
+        }
+
+        return null;
+    }
+
+    private static string YouTubeApiUrl(string resource, string parameters, string apiKey) =>
+        $"https://www.googleapis.com/youtube/v3/{resource}?{parameters}&key={Uri.EscapeDataString(apiKey)}";
+
+    private async Task<(string? Description, string? Title)> FetchYouTubeInnerTubeDescriptionAsync(string videoId, CancellationToken ct)
     {
         var endpoint = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
         var payload = JsonSerializer.Serialize(new
@@ -126,13 +201,23 @@ public sealed class RecipeSocialCaptionFetcher(
             videoId,
         });
 
-        var json = await SendPostAsync(endpoint, payload, "application/json", ct);
-        if (string.IsNullOrWhiteSpace(json))
+        var json = await SendAsync(HttpMethod.Post, endpoint, "application/json", payload, ct);
+        if (json is null)
         {
-            return null;
+            return default;
         }
 
-        return TryParseYouTubeInnerTubeDescription(json);
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return TryGetObject(document.RootElement, "videoDetails", out var details)
+                ? (ReadString(details, "shortDescription"), ReadString(details, "title"))
+                : default;
+        }
+        catch (JsonException)
+        {
+            return default;
+        }
     }
 
     /// <summary>True when the key is usable (not empty and not the Key Vault placeholder).</summary>
@@ -157,151 +242,88 @@ public sealed class RecipeSocialCaptionFetcher(
     internal static string? TryParseInstagramOEmbedTitle(string json)
     {
         using var document = JsonDocument.Parse(json);
-        if (!document.RootElement.TryGetProperty("title", out var titleElement)
-            || titleElement.ValueKind != JsonValueKind.String)
-        {
-            return null;
-        }
-
-        var caption = titleElement.GetString();
-        return string.IsNullOrWhiteSpace(caption) ? null : caption.Trim();
+        return ReadString(document.RootElement, "title");
     }
 
     internal static string? TryParseYouTubeDataApiSnippet(string json)
     {
         using var document = JsonDocument.Parse(json);
-        if (!document.RootElement.TryGetProperty("items", out var items)
-            || items.ValueKind != JsonValueKind.Array
-            || items.GetArrayLength() == 0)
-        {
-            return null;
-        }
-
-        var first = items[0];
-        if (!first.TryGetProperty("snippet", out var snippet)
-            || snippet.ValueKind != JsonValueKind.Object)
-        {
-            return null;
-        }
-
-        if (snippet.TryGetProperty("description", out var descriptionElement)
-            && descriptionElement.ValueKind == JsonValueKind.String)
-        {
-            var description = descriptionElement.GetString();
-            if (!string.IsNullOrWhiteSpace(description))
-            {
-                return description.Trim();
-            }
-        }
-
-        if (snippet.TryGetProperty("title", out var titleElement)
-            && titleElement.ValueKind == JsonValueKind.String)
-        {
-            var title = titleElement.GetString();
-            return string.IsNullOrWhiteSpace(title) ? null : title.Trim();
-        }
-
-        return null;
+        return GetDataApiVideoSnippet(document.RootElement) is { } snippet
+            ? ReadYouTubeText(snippet, "description")
+            : null;
     }
+
+    private static JsonElement? GetDataApiVideoSnippet(JsonElement root) =>
+        root.ValueKind == JsonValueKind.Object
+        && root.TryGetProperty("items", out var items)
+        && items.ValueKind == JsonValueKind.Array && items.GetArrayLength() > 0
+        && TryGetObject(items[0], "snippet", out var snippet)
+            ? snippet
+            : null;
 
     internal static string? TryParseYouTubeInnerTubeDescription(string json)
     {
         using var document = JsonDocument.Parse(json);
-        if (!document.RootElement.TryGetProperty("videoDetails", out var details)
-            || details.ValueKind != JsonValueKind.Object)
+        return TryGetObject(document.RootElement, "videoDetails", out var details)
+            ? ReadYouTubeText(details, "shortDescription")
+            : null;
+    }
+
+    internal static string? ReadYouTubeText(JsonElement snippet, string descriptionName) =>
+        ReadString(snippet, descriptionName) ?? ReadString(snippet, "title");
+
+    private static string? ReadString(JsonElement element, string name) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value)
+        && value.ValueKind == JsonValueKind.String && value.GetString()?.Trim() is { Length: > 0 } text
+            ? text
+            : null;
+
+    private static bool TryGetObject(JsonElement parent, string name, out JsonElement value)
+    {
+        value = default;
+        return parent.ValueKind == JsonValueKind.Object && parent.TryGetProperty(name, out value)
+            && value.ValueKind == JsonValueKind.Object;
+    }
+
+    private Task<string?> SendGetAsync(string url, string accept, CancellationToken ct) =>
+        SendAsync(HttpMethod.Get, url, accept, null, ct);
+
+    private async Task<string?> SendAsync(HttpMethod method, string url, string accept, string? payload, CancellationToken ct)
+    {
+        using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        requestTimeout.CancelAfter(TimeSpan.FromSeconds(options.Value.UrlFetch.TimeoutSeconds));
+        var token = requestTimeout.Token;
+        try
+        {
+            using var client = httpClientFactory.CreateClient(RecipeImportServiceRegistration.HttpClientName);
+            var endpoint = await RecipeImportUrlSafety.ResolvePublicHttpEndpointAsync(url, token);
+
+            using (RecipeImportConnectPin.Use(endpoint.Uri.Host, endpoint.Addresses))
+            {
+                using var request = new HttpRequestMessage(method, endpoint.Uri);
+                request.Headers.UserAgent.ParseAdd(UserAgent);
+                request.Headers.Accept.ParseAdd(accept);
+                request.Headers.AcceptLanguage.ParseAdd("en");
+                if (payload is not null)
+                {
+                    request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+                }
+
+                using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                await using var stream = await response.Content.ReadAsStreamAsync(token);
+                var body = await RecipeImportBodyReader.ReadUtf8UpToMaxBytesAsync(stream, options.Value.UrlFetch.MaxBytes, token);
+                return accept == "text/html" || !body.WasTruncated ? body.Text : null;
+            }
+        }
+        catch (Exception error) when (!ct.IsCancellationRequested
+            && error is HttpRequestException or IOException or OperationCanceledException or InvalidOperationException)
         {
             return null;
         }
-
-        if (details.TryGetProperty("shortDescription", out var descriptionElement)
-            && descriptionElement.ValueKind == JsonValueKind.String)
-        {
-            var description = descriptionElement.GetString();
-            if (!string.IsNullOrWhiteSpace(description))
-            {
-                return description.Trim();
-            }
-        }
-
-        if (details.TryGetProperty("title", out var titleElement)
-            && titleElement.ValueKind == JsonValueKind.String)
-        {
-            var title = titleElement.GetString();
-            return string.IsNullOrWhiteSpace(title) ? null : title.Trim();
-        }
-
-        return null;
-    }
-
-    private async Task<string?> SendGetAsync(string url, CancellationToken ct)
-    {
-        var client = httpClientFactory.CreateClient(RecipeImportServiceRegistration.HttpClientName);
-        var endpoint = await RecipeImportUrlSafety.ResolvePublicHttpEndpointAsync(url, ct);
-
-        using (RecipeImportConnectPin.Use(endpoint.Uri.Host, endpoint.Addresses))
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, endpoint.Uri);
-            request.Headers.UserAgent.ParseAdd(UserAgent);
-            request.Headers.Accept.ParseAdd("application/json");
-
-            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-
-            return await ReadBodyAsync(response, ct);
-        }
-    }
-
-    private async Task<string?> SendPostAsync(
-        string url,
-        string jsonBody,
-        string contentType,
-        CancellationToken ct)
-    {
-        var client = httpClientFactory.CreateClient(RecipeImportServiceRegistration.HttpClientName);
-        var endpoint = await RecipeImportUrlSafety.ResolvePublicHttpEndpointAsync(url, ct);
-
-        using (RecipeImportConnectPin.Use(endpoint.Uri.Host, endpoint.Addresses))
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint.Uri);
-            request.Headers.UserAgent.ParseAdd(UserAgent);
-            request.Headers.Accept.ParseAdd("application/json");
-            request.Content = new StringContent(jsonBody, Encoding.UTF8, contentType);
-
-            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-
-            return await ReadBodyAsync(response, ct);
-        }
-    }
-
-    private async Task<string> ReadBodyAsync(HttpResponseMessage response, CancellationToken ct)
-    {
-        var maxBytes = options.Value.UrlFetch.MaxBytes;
-        await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-        var buffer = new char[Math.Min(maxBytes, 8192)];
-        var builder = new StringBuilder();
-        int read;
-        var totalBytes = 0;
-
-        while ((read = await reader.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
-        {
-            totalBytes += Encoding.UTF8.GetByteCount(buffer.AsSpan(0, read));
-            if (totalBytes > maxBytes)
-            {
-                // Oversized bodies are treated as fetch failure (TryFetchCaptionAsync → null).
-                return string.Empty;
-            }
-
-            builder.Append(buffer, 0, read);
-        }
-
-        return builder.ToString();
     }
 }

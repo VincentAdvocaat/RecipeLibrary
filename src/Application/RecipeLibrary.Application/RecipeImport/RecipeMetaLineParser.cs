@@ -34,11 +34,20 @@ internal static class RecipeMetaLineParser
         if (!match.Success) return false;
         if (match.Groups["minutes"].Success)
         {
-            minutes = int.Parse(match.Groups["minutes"].Value, CultureInfo.InvariantCulture);
-            return minutes > 0;
+            return int.TryParse(match.Groups["minutes"].Value, CultureInfo.InvariantCulture, out minutes) && minutes > 0;
         }
-        var hours = int.Parse(match.Groups["hours"].Value, CultureInfo.InvariantCulture);
-        var extra = match.Groups["minutes2"].Success ? int.Parse(match.Groups["minutes2"].Value, CultureInfo.InvariantCulture) : 0;
+        if (!int.TryParse(match.Groups["hours"].Value, CultureInfo.InvariantCulture, out var hours))
+        {
+            return false;
+        }
+
+        var extra = 0;
+        if ((match.Groups["minutes2"].Success && !int.TryParse(match.Groups["minutes2"].Value, CultureInfo.InvariantCulture, out extra))
+            || hours > (int.MaxValue - extra) / 60)
+        {
+            return false;
+        }
+
         minutes = hours * 60 + extra;
         return minutes > 0;
     }
@@ -64,8 +73,8 @@ internal static class RecipeMetaLineParser
         if (!match.Success) match = ServesInParenthesesPattern.Match(trimmed);
         if (!match.Success) match = ServingsPattern.Match(trimmed);
         if (!match.Success) return false;
-        servings = int.Parse(match.Groups["count"].Value, CultureInfo.InvariantCulture);
-        return servings is > 0 and <= 100;
+        return int.TryParse(match.Groups["count"].Value, CultureInfo.InvariantCulture, out servings)
+            && servings is > 0 and <= 100;
     }
 
     internal static string? NormalizeTitleCandidate(string line)

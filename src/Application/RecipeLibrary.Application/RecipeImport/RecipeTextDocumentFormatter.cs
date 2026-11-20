@@ -1,4 +1,5 @@
 using System.Text;
+using RecipeLibrary.Application.Contracts;
 
 namespace RecipeLibrary.Application.RecipeImport;
 
@@ -7,6 +8,12 @@ internal static class RecipeTextDocumentFormatter
     internal static string NormalizePlainTextForAi(string plainText)
     {
         var document = RecipeTextDocumentExtractor.Extract(plainText ?? string.Empty);
+        if (document.IngredientLines.Count == 0 || document.Steps.Count == 0
+            || document.Warnings.Contains(ImportWarningCodes.HeuristicIngredients))
+        {
+            return plainText ?? string.Empty;
+        }
+
         var normalized = FormatNormalizedPlainText(document);
         return string.IsNullOrWhiteSpace(normalized) ? plainText ?? string.Empty : normalized;
     }

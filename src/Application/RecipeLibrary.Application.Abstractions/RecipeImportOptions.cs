@@ -25,9 +25,14 @@ public sealed class RecipeImportAiOptions
 
     public string Provider { get; init; } = "OpenAI";
 
-    public string Model { get; init; } = "gpt-4o-mini";
+    public string Model { get; init; } = "gpt-6.2-sol";
 
-    public string? ApiKey { get; init; }
+    public string? ApiKey { get; set; }
+
+    public bool IsConfigured => Enabled && HasApiKey(ApiKey);
+
+    public static bool HasApiKey(string? key) =>
+        !string.IsNullOrWhiteSpace(key) && !key.Trim().Equals("UNSET", StringComparison.OrdinalIgnoreCase);
 
     public string? Endpoint { get; init; }
 

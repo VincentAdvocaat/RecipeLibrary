@@ -1,9 +1,10 @@
 using System.Globalization;
+using System.Net;
+using AngleSharp.Dom;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using AngleSharp.Html.Parser;
-using RecipeLibrary.Application.Contracts;
 
 namespace RecipeLibrary.Application.RecipeImport;
 
@@ -21,60 +22,77 @@ public sealed class HtmlRecipeTextExtractor
             return string.Empty;
         }
 
-        var warnings = new List<string>();
-        var fromJsonLd = TryFormatJsonLdAsText(html, warnings);
-        if (!string.IsNullOrWhiteSpace(fromJsonLd))
+        var document = HtmlParser.ParseDocument(html);
+        var recipe = FindBestRecipe(document);
+        var body = document.QuerySelector("main article") ?? document.QuerySelector("article")
+            ?? document.QuerySelector("main") ?? document.Body;
+        var bodyText = body is null ? string.Empty : ReadVisibleLines(body);
+        if (recipe is not { } structured)
         {
-            return fromJsonLd;
+            return bodyText;
         }
 
-        var document = HtmlParser.ParseDocument(html);
-        var bodyText = document.Body?.TextContent ?? html;
-        return NormalizeWhitespace(bodyText);
+        var structuredText = FormatRecipeNodeAsText(structured, bodyText);
+        var draft = RecipeTextDocumentExtractor.Extract(structuredText);
+        if (draft is { IngredientLines.Count: > 0, Steps.Count: > 0 })
+        {
+            return structuredText;
+        }
+
+        var visible = RecipeTextDocumentExtractor.Extract(bodyText);
+        return visible is { IngredientLines.Count: > 0, Steps.Count: > 0 } ? bodyText : structuredText;
     }
 
-    private static string? TryFormatJsonLdAsText(string html, List<string> warnings)
+    private static JsonElement? FindBestRecipe(IDocument document)
     {
-        var document = HtmlParser.ParseDocument(html);
-        var scripts = document.QuerySelectorAll("script[type='application/ld+json']");
+        JsonElement? best = null;
+        var bestScore = 0;
 
-        foreach (var script in scripts)
+        foreach (var script in document.QuerySelectorAll("script[type='application/ld+json']"))
         {
-            var json = script.TextContent;
-            if (string.IsNullOrWhiteSpace(json))
+            if (string.IsNullOrWhiteSpace(script.TextContent))
             {
                 continue;
             }
 
             try
             {
-                using var doc = JsonDocument.Parse(json);
-                var recipe = FindRecipeNode(doc.RootElement);
-                if (recipe is null)
+                using var json = JsonDocument.Parse(script.TextContent);
+                foreach (var candidate in FindRecipeNodes(json.RootElement))
                 {
-                    continue;
-                }
+                    var ingredients = candidate.TryGetProperty("recipeIngredient", out var lines)
+                        && ParseIngredientElements(lines).Any();
+                    var steps = candidate.TryGetProperty("recipeInstructions", out var instructions)
+                        && ParseInstructionTexts(instructions).Any();
+                    var score = (ingredients ? 2 : 0) + (steps ? 1 : 0);
+                    if (score > bestScore)
+                    {
+                        best = candidate.Clone();
+                        bestScore = score;
+                    }
 
-                var bodyText = document.Body?.TextContent;
-                return FormatRecipeNodeAsText(recipe.Value, bodyText);
+                    if (bestScore == 3)
+                    {
+                        return best;
+                    }
+                }
             }
             catch (JsonException)
             {
-                warnings.Add(ImportWarningCodes.JsonLdParseSkipped);
+                // A later script or the visible recipe may still be usable.
             }
         }
 
-        return null;
+        return best;
     }
 
-    private static string FormatRecipeNodeAsText(JsonElement recipe, string? bodyText = null)
+    private static string FormatRecipeNodeAsText(JsonElement recipe, string? bodyText)
     {
         var sb = new StringBuilder();
         var title = GetStringProperty(recipe, "name");
         var description = GetStringProperty(recipe, "description");
         var prep = ParseIsoDurationMinutes(GetStringProperty(recipe, "prepTime"));
         var cook = ParseIsoDurationMinutes(GetStringProperty(recipe, "cookTime"));
-        var total = ParseIsoDurationMinutes(GetStringProperty(recipe, "totalTime"));
 
         if (!string.IsNullOrWhiteSpace(description))
         {
@@ -84,27 +102,14 @@ public sealed class HtmlRecipeTextExtractor
         }
 
         // Keep prep/cook distinct so the text parser can populate both fields.
-        var wroteSplitTimes = false;
         if (prep is > 0)
         {
             sb.AppendLine($"Bereidingstijd: {prep.Value} M");
-            wroteSplitTimes = true;
         }
 
         if (cook is > 0)
         {
             sb.AppendLine($"Kooktijd: {cook.Value} M");
-            wroteSplitTimes = true;
-        }
-
-        if (!wroteSplitTimes)
-        {
-            var combinedMinutes = (prep ?? 0) + (cook ?? 0);
-            var totalMinutes = total ?? (combinedMinutes > 0 ? combinedMinutes : null);
-            if (totalMinutes is > 0)
-            {
-                sb.AppendLine($"{totalMinutes.Value} M");
-            }
         }
 
         var difficultyLabel = TryFindDifficultyLabel(bodyText);
@@ -157,74 +162,39 @@ public sealed class HtmlRecipeTextExtractor
         return sb.ToString().Trim();
     }
 
-    private static JsonElement? FindRecipeNode(JsonElement element)
+    private static IEnumerable<JsonElement> FindRecipeNodes(JsonElement element)
     {
         if (element.ValueKind == JsonValueKind.Array)
         {
-            foreach (var item in element.EnumerateArray())
+            foreach (var candidate in element.EnumerateArray().SelectMany(FindRecipeNodes))
             {
-                var found = FindRecipeNode(item);
-                if (found is not null)
-                {
-                    return found;
-                }
-            }
-
-            return null;
-        }
-
-        if (element.ValueKind != JsonValueKind.Object)
-        {
-            return null;
-        }
-
-        if (IsRecipeType(element))
-        {
-            return element;
-        }
-
-        if (element.TryGetProperty("@graph", out var graph))
-        {
-            return FindRecipeNode(graph);
-        }
-
-        foreach (var property in element.EnumerateObject())
-        {
-            if (property.Value.ValueKind is JsonValueKind.Array or JsonValueKind.Object)
-            {
-                var found = FindRecipeNode(property.Value);
-                if (found is not null)
-                {
-                    return found;
-                }
+                yield return candidate;
             }
         }
-
-        return null;
-    }
-
-    private static bool IsRecipeType(JsonElement element)
-    {
-        if (!element.TryGetProperty("@type", out var typeElement))
+        else if (element.ValueKind == JsonValueKind.Object)
         {
-            return false;
+            if (element.TryGetProperty("@type", out var types) && EnumerateStringValues(types).Any(IsRecipeType))
+            {
+                yield return element;
+            }
+
+            foreach (var candidate in element.EnumerateObject().SelectMany(property => FindRecipeNodes(property.Value)))
+            {
+                yield return candidate;
+            }
         }
-
-        return typeElement.ValueKind switch
-        {
-            JsonValueKind.String => typeElement.GetString()?.Contains("Recipe", StringComparison.OrdinalIgnoreCase) == true,
-            JsonValueKind.Array => typeElement.EnumerateArray().Any(x =>
-                x.GetString()?.Contains("Recipe", StringComparison.OrdinalIgnoreCase) == true),
-            _ => false,
-        };
     }
+
+    private static bool IsRecipeType(string value) =>
+        value.Equals("Recipe", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("https://schema.org/Recipe", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("http://schema.org/Recipe", StringComparison.OrdinalIgnoreCase);
 
     private static IEnumerable<string> ParseIngredientElements(JsonElement element)
     {
         if (element.ValueKind == JsonValueKind.String)
         {
-            var value = element.GetString();
-            return string.IsNullOrWhiteSpace(value) ? [] : [value.Trim()];
+            return SplitRecipeLines(element.GetString());
         }
 
         if (element.ValueKind == JsonValueKind.Array)
@@ -254,8 +224,7 @@ public sealed class HtmlRecipeTextExtractor
     {
         if (element.ValueKind == JsonValueKind.String)
         {
-            var text = element.GetString()?.Trim();
-            return string.IsNullOrWhiteSpace(text) ? [] : [text];
+            return SplitRecipeLines(element.GetString());
         }
 
         if (element.ValueKind == JsonValueKind.Array)
@@ -271,11 +240,7 @@ public sealed class HtmlRecipeTextExtractor
                 return ParseInstructionTexts(nested);
             }
 
-            var text = GetStringProperty(element, "text");
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                return [text.Trim()];
-            }
+            return SplitRecipeLines(GetStringProperty(element, "text"));
         }
 
         return [];
@@ -288,18 +253,18 @@ public sealed class HtmlRecipeTextExtractor
             return null;
         }
 
-        foreach (var candidate in EnumerateStringValues(yieldElement))
-        {
-            var match = Regex.Match(candidate, @"\d+", RegexOptions.CultureInvariant);
-            if (match.Success
-                && int.TryParse(match.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
-                && value > 0)
-            {
-                return value;
-            }
-        }
-
-        return null;
+        var candidates = EnumerateStringValues(yieldElement).Select(value => value.Trim()).ToArray();
+        var labeled = candidates.FirstOrDefault(value => Regex.IsMatch(value,
+            @"^(?:serves?|voor)\s+\d+$|^\d+\s+(?:servings?|personen|porties|portie)$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
+        // Some recipe cards encode package yield as ["150", "150 ml"].
+        // A bare number is a serving count only when the card supplies no other yield label.
+        var count = labeled ?? (candidates.All(value => value.All(char.IsAsciiDigit))
+            ? candidates.FirstOrDefault()
+            : null);
+        return count is not null && RecipeMetaLineParser.TryParseServingsPhrase(count, out var servings)
+            ? servings
+            : null;
     }
 
     private static IEnumerable<string> EnumerateStringValues(JsonElement element)
@@ -366,7 +331,7 @@ public sealed class HtmlRecipeTextExtractor
 
         return value.ValueKind switch
         {
-            JsonValueKind.String => value.GetString(),
+            JsonValueKind.String => WebUtility.HtmlDecode(value.GetString()),
             JsonValueKind.Number => value.GetRawText(),
             _ => null,
         };
@@ -389,17 +354,63 @@ public sealed class HtmlRecipeTextExtractor
             return null;
         }
 
-        var hours = match.Groups["hours"].Success
-            ? int.Parse(match.Groups["hours"].Value, CultureInfo.InvariantCulture)
-            : 0;
-        var minutes = match.Groups["minutes"].Success
-            ? int.Parse(match.Groups["minutes"].Value, CultureInfo.InvariantCulture)
-            : 0;
-
-        var total = hours * 60 + minutes;
-        return total > 0 ? total : null;
+        int.TryParse(match.Groups["hours"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var hours);
+        int.TryParse(match.Groups["minutes"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var minutes);
+        return hours <= (int.MaxValue - minutes) / 60 && hours * 60 + minutes > 0
+            ? hours * 60 + minutes
+            : null;
     }
 
-    private static string NormalizeWhitespace(string text) =>
-        Regex.Replace(text.Replace("\r\n", "\n", StringComparison.Ordinal), @"[ \t]+\n", "\n").Trim();
+    private static IEnumerable<string> SplitRecipeLines(string? value)
+    {
+        var text = WebUtility.HtmlDecode(value ?? string.Empty);
+        if (text.Contains('<', StringComparison.Ordinal) && text.Contains('>', StringComparison.Ordinal))
+        {
+            var fragment = HtmlParser.ParseDocument(text).Body;
+            text = fragment is null ? text : ReadVisibleLines(fragment);
+        }
+
+        return text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private static string ReadVisibleLines(INode root)
+    {
+        var text = new StringBuilder();
+        AppendVisibleText(root, text, 0);
+        return Regex.Replace(text.ToString(), @"[ \t]+\n", "\n").Trim();
+    }
+
+    private static void AppendVisibleText(INode node, StringBuilder text, int depth)
+    {
+        if (depth > 128)
+        {
+            return;
+        }
+
+        if (node is IText content)
+        {
+            text.Append(content.Data);
+            return;
+        }
+
+        if (node is IElement { LocalName: "script" or "style" or "noscript" or "nav" or "footer" or "aside" or "template" }
+            || node is IElement element && element.HasAttribute("hidden"))
+        {
+            return;
+        }
+
+        var block = node is IElement { LocalName: "p" or "div" or "li" or "br" or "h1" or "h2" or "h3" or "h4" or "section" };
+        if (block)
+        {
+            text.AppendLine();
+        }
+        foreach (var child in node.ChildNodes)
+        {
+            AppendVisibleText(child, text, depth + 1);
+        }
+        if (block)
+        {
+            text.AppendLine();
+        }
+    }
 }
