@@ -39,7 +39,7 @@ def database():
 def http_probe():
     # No redirect following or retries: do not hide a failed first request.
     curl = shutil.which('curl.exe') or shutil.which('curl') or 'curl'
-    result = subprocess.run([curl, '--silent', '--show-error', '--max-time', '120',
+    result = subprocess.run([curl, '--disable', '--silent', '--show-error', '--max-time', '120',
                              '--output', 'NUL' if __import__('os').name == 'nt' else '/dev/null',
                              '--write-out', '%{json}', URL],
                             capture_output=True, text=True, timeout=125)
@@ -80,8 +80,13 @@ def main():
         cold = http_probe()
         warm = http_probe()
         sample = {'number': number, 'zeroReplicasAt': observed, 'revision': revisions[0]['name'],
-                  'cold': cold, 'warm': warm, 'sqlAfter': database()}
+                  'cold': cold, 'warm': warm}
         report['samples'].append(sample)
+        save()
+        try:
+            sample['sqlAfter'] = database()
+        except Exception:
+            sample['sqlAfterError'] = 'Azure management read failed; HTTP results retained'
         save()
         print(json.dumps(sample), flush=True)
         if any(p['exitCode'] != 0 or p['http_code'] != 200 for p in (cold, warm)):
