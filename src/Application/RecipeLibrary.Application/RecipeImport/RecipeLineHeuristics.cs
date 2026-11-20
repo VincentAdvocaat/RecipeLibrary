@@ -54,6 +54,14 @@ internal static class RecipeLineHeuristics
         return stepHits.Count < 2 && (stepHits.Count != 1 || trimmed.Length >= 40) && trimmed.Contains(' ', StringComparison.Ordinal);
     }
 
+    internal static bool IsLikelyNumberedInstructionLine(string line)
+    {
+        if (!HasNumberedStepPrefix(line) || !IsLikelyInstructionLine(line)) return false;
+        var text = StripNumberPrefix(line);
+        return !LooksLikeMeasuredOrToTasteIngredient(text)
+            && (!IsLikelyIngredientLine(text) || text.EndsWith('.') || text.EndsWith('!'));
+    }
+
     internal static bool IsChromeLine(string line)
     {
         var normalized = line.Trim();

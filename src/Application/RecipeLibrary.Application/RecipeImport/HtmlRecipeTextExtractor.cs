@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using AngleSharp.Html.Parser;
+using RecipeLibrary.Application.Contracts;
 
 namespace RecipeLibrary.Application.RecipeImport;
 
@@ -34,13 +35,21 @@ public sealed class HtmlRecipeTextExtractor
 
         var structuredText = FormatRecipeNodeAsText(structured, bodyText);
         var draft = RecipeTextDocumentExtractor.Extract(structuredText);
-        if (draft is { IngredientLines.Count: > 0, Steps.Count: > 0 })
+        if (draft is { IngredientLines.Count: > 0, Steps.Count: > 0 }
+            && !draft.Warnings.Contains(ImportWarningCodes.HeuristicIngredients))
         {
             return structuredText;
         }
 
         var visible = RecipeTextDocumentExtractor.Extract(bodyText);
-        return visible is { IngredientLines.Count: > 0, Steps.Count: > 0 } ? bodyText : structuredText;
+        var reliableIngredients = visible.IngredientLines.Count > 0
+            && !visible.Warnings.Contains(ImportWarningCodes.HeuristicIngredients);
+        if (!string.Equals(draft.Title, visible.Title, StringComparison.OrdinalIgnoreCase))
+        {
+            return reliableIngredients && visible.Steps.Count > 0 ? bodyText : structuredText;
+        }
+
+        return FormatRecipeNodeAsText(structured, bodyText, visible, reliableIngredients);
     }
 
     private static JsonElement? FindBestRecipe(IDocument document)
@@ -86,7 +95,8 @@ public sealed class HtmlRecipeTextExtractor
         return best;
     }
 
-    private static string FormatRecipeNodeAsText(JsonElement recipe, string? bodyText)
+    private static string FormatRecipeNodeAsText(JsonElement recipe, string? bodyText,
+        RecipeTextDocument? visible = null, bool reliableVisibleIngredients = false)
     {
         var sb = new StringBuilder();
         var title = GetStringProperty(recipe, "name");
@@ -134,12 +144,15 @@ public sealed class HtmlRecipeTextExtractor
         sb.AppendLine();
         sb.AppendLine();
 
-        if (recipe.TryGetProperty("recipeIngredient", out var ingredientsElement))
+        var ingredients = recipe.TryGetProperty("recipeIngredient", out var ingredientsElement)
+            ? ParseIngredientElements(ingredientsElement).ToArray() : [];
+        if (ingredients.Length == 0 && reliableVisibleIngredients && visible is not null)
         {
-            foreach (var line in ParseIngredientElements(ingredientsElement))
-            {
-                sb.AppendLine(line);
-            }
+            ingredients = visible.IngredientLines.ToArray();
+        }
+        foreach (var line in ingredients)
+        {
+            sb.AppendLine(line);
         }
 
         sb.AppendLine();
@@ -151,12 +164,15 @@ public sealed class HtmlRecipeTextExtractor
 
         sb.AppendLine();
 
-        if (recipe.TryGetProperty("recipeInstructions", out var instructionsElement))
+        var instructions = recipe.TryGetProperty("recipeInstructions", out var instructionsElement)
+            ? ParseInstructionTexts(instructionsElement).ToArray() : [];
+        if (instructions.Length == 0 && visible is not null)
         {
-            foreach (var step in ParseInstructionTexts(instructionsElement))
-            {
-                sb.AppendLine(step);
-            }
+            instructions = visible.Steps.Select(step => step.Text).ToArray();
+        }
+        foreach (var step in instructions)
+        {
+            sb.AppendLine(step);
         }
 
         return sb.ToString().Trim();

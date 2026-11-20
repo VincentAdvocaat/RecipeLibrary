@@ -105,14 +105,14 @@ public static class RecipeTextDocumentExtractor
                     if (!RecipeLineHeuristics.IsChromeLine(line)) introBuffer.Add(line);
                     break;
                 case Section.Ingredients:
-                    if (ingredientLines.Count > 0 && RecipeLineHeuristics.HasNumberedStepPrefix(line)
-                        && RecipeLineHeuristics.IsLikelyInstructionLine(line))
+                    if (ingredientLines.Count > 0 && RecipeLineHeuristics.IsLikelyNumberedInstructionLine(line))
                     {
                         section = Section.Instructions;
                         instructionLines.Add(RecipeLineHeuristics.StripNumberPrefix(line));
                         break;
                     }
                     if (ingredientsClosed) break;
+                    line = RecipeLineHeuristics.StripNumberPrefix(line);
                     if (RecipeLineHeuristics.IsIngredientSubsectionHeader(line))
                     {
                         inGarnishIngredients = RecipeLineHeuristics.IsGarnishSubsectionHeader(line);
