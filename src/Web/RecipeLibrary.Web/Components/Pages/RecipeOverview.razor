@@ -197,6 +197,9 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        ++_recipeLoadVersion;
+        _items = [];
+        _loadingRecipes = true;
         if (!DemoContext.IsDemo)
         {
             _household = await QueryBus.QueryAsync<GetHouseholdQuery, HouseholdSummary?>(new());
@@ -206,7 +209,6 @@
         {
             CancelSelectMode();
             _statusMessage = null;
-            _items = [];
             _displayedHouseholdId = ActiveHouseholdId;
         }
 

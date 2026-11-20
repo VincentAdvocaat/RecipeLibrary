@@ -35,6 +35,8 @@ public sealed class HouseholdTests(E2eFixture fixture)
         await Expect(manager.GetByText("Al gedeeld", new() { Exact = true })).ToBeVisibleAsync();
 
         await manager.GetByRole(AriaRole.Link, new() { Name = "Huishouden", Exact = true }).ClickAsync();
+        await Expect(manager).ToHaveURLAsync(new Regex("/recipes\\?library=household$"));
+        await Expect(manager.GetByTestId(UiTestIds.RecipeListItem(fixture.Seed.RecipeId))).ToHaveCountAsync(0);
         await manager.GetByText(TestDataSeeder.LasagnaTitle, new() { Exact = true }).ClickAsync();
         await Expect(manager.GetByRole(AriaRole.Heading, new() { Name = TestDataSeeder.LasagnaTitle })).ToBeVisibleAsync();
         var sharedRecipeUrl = manager.Url;
