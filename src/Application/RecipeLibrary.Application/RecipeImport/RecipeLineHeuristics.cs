@@ -59,7 +59,8 @@ internal static class RecipeLineHeuristics
         if (!HasNumberedStepPrefix(line) || !IsLikelyInstructionLine(line)) return false;
         var text = StripNumberPrefix(line);
         return !LooksLikeMeasuredOrToTasteIngredient(text)
-            && (!IsLikelyIngredientLine(text) || text.EndsWith('.') || text.EndsWith('!'));
+            && (!IsLikelyIngredientLine(text) || text.EndsWith('.') || text.EndsWith('!')
+                || RecipeTextSectionLexicon.InstructionActionPattern.IsMatch(text));
     }
 
     internal static bool IsChromeLine(string line)

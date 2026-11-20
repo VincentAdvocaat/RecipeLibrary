@@ -6,11 +6,20 @@ namespace RecipeLibrary.Application.Tests.RecipeImport;
 public sealed class RecipeSourceExtractionTests
 {
     [Fact]
+    public void TextExtraction_NumberedIngredientsFollowedByActionsWithoutPunctuation_SeparatesSections()
+    {
+        var draft = RecipeTextDocumentExtractor.Extract("Ingredients\n1. 200 g flour\n2. 100 g sugar\n3. 2 large eggs\n1. Mix all ingredients\n2. Bake until golden");
+
+        Assert.Equal(["200 g flour", "100 g sugar", "2 large eggs"], draft.IngredientLines);
+        Assert.Equal(["Mix all ingredients", "Bake until golden"], draft.Steps.Select(step => step.Text));
+    }
+
+    [Fact]
     public void TextExtraction_PreservesNumberedMeasuredAndBareIngredients()
     {
-        var draft = RecipeTextDocumentExtractor.Extract("Ingredients\n1. 200 g flour\n2. 100 g sugar\n3. 2 large eggs\n4. olive oil\n5. salt and pepper");
+        var draft = RecipeTextDocumentExtractor.Extract("Ingredients\n1. 200 g flour\n2. 100 g sugar\n3. 2 large eggs\n4. olive oil\n5. salt and pepper\n6. roast beef\n7. roast chicken");
 
-        Assert.Equal(["200 g flour", "100 g sugar", "2 large eggs", "olive oil", "salt and pepper"], draft.IngredientLines);
+        Assert.Equal(["200 g flour", "100 g sugar", "2 large eggs", "olive oil", "salt and pepper", "roast beef", "roast chicken"], draft.IngredientLines);
         Assert.Empty(draft.Steps);
     }
 
