@@ -124,7 +124,7 @@ additional metadata read; offline checks cover both fixes. They did not change
 the running process or target environment.
 
 Raw selected timing JSON, clean-browser results, and filtered platform evidence
-are retained in the operator's protected workspace under
+are retained in the operator's local workspace under
 `.codex/reviews/RecipeLibrary/startup*-2026-11-20.json`; no credential or cookie
 values were included in the evidence.
 
