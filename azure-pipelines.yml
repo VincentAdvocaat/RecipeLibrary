@@ -226,6 +226,8 @@ stages:
                     environment="$(environmentName)" \
                     provisionSqlInfrastructure=${{ lower(parameters.provisionSqlInfrastructure) }} \
                     enableWelcome=true \
+                    useBasicSql=true \
+                    enableDaytimeWarmup=true \
                     enableAnalytics=${{ lower(parameters.enableAnalytics) }} \
                     tenantId="$(AZURE_TENANT_ID)" \
                     entraAdminLogin="$(AZURE_ENTRA_ADMIN_LOGIN)" \
@@ -243,11 +245,11 @@ stages:
                   echo "SQL database missing or inaccessible. For initial provisioning, manually enable provisionSqlInfrastructure; do not enable it for routine releases."
                   exit 1
                 fi
-                if ! echo "$sql_settings" | jq -e '.useFreeLimit == true and .freeLimitExhaustionBehavior == "AutoPause"' >/dev/null; then
-                  echo "SQL free-limit protection is missing. Stopping deployment validation without changing SQL."
+                if ! echo "$sql_settings" | jq -e '.sku.tier == "Basic" and .sku.name == "Basic" and .sku.capacity == 5 and .maxSizeBytes <= 2147483648 and .useFreeLimit != true' >/dev/null; then
+                  echo "Expected approved SQL Basic 5 DTU / <=2 GiB. Run the reviewed SQL conversion procedure first; routine releases never change the database tier."
                   exit 1
                 fi
-                echo "SQL free limit and AutoPause verified through management metadata."
+                echo "Approved SQL Basic plan verified through management metadata."
 
                 container_app_name="$(echo "$outputs" | jq -r '.containerAppName.value')"
                 container_app_fqdn="$(echo "$outputs" | jq -r '.containerAppFqdn.value')"

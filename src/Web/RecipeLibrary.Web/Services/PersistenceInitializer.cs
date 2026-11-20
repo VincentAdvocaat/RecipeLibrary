@@ -38,5 +38,6 @@ public sealed class PersistenceInitializer(
 
 public sealed class PersistenceWarmupOptions
 {
+    public bool AutoStart { get; set; }
     public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(5);
 }

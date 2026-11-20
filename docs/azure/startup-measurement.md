@@ -1,5 +1,11 @@
 # Startup measurement
 
+Current SEC uses the [daytime Basic plan](daytime-basic.md). Its automatic
+initialization means waking a container also initializes SQL. The container-only
+probe now refuses that mode before sending HTTP; do not disable the live plan
+merely to reproduce the historical SQL-free baseline below. The daytime cron
+also intentionally prevents scale-to-zero during its active window.
+
 ## Repeat the container-only probe
 
 Run outside deployment windows, while signed into Azure CLI with management read

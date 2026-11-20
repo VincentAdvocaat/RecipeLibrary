@@ -10,11 +10,14 @@ polls passive readiness and replaces the page with
 `https://app-recipelibrary.vasoftware.nl` when SQL is reachable. Until public domain
 binding is complete, deployments use the generated Container Apps hostname instead.
 
-Opening the landing page does not start SQL. Only the explicit application start
-action requests migrations, seeds or a SQL probe. Ordinary GET/HEAD requests, scans
-and health/readiness requests never request initialization or a SQL probe. This
-is a request boundary, not a guarantee that an automated client cannot click or POST. Container Apps still allows zero replicas; SQL
-still auto-pauses after 60 minutes. Direct app links still incur container startup.
+SEC uses SQL Basic and an opted-in automatic initialization when the container
+starts. A cron scale rule prewarms it at 07:59 for daily availability 08:00–20:00
+Europe/Paris; at night the HTTP rule may still start a sleeping container on demand.
+Readiness reads and health handlers themselves do not query SQL. In environments
+with `PersistenceWarmup:AutoStart=false` (the default), initialization still waits
+for the explicit start action and passive GET/HEAD requests do not trigger it.
+See [daytime Basic runbook](daytime-basic.md). SQL Basic stays online at its fixed
+rate; only the application container can scale to zero at night.
 To share a recipe through the instant entrance, use
 `https://recipelibrary.vasoftware.nl/?returnUrl=%2Frecipes%2FRECIPE_ID`.
 

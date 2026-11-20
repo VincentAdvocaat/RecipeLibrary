@@ -13,7 +13,7 @@ public sealed class NullApplicationWakeObserver : IApplicationWakeObserver
     public void Observe(ApplicationWakeEvent wakeEvent) { }
 }
 
-/// <summary>A process-wide, single-flight explicit request. Reading state never signals it.</summary>
+/// <summary>A process-wide, single-flight initialization request. Reading state never signals it.</summary>
 public sealed class ApplicationWakeRequest(IEnumerable<IApplicationWakeObserver> observers,
     ILogger<ApplicationWakeRequest> logger)
 {

@@ -18,7 +18,7 @@ public sealed class AnalyticsWakeObserver(TrafficRecorder recorder) : IApplicati
             "ProbeFailed" => "database-probe-failure",
             _ => null
         };
-        if (kind is not null) recorder.RecordLifecycle(kind, wakeEvent.Reason is "free-limit-exhausted" or "probe-failed" ? wakeEvent.Reason : "user-start", wakeEvent.CorrelationId, wakeEvent.AttemptId);
+        if (kind is not null) recorder.RecordLifecycle(kind, wakeEvent.Reason == "AutomaticStartup" ? "startup" : wakeEvent.Reason is "free-limit-exhausted" or "probe-failed" ? wakeEvent.Reason : "user-start", wakeEvent.CorrelationId, wakeEvent.AttemptId);
     }
 }
 

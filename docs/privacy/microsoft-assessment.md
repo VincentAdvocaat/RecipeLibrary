@@ -78,3 +78,7 @@ De applicatie vult de standaard Cosmos-TTL aan met een per-item resterende termi
 Vastgelegd zijn het accountgebonden MCA-type, de actuele publieke DPA/SCC-verwijzingen en subverwerkerslijst, de geconfigureerde regio's, de aangetroffen loggingconfiguratie en de genoemde retentie-instellingen. Er hoeft voor deze vastlegging geen betaalde dienst, nieuw abonnement of nieuwe toestemming bij Microsoft te worden geactiveerd.
 
 Niet bewezen zijn individuele acceptatiehistorie en afwijkende afspraken, feitelijke toegang door specifieke subverwerkers, volledige geografische routes, retentie van alle interne platformlogs, of contracten met OpenAI en Google. Presenteer die punten niet als gecontroleerd. Deze bevindingen kunnen worden verwerkt in de verklaring en belangenafweging; cookiegedrag en de eigen applicatiegrondslag worden door de integratiechat afzonderlijk beoordeeld.
+
+## Wijziging 20 november 2026
+
+Na expliciete opdracht is voor SEC Azure SQL Basic (5 DTU / 2 GiB) gekozen met overdag een warme appcontainer. De eerdere free-limit-waarnemingen hierboven zijn de nulmeting van 19 november, niet de nieuwe doelconfiguratie. Provider, regio, identiteiten en korte backupretentie blijven gelijk. Zie [uitvoeringsdraaiboek](../azure/daytime-basic.md); de live verificatie wordt bij de uitrol-PR vastgelegd.

@@ -24,6 +24,9 @@ public sealed class PersistenceWarmupHostedService(
             return;
         }
 
+        // Opt-in only for the approved non-sleeping Basic plan. The free plan
+        // still waits for an explicit action and passive pages remain SQL-free.
+        if (options.Value.AutoStart) wake.Request("AutomaticStartup", "startup");
         var attempt = await wake.WaitAsync(stoppingToken);
         using var wakeContext = ApplicationWakeContext.Push(attempt);
         wake.Report(attempt, "Initializing");

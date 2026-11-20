@@ -44,7 +44,7 @@ public sealed class TrafficRecorder
         if (kind is not ("database-connection-open" or "database-connection-failure")) return;
         var attempt = RecipeLibrary.Web.Services.ApplicationWakeContext.Current;
         Enqueue(new(DateTimeOffset.UtcNow, kind,
-            Path: TrafficPrivacy.Path(context?.Request.Path.Value ?? (attempt is null ? "/background" : "/api/system/start")),
+            Path: TrafficPrivacy.Path(context?.Request.Path.Value ?? (attempt is null || attempt.Reason == "AutomaticStartup" ? "/background" : "/api/system/start")),
             RequestId: TrafficPrivacy.Bound(context?.TraceIdentifier ?? attempt?.CorrelationId, 64), Reason: reason,
             AttemptId: TrafficPrivacy.Bound(attempt?.AttemptId, 64)));
     }

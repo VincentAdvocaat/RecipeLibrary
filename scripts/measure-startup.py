@@ -57,6 +57,11 @@ def main():
     parser.add_argument('--idle-timeout', type=int, default=1200,
                         help='Maximum seconds to wait for zero replicas before each sample')
     args = parser.parse_args()
+    env = azure('containerapp', 'show', '-g', GROUP, '-n', APP,
+                '--query', 'properties.template.containers[0].env') or []
+    if any(e.get('name', '').casefold() == 'persistencewarmup__autostart'
+           and str(e.get('value', '')).strip().casefold() == 'true' for e in env):
+        raise RuntimeError('Container-only SQL-free measurement is unavailable with automatic initialization enabled; do not change production configuration to run this probe')
     report = {'startedAt': utc(), 'target': URL, 'sqlBefore': database(), 'samples': []}
 
     def save():

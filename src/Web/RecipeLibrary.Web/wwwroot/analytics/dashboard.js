@@ -39,7 +39,7 @@ function render(data) {
     for (const [label, number, hint] of [
         ['Serververzoeken', totals.request, 'Exclusief statische bestanden en healthchecks'],
         ['Browsermeldingen', (totals.landing || 0) + (totals.browser || 0), 'JavaScript actief; geen unieke personen'],
-        ['Startverzoeken', totals['database-start-requested'], 'Bewuste startacties en hun aanleiding'],
+        ['Startverzoeken', totals['database-start-requested'], 'Automatische of aangevraagde app-initialisaties'],
         ['Mislukte starts', totals['database-start-failure'], 'Bekijk de gebeurtenissen hieronder']
     ]) { const card = text('article', '', 'stat'); card.append(text('div', label), text('strong', count(number)), text('span', hint)); $('#stats').append(card); }
     const bars = $('#chart'); bars.replaceChildren();
