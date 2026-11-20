@@ -219,6 +219,30 @@ public sealed class AnalyticsTests
         Assert.Null(RecipeLibrary.Web.Services.ApplicationWakeContext.Current);
     }
 
+    [Fact]
+    public async Task Automatic_warmup_is_reported_as_startup_not_a_visitor_action()
+    {
+        var recorder = new TrafficRecorder();
+        var observer = new AnalyticsWakeObserver(recorder);
+        var wake = new RecipeLibrary.Web.Services.ApplicationWakeRequest([observer], Microsoft.Extensions.Logging.Abstractions.NullLogger<RecipeLibrary.Web.Services.ApplicationWakeRequest>.Instance);
+        var readiness = new RecipeLibrary.Infrastructure.Persistence.PersistenceReadiness();
+        var interceptor = new TrafficSqlConnectionInterceptor(recorder, new HttpContextAccessor());
+        using var service = new RecipeLibrary.Web.Services.PersistenceWarmupHostedService(new CorrelationInitializer(interceptor),
+            Microsoft.Extensions.Options.Options.Create(new RecipeLibrary.Web.Services.PersistenceWarmupOptions { AutoStart = true }), readiness,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<RecipeLibrary.Web.Services.PersistenceWarmupHostedService>.Instance, wake);
+        await service.StartAsync(default);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (!readiness.HasPermanentlyFailed) await Task.Delay(10, deadline.Token);
+        var store = new MemoryTrafficStore();
+        await new TrafficWriter(recorder, store).FlushAsync(default);
+        var events = Assert.Single(await store.ReadAsync(DateTimeOffset.UtcNow.AddHours(-1), default)).Events;
+        Assert.Contains(events, e => e.Kind == "database-start-requested" && e.Reason == "startup");
+        Assert.Contains(events, e => e.Kind == "database-connection-open" && e.Path == "/background");
+        Assert.All(events, e => Assert.Equal("startup", e.RequestId));
+        Assert.NotEmpty(Assert.Single(events.Select(e => e.AttemptId).Distinct()));
+        await service.StopAsync(default);
+    }
+
     private sealed class CorrelationInitializer(TrafficSqlConnectionInterceptor interceptor) : RecipeLibrary.Web.Services.IPersistenceInitializer
     {
         public async Task InitializeAsync(CancellationToken cancellationToken)

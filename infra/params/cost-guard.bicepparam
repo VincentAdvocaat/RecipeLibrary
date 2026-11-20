@@ -7,5 +7,5 @@ param environment = 'test'
 // Set after the first main.bicep deploy (output: containerAppName)
 param containerAppName = 'ca-recipelibrary-test-example'
 
-param budgetAmount = 5
+param budgetAmount = 12
 param alertEmail = 'your.email@example.com'

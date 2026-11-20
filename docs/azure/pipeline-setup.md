@@ -29,19 +29,22 @@ Reapplying serverless database properties can resume SQL even without app traffi
 therefore an unchanged SQL resource must not be redeployed on each app release.
 
 The pipeline reads database management metadata after deployment and fails if SQL
-is missing/inaccessible or `useFreeLimit=true` / `freeLimitExhaustionBehavior=AutoPause`
-is absent. It does not connect to the database or automatically repair those settings.
+is missing/inaccessible or does not match the approved plan. SEC requires Basic
+5 DTU / at most 2 GiB; optional NEU retains `useFreeLimit=true` / `AutoPause`.
+The check does not connect to SQL or automatically repair those settings.
 
 For a **first deployment** into an empty environment, manually run the pipeline
 with `provisionSqlInfrastructure=true`. The same explicit option is required for
 intentional changes to SQL configuration, Entra admin or firewall rules. It may
-resume SQL. The provisioning module retains the same names, serverless SKU,
-32 GiB size, free limit and AutoPause settings. Leave the option off for routine
+resume SQL. The provisioning module retains the same names. `useBasicSql=true`
+selects Basic 5 DTU / 2 GiB; the default false retains free serverless for other
+environments. The SEC pipeline explicitly selects Basic and daytime warmup. Leave the option off for routine
 releases, including rollback releases. Keep deployment mode **Incremental**;
 complete mode can delete resources omitted from a template.
 
 Compiled ARM regression tests verify that every SQL resource is behind the
-default-off gate and that free-limit settings and app connection names are retained.
+default-off gate and that both SQL plans, schedule and app connection names are retained.
+See [daytime Basic runbook](daytime-basic.md) for the approved SEC plan and conversion.
 After release, compare SQL state and Azure Activity Log resume events with the
 deployment window. Public HTTP probes must not POST `/api/system/start`.
 

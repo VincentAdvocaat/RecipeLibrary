@@ -188,6 +188,32 @@ public sealed class StartupAvailabilityTests
     }
 
     [Fact]
+    public async Task AutomaticWarmup_InitializesWithoutVisitor_AndKeepsSingleFlight()
+    {
+        var initializer = new BlockedInitializer();
+        var readiness = new PersistenceReadiness();
+        var observer = new Observer();
+        var wake = new ApplicationWakeRequest([observer], NullLogger<ApplicationWakeRequest>.Instance);
+        using var service = new PersistenceWarmupHostedService(initializer,
+            Options.Create(new PersistenceWarmupOptions { AutoStart = true }), readiness,
+            NullLogger<PersistenceWarmupHostedService>.Instance, wake);
+        await service.StartAsync(default);
+        await WaitUntilAsync(() => initializer.Calls == 1);
+        Assert.False(readiness.IsReady);
+        wake.Request("ExplicitApplicationStart", "later-visitor");
+        initializer.Complete();
+        await WaitUntilAsync(() => readiness.IsReady);
+        Assert.Equal(1, initializer.Calls);
+        Assert.All(observer.Events, entry =>
+        {
+            Assert.Equal("AutomaticStartup", entry.Reason);
+            Assert.Equal("startup", entry.CorrelationId);
+        });
+        Assert.Equal(new[] { "Requested", "Initializing", "Ready" }, observer.Events.Select(e => e.Stage));
+        await service.StopAsync(default);
+    }
+
+    [Fact]
     public async Task InitializerFailure_IsReportedWithoutCrashingHost()
     {
         var startup = new PersistenceReadiness();

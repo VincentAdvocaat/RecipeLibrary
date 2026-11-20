@@ -16,7 +16,7 @@ param nameSuffix string = ''
 param containerAppName string
 
 @description('Monthly budget amount in the subscription billing currency.')
-param budgetAmount int = 5
+param budgetAmount int = 12
 
 @description('Email address for budget warning notifications.')
 param alertEmail string

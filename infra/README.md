@@ -112,3 +112,5 @@ with the app).
 
 Remove legacy App Service resources manually after ACA is validated; SQL and Blob
 data are preserved.
+
+SEC now uses the approved Basic SQL plan and a daily 07:59 prewarm / 20:00 end cron rule. See [daytime Basic runbook](../docs/azure/daytime-basic.md). Optional NEU remains free-serverless without the daytime rule.

@@ -24,15 +24,34 @@ test('ordinary deployments cannot write any SQL resource', () => {
     assert.equal(sql.properties.mode, 'Incremental');
 });
 
-test('explicit SQL provisioning keeps free limit, auto-pause and serverless capacity', () => {
+test('explicit provisioning separates approved Basic from free serverless defaults', () => {
+    const inner = sql.properties.template;
     const db = allSql.find(r => r.resource.type === 'Microsoft.Sql/servers/databases').resource;
-    assert.equal(db.properties.useFreeLimit, true);
-    assert.equal(db.properties.freeLimitExhaustionBehavior, 'AutoPause');
-    assert.equal(db.properties.autoPauseDelay, 60);
-    assert.equal(db.properties.minCapacity, "[json('0.5')]");
-    assert.equal(db.properties.maxSizeBytes, 34359738368);
-    assert.equal(db.sku.name, 'GP_S_Gen5');
-    assert.equal(db.sku.capacity, 2);
+    assert.equal(template.parameters.useBasicSql.defaultValue, false);
+    assert.equal(inner.parameters.useBasicSql.defaultValue, false);
+    assert.equal(db.sku, "[if(parameters('useBasicSql'), variables('basicSku'), variables('serverlessSku'))]");
+    assert.equal(db.properties, "[if(parameters('useBasicSql'), variables('basicProperties'), variables('serverlessProperties'))]");
+    assert.deepEqual(inner.variables.basicSku, {name: 'Basic', tier: 'Basic', capacity: 5});
+    assert.deepEqual(inner.variables.basicProperties, {maxSizeBytes: 2147483648, useFreeLimit: false});
+    assert.equal(inner.variables.serverlessProperties.useFreeLimit, true);
+    assert.equal(inner.variables.serverlessProperties.freeLimitExhaustionBehavior, 'AutoPause');
+    assert.equal(inner.variables.serverlessProperties.autoPauseDelay, 60);
+    assert.equal(inner.variables.serverlessSku.name, 'GP_S_Gen5');
+});
+
+test('daytime cron retains night scale-to-zero and both daylight-saving offsets', () => {
+    const app = resourcesOf(template).find(r => r.type === 'Microsoft.App/containerApps');
+    assert.equal(app.properties.template.scale.minReplicas, 0);
+    assert.equal(app.properties.template.scale.maxReplicas, 1);
+    assert.ok(app.properties.template.scale.rules.includes("parameters('enableDaytimeWarmup')"));
+    const rule = template.variables.daytimeWarmRule;
+    assert.equal(rule.custom.type, 'cron');
+    assert.deepEqual(rule.custom.metadata, {timezone: 'Europe/Paris', start: '59 7 * * *', end: '0 20 * * *', desiredReplicas: '1'});
+    const localHour = iso => Number(new Intl.DateTimeFormat('en-GB', {timeZone: rule.custom.metadata.timezone, hour:'2-digit',hourCycle:'h23'}).format(new Date(iso)));
+    assert.equal(localHour('2026-01-15T07:00:00Z'), 8);
+    assert.equal(localHour('2026-07-15T06:00:00Z'), 8);
+    assert.equal(localHour('2026-01-15T19:00:00Z'), 20);
+    assert.equal(localHour('2026-07-15T18:00:00Z'), 20);
 });
 
 test('outputs and application connection retain the same SQL names without reading SQL', () => {

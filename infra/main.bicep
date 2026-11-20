@@ -30,6 +30,12 @@ param allowAzureServices bool = true
 @description('Explicit initial SQL provisioning or intentional SQL configuration maintenance. False for ordinary app releases to avoid resuming serverless SQL.')
 param provisionSqlInfrastructure bool = false
 
+@description('Use the approved Basic 5 DTU / 2 GiB SQL plan. False retains free serverless for other environments.')
+param useBasicSql bool = false
+
+@description('Keep one replica daily with 07:59 prewarm for 08:00-20:00 Europe/Paris; allow scale-to-zero at night.')
+param enableDaytimeWarmup bool = false
+
 @description('GHCR image repository without digest (lowercase), e.g. ghcr.io/owner/recipelibrary.')
 param ghcrImageRepository string = 'ghcr.io/vincentadvocaat/recipelibrary'
 
@@ -103,6 +109,19 @@ var sqlDatabaseName = toLower('${projectName}-${environment}')
 
 var sqlFqdn = '${sqlServerName}.database.windows.net'
 var containerImage = '${ghcrImageRepository}@${containerImageDigest}'
+var daytimeWarmRule = {
+  name: 'daytime-warm'
+  custom: {
+    type: 'cron'
+    metadata: {
+      timezone: 'Europe/Paris'
+      start: '59 7 * * *'
+      end: '0 20 * * *'
+      desiredReplicas: '1'
+    }
+  }
+}
+
 var dataProtectionBlobUri = 'https://${storageAccount.name}.blob.core.windows.net/dataprotection/keys.xml'
 
 // Key Vault secret names (rotate via Azure CLI without redeploy). Container Apps secret aliases for secretRef.
@@ -336,6 +355,7 @@ module sql './sql.bicep' = if (provisionSqlInfrastructure) {
     location: location
     sqlServerName: sqlServerName
     sqlDatabaseName: sqlDatabaseName
+    useBasicSql: useBasicSql
     tenantId: tenantId
     entraAdminLogin: entraAdminLogin
     entraAdminObjectId: entraAdminObjectId
@@ -512,6 +532,10 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: 'true'
             }
             {
+              name: 'PersistenceWarmup__AutoStart'
+              value: useBasicSql ? 'true' : 'false'
+            }
+            {
               name: 'Welcome__AllowedOrigins__0'
               value: enableWelcome ? 'https://recipelibrary.vasoftware.nl' : ''
             }
@@ -596,7 +620,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
       scale: {
         minReplicas: 0
         maxReplicas: 1
-        rules: [
+        rules: concat([
           {
             name: 'http-scaler'
             http: {
@@ -605,7 +629,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               }
             }
           }
-        ]
+        ], enableDaytimeWarmup ? [daytimeWarmRule] : [])
       }
     }
   }
