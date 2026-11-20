@@ -20,10 +20,10 @@ public sealed class GetRecipeByIdQueryHandler(
             return null;
         }
 
-        return MapToDetailResult(recipe);
+        return MapToDetailResult(recipe, ownerUserId);
     }
 
-    internal static GetRecipeByIdResult MapToDetailResult(Recipe recipe)
+    private static GetRecipeByIdResult MapToDetailResult(Recipe recipe, string userId)
     {
         return new GetRecipeByIdResult
         {
@@ -36,6 +36,7 @@ public sealed class GetRecipeByIdQueryHandler(
             Category = (int)recipe.Category,
             Servings = recipe.Servings,
             Difficulty = (int)recipe.Difficulty,
+            MyRating = recipe.Ratings.FirstOrDefault(r => r.UserId == userId)?.Stars,
             Ingredients = recipe.Ingredients
                 .OrderBy(i => i.Name)
                 .Select(i => new RecipeDetailIngredientItem

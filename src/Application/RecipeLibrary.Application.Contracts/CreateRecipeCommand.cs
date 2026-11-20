@@ -119,6 +119,7 @@ public sealed class GetRecipeByIdResult
     public int Servings { get; init; }
     /// <summary><see cref="Difficulty"/> enum value.</summary>
     public int Difficulty { get; init; }
+    public int? MyRating { get; init; }
     public IReadOnlyList<RecipeDetailIngredientItem> Ingredients { get; init; } = [];
     public IReadOnlyList<RecipeDetailStepItem> Steps { get; init; } = [];
 }
