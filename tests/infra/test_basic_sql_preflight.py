@@ -11,6 +11,19 @@ spec.loader.exec_module(preflight)
 
 
 class PreflightTests(unittest.TestCase):
+    def test_resolved_cli_path_is_used(self):
+        with patch.object(preflight.shutil, "which", return_value="C:/AzureCLI/az.cmd"), \
+                patch.object(preflight.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "[]")) as run:
+            self.assertEqual(preflight.az_json("sql", "server", "list"), [])
+            self.assertEqual(run.call_args.args[0], ["C:/AzureCLI/az.cmd", "sql", "server", "list", "-o", "json"])
+
+    def test_cli_start_failure_returns_failure(self):
+        with patch.object(preflight.sys, "argv", ["check-basic-sql.py", "rg", "project", "test"]), \
+                patch.object(preflight, "check", side_effect=OSError("private details")), \
+                patch.object(preflight.sys, "stderr") as stderr:
+            self.assertEqual(preflight.main(), 1)
+            self.assertNotIn("private details", str(stderr.write.call_args_list))
+
     def run_check(self, servers=None, databases=None, initial=False):
         with patch.object(preflight, "az_json", side_effect=[
                 servers if servers is not None else [{"name": "sql-recipelibrary-test-sec-abc"}],

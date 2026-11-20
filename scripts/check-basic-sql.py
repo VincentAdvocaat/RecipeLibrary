@@ -2,12 +2,13 @@
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 
 
 def az_json(*args):
-    result = subprocess.run(["az", *args, "-o", "json"], check=True,
+    result = subprocess.run([shutil.which("az") or "az", *args, "-o", "json"], check=True,
                             capture_output=True, text=True)
     return json.loads(result.stdout)
 
@@ -51,6 +52,9 @@ def main():
     args = parser.parse_args()
     try:
         check(args.resource_group, args.project, args.environment, args.allow_initial == "true")
+    except OSError:
+        print("SQL preflight failed: Azure CLI could not be started.", file=sys.stderr)
+        return 1
     except (ValueError, KeyError, TypeError, subprocess.CalledProcessError) as error:
         print(f"SQL preflight failed: {error}", file=sys.stderr)
         return 1
