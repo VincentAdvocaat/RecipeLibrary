@@ -19,6 +19,11 @@ First deploy creates a placeholder secret value `UNSET` if the secret does not
 exist yet. Later infrastructure deploys **do not overwrite** a secret you set
 via CLI.
 
+Recipe import defaults to GPT-6.2 Sol (`gpt-6.2-sol`). If you claim ChatGPT API
+credits, create the project key in the API organization that received those
+credits and use it for this secret.
+[OpenAI API credits guide](https://developers.openai.com/api/docs/guides/chatgpt-api-credits)
+
 ## One-time setup after first infra deploy
 
 1. Widen the pipeline SP **Role Based Access Control Administrator** condition so
@@ -93,3 +98,7 @@ az containerapp revision restart -g $RG -n $CA --revision $REV
 
 Use `.env` (gitignored) or user secrets — see `.env.example`. Do not put the key
 in `appsettings*.json`.
+
+Set `RecipeImport__Ai__Enabled=true` and use either the app-specific key setting
+or `OPENAI_API_KEY`. The app-specific key takes precedence. An empty value or
+`UNSET` allows the local fallback.

@@ -14,6 +14,15 @@ public static class RecipeImportServiceRegistration
     public static IServiceCollection AddRecipeImport(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<RecipeImportOptions>(configuration.GetSection(RecipeImportOptions.SectionName));
+        var apiKey = configuration[$"{RecipeImportOptions.SectionName}:Ai:ApiKey"];
+        if (!RecipeImportAiOptions.HasApiKey(apiKey))
+        {
+            var projectKey = configuration["OPENAI_API_KEY"];
+            var endpoint = configuration[$"{RecipeImportOptions.SectionName}:Ai:Endpoint"];
+            apiKey = IsOpenAiEndpoint(endpoint) && RecipeImportAiOptions.HasApiKey(projectKey) ? projectKey : null;
+        }
+
+        services.PostConfigure<RecipeImportOptions>(options => options.Ai.ApiKey = apiKey?.Trim());
 
         services.AddHttpClient(HttpClientName, (sp, client) =>
             {
@@ -43,8 +52,7 @@ public static class RecipeImportServiceRegistration
         services.AddScoped<IRecipeImportUrlGuard, RecipeImportUrlGuard>();
 
         var aiEnabled = configuration.GetValue<bool>($"{RecipeImportOptions.SectionName}:Ai:Enabled");
-        var apiKey = configuration[$"{RecipeImportOptions.SectionName}:Ai:ApiKey"];
-        if (aiEnabled && !string.IsNullOrWhiteSpace(apiKey))
+        if (aiEnabled && RecipeImportAiOptions.HasApiKey(apiKey))
         {
             services.AddScoped<IIngredientLineAiParser, OpenAiIngredientLineAiParser>();
             services.AddScoped<IRecipeAiParser, OpenAiRecipeAiParser>();
@@ -59,4 +67,11 @@ public static class RecipeImportServiceRegistration
 
         return services;
     }
+
+    private static bool IsOpenAiEndpoint(string? endpoint) =>
+        string.IsNullOrWhiteSpace(endpoint)
+        || (Uri.TryCreate(endpoint.Trim(), UriKind.Absolute, out var uri)
+            && uri.Scheme == Uri.UriSchemeHttps && uri.Port == 443
+            && uri.Host.Equals("api.openai.com", StringComparison.OrdinalIgnoreCase)
+            && uri.UserInfo.Length == 0);
 }

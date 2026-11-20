@@ -113,7 +113,8 @@
   <data name="RecipeCreate.Import.Warning.NoContent" xml:space="preserve"><value>Er is geen bruikbare tekst gevonden om te importeren.</value></data>
   <data name="RecipeCreate.Import.Warning.HeuristicIngredients" xml:space="preserve"><value>Geen duidelijke ingrediëntensectie gevonden; we hebben regels als ingrediënten geïnterpreteerd. Check dit.</value></data>
   <data name="RecipeCreate.Import.Warning.LowConfidenceAiHint" xml:space="preserve"><value>Sommige ingrediëntregels zijn onzeker. Check die regels even.</value></data>
-  <data name="RecipeCreate.Import.Warning.AiFallbackFailed" xml:space="preserve"><value>AI kon onzekere ingrediëntregels niet verbeteren. Check die regels handmatig.</value></data>
+  <data name="RecipeCreate.Import.Warning.AiFallbackFailed" xml:space="preserve"><value>De AI-import kon niet worden voltooid. Controleer de gegevens uit de bron.</value></data>
+  <data name="RecipeCreate.Import.Warning.IncompleteRecipe" xml:space="preserve"><value>Ingrediënten of bereidingsstappen ontbreken in dit concept. Voeg ontbrekende informatie toe vanuit de receptpagina, het bijschrift of een screenshot.</value></data>
   <data name="RecipeCreate.Import.Warning.UrlContentTruncated" xml:space="preserve"><value>De pagina was groter dan we volledig konden downloaden; er kan inhoud ontbreken. Controleer het recept.</value></data>
   <data name="RecipeOverview.PageTitle" xml:space="preserve"><value>Mijn Recepten</value></data>
   <data name="RecipeCreate.PageTitle" xml:space="preserve"><value>Nieuw Recept Toevoegen</value></data>

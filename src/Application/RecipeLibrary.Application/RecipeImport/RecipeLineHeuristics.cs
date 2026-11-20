@@ -54,6 +54,15 @@ internal static class RecipeLineHeuristics
         return stepHits.Count < 2 && (stepHits.Count != 1 || trimmed.Length >= 40) && trimmed.Contains(' ', StringComparison.Ordinal);
     }
 
+    internal static bool IsLikelyNumberedInstructionLine(string line)
+    {
+        if (!HasNumberedStepPrefix(line) || !IsLikelyInstructionLine(line)) return false;
+        var text = StripNumberPrefix(line);
+        return !LooksLikeMeasuredOrToTasteIngredient(text)
+            && (!IsLikelyIngredientLine(text) || text.EndsWith('.') || text.EndsWith('!')
+                || RecipeTextSectionLexicon.InstructionActionPattern.IsMatch(text));
+    }
+
     internal static bool IsChromeLine(string line)
     {
         var normalized = line.Trim();
@@ -64,8 +73,9 @@ internal static class RecipeLineHeuristics
         return RecipeTextSectionLexicon.ChromeLinePrefixes.Any(prefix => lower.StartsWith(prefix, StringComparison.Ordinal));
     }
 
-    internal static string StripBullet(string line) => line.TrimStart('-', '•', '*', '▢', ' ').Trim();
-    internal static string StripNumberPrefix(string line) => Regex.Replace(line, @"^\d+[\.)]\s*", string.Empty).Trim();
+    internal static string StripBullet(string line) => line.TrimStart('-', '–', '—', '•', '▪', '*', '▢', ' ').Trim();
+    internal static bool HasNumberedStepPrefix(string line) => Regex.IsMatch(line, @"^\d+[.)]\s+");
+    internal static string StripNumberPrefix(string line) => Regex.Replace(line, @"^\d+[.)]\s+", string.Empty).Trim();
 
     internal static bool IsTitleCandidate(string line)
     {

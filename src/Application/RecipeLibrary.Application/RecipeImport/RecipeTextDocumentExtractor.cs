@@ -105,7 +105,14 @@ public static class RecipeTextDocumentExtractor
                     if (!RecipeLineHeuristics.IsChromeLine(line)) introBuffer.Add(line);
                     break;
                 case Section.Ingredients:
+                    if (ingredientLines.Count > 0 && RecipeLineHeuristics.IsLikelyNumberedInstructionLine(line))
+                    {
+                        section = Section.Instructions;
+                        instructionLines.Add(RecipeLineHeuristics.StripNumberPrefix(line));
+                        break;
+                    }
                     if (ingredientsClosed) break;
+                    line = RecipeLineHeuristics.StripNumberPrefix(line);
                     if (RecipeLineHeuristics.IsIngredientSubsectionHeader(line))
                     {
                         inGarnishIngredients = RecipeLineHeuristics.IsGarnishSubsectionHeader(line);
@@ -193,6 +200,9 @@ public static class RecipeTextDocumentExtractor
     private static bool TryGetLabeledHeader(string line, IEnumerable<string> headers, out string remainder)
     {
         remainder = string.Empty;
+        var start = 0;
+        while (start < line.Length && !char.IsLetterOrDigit(line[start])) start++;
+        line = line[start..].TrimEnd(' ', '*');
         foreach (var header in headers)
         {
             if (line.Equals(header, StringComparison.OrdinalIgnoreCase)) return true;
@@ -200,6 +210,12 @@ public static class RecipeTextDocumentExtractor
             if (line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
                 remainder = line[prefix.Length..].Trim();
+                return true;
+            }
+            if (line.StartsWith(header + " (", StringComparison.OrdinalIgnoreCase)
+                && line.TrimEnd(':').EndsWith(')'))
+            {
+                remainder = line[header.Length..].Trim().TrimEnd(':').Trim('(', ')');
                 return true;
             }
         }

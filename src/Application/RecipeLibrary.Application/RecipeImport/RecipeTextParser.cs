@@ -33,9 +33,7 @@ public sealed class RecipeTextParser(
     {
         var warnings = document.Warnings.ToList();
         var threshold = importOptions.Value.Ai.ConfidenceThreshold;
-        var aiEnabled = importOptions.Value.Ai.Enabled
-            && !string.IsNullOrWhiteSpace(importOptions.Value.Ai.ApiKey);
-        var useAiFallback = parseOptions.UseAiFallback && aiEnabled;
+        var useAiFallback = parseOptions.UseAiFallback && importOptions.Value.Ai.IsConfigured;
 
         var ingredients = new List<ImportedIngredientLine>();
         var aiCandidates = new List<(int Index, string RawLine)>();
@@ -99,6 +97,11 @@ public sealed class RecipeTextParser(
 
                 var (index, rawLine) = aiCandidates[i];
                 var aiLine = aiLines[i];
+                if (aiLine.Confidence < ingredients[index].Confidence)
+                {
+                    continue;
+                }
+
                 ingredients[index] = new ImportedIngredientLine
                 {
                     RawLine = rawLine,
@@ -117,7 +120,7 @@ public sealed class RecipeTextParser(
                 AddWarning(warnings, ImportWarningCodes.LowConfidenceAiHint);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             logger.LogWarning(
                 ex,

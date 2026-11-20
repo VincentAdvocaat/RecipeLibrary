@@ -242,7 +242,7 @@ public sealed class RecipeSocialCaptionFetcherTests
     }
 
     [Fact]
-    public async Task TryFetchCaptionAsync_ReturnsNullWhenDataApiAndInnerTubeFail()
+    public async Task TryFetchCaptionAsync_ReturnsNullWhenAllYouTubeSourcesFail()
     {
         var handler = new ScriptedHandler(_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
         var sut = CreateSut(handler, youtubeApiKey: "AIzaSyTestKey");
@@ -250,7 +250,71 @@ public sealed class RecipeSocialCaptionFetcherTests
         var caption = await sut.TryFetchCaptionAsync(ShortsUrl);
 
         Assert.Null(caption);
+        Assert.Equal(3, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task TryFetchCaptionAsync_RecoversInstagramLinesFromPublicEmbed()
+    {
+        var handler = new ScriptedHandler(request => request.RequestUri!.AbsolutePath.EndsWith("/embed/captioned/", StringComparison.Ordinal)
+            ? HtmlResponse("""<div class="Caption"><a class="CaptionUsername">author</a>Mixed bean stew<br>Ingredients<br>300 g beans<br>Method<br>Simmer until tender.<div class="CaptionComments">Viewer comments</div></div>""")
+            : new HttpResponseMessage(HttpStatusCode.Forbidden));
+
+        var caption = await CreateSut(handler, null).TryFetchCaptionAsync("https://www.instagram.com/reel/ABC_123/?share=abc");
+
+        Assert.Equal("Mixed bean stew\nIngredients\n300 g beans\nMethod\nSimmer until tender.", caption);
         Assert.Equal(2, handler.RequestCount);
+        Assert.All(handler.RequestedUris, uri => Assert.Empty(uri.Query));
+    }
+
+    [Fact]
+    public void InstagramCaption_DecodesJsonFreePublicMetadata_AndKeepsLineBreaks()
+    {
+        var html = """
+            <meta name="description" content="11 likes, 2 comments - author on November 20, 2026: &quot;Pear compote
+            Ingredients
+            2 pears
+            Method
+            Simmer in water.&quot;.">
+            """;
+
+        Assert.Equal("Pear compote\nIngredients\n2 pears\nMethod\nSimmer in water.", PublicRecipeCaption.Instagram(html));
+    }
+
+    [Fact]
+    public async Task TryFetchCaptionAsync_UsesVerifiedYouTubeCreatorCommentForMissingSteps()
+    {
+        var handler = new ScriptedHandler(request => request.RequestUri!.AbsolutePath.EndsWith("/commentThreads", StringComparison.Ordinal)
+            ? JsonResponse("""
+                {"items":[
+                  {"snippet":{"topLevelComment":{"snippet":{"authorChannelId":{"value":"viewer"},"textDisplay":"Method\nUse an unrelated sauce."}}}},
+                  {"snippet":{"topLevelComment":{"snippet":{"authorChannelId":{"value":"creator"},"textDisplay":"Method\nSimmer the carrots for 8 minutes."}}}}
+                ]}
+                """)
+            : JsonResponse("""
+                {"items":[{"snippet":{"channelId":"creator","title":"Carrot side","description":"Carrot side\nIngredients\n2 carrots"}}]}
+                """));
+
+        var caption = await CreateSut(handler, "example-key").TryFetchCaptionAsync(ShortsUrl);
+
+        Assert.Equal("Carrot side\nIngredients\n2 carrots\n\nMethod\nSimmer the carrots for 8 minutes.", caption);
+        Assert.Equal(2, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task TryFetchCaptionAsync_RecoversYouTubeDescriptionFromCorrectPublicWatchPage()
+    {
+        var handler = new ScriptedHandler(request => request.Method == HttpMethod.Post
+            ? new HttpResponseMessage(HttpStatusCode.BadRequest)
+            : HtmlResponse("""
+                <script>var ytInitialPlayerResponse = {"videoDetails":{"videoId":"unrelated","shortDescription":"Wrong video"}};</script>
+                <script>var ytInitialPlayerResponse = {"videoDetails":{"videoId":"DSGRNoSTvLg","shortDescription":"Root vegetable soup\nIngredients\n2 carrots"}}; after();</script>
+                """));
+
+        var caption = await CreateSut(handler, null).TryFetchCaptionAsync(ShortsUrl);
+
+        Assert.Equal("Root vegetable soup\nIngredients\n2 carrots", caption);
+        Assert.Equal("/watch", handler.RequestedUris[^1].AbsolutePath);
     }
 
     private static RecipeSocialCaptionFetcher CreateSut(HttpMessageHandler handler, string? youtubeApiKey)
@@ -269,6 +333,9 @@ public sealed class RecipeSocialCaptionFetcherTests
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json"),
         };
+
+    private static HttpResponseMessage HtmlResponse(string html) =>
+        new(HttpStatusCode.OK) { Content = new StringContent(html, Encoding.UTF8, "text/html") };
 
     private sealed class FixedHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
     {

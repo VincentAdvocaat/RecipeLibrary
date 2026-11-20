@@ -13,4 +13,5 @@ internal static class RecipeTextSectionLexicon
 
     internal static readonly Regex MediaFilePattern = new(@"\.(?:png|jpe?g|webp|gif|svg)(?:\b|$)", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
     internal static readonly Regex StepCaptionNoisePattern = new(@"(?:stap|step)\s*\d+", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    internal static readonly Regex InstructionActionPattern = new(@"^(?:add|bake|beat|blend|boil|bring|chop|combine|cook|cut|drain|fry|heat|knead|mix|peel|place|pour|preheat|remove|roast|serve|simmer|slice|stir|whisk|voeg|bak|klop|kook|breng|snijd|meng|verhit|kneed|schil|leg|giet|verwarm|verwijder|rooster|serveer|laat|roer)\s+(?:the|a|an|all|both|remaining|half|until|for|to|in|into|on|over|at|de|het|een|alle|beide|resterende|tot|gedurende|voor|op|door|aan|met|\d+)\b", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 }

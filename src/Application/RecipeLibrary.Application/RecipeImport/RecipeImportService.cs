@@ -83,19 +83,41 @@ public sealed class RecipeImportService(
     {
         if (demo?.IsDemo == true) throw new DemoAccessException("Demo.AccountRequired");
         var options = parseOptions ?? new ImportRecipeParseOptions();
-        var aiEnabled = importOptions.Value.Ai.Enabled
-            && !string.IsNullOrWhiteSpace(importOptions.Value.Ai.ApiKey);
-
         ImportRecipeResult parsed;
-        if (options.UseFullRecipeAi && aiEnabled)
+        if (options.UseFullRecipeAi && importOptions.Value.Ai.IsConfigured && !string.IsNullOrWhiteSpace(plainText))
         {
-            // Strip page chrome (nav/footer/tips) before sending the full recipe to the LLM.
             var aiInput = RecipeTextDocumentExtractor.NormalizePlainTextForAi(plainText);
-            parsed = await recipeAiParser.ParseAsync(aiInput, ct);
+            try
+            {
+                parsed = await recipeAiParser.ParseAsync(aiInput, ct);
+                if (parsed.Ingredients.Count == 0 || parsed.Steps.Count == 0)
+                {
+                    var draft = await ParseWithoutAiAsync(plainText, ct);
+                    if (draft.Ingredients.Count > 0 && draft.Steps.Count > 0
+                        && !draft.Warnings.Contains(ImportWarningCodes.HeuristicIngredients))
+                    {
+                        parsed = draft.WithWarning(ImportWarningCodes.AiFallbackFailed);
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or System.Text.Json.JsonException)
+            {
+                var draft = await ParseWithoutAiAsync(plainText, ct);
+                parsed = draft.WithWarning(ImportWarningCodes.AiFallbackFailed);
+            }
         }
         else
         {
             parsed = await recipeTextParser.ParseAsync(plainText, options, ct);
+            if (options.UseFullRecipeAi && !importOptions.Value.Ai.IsConfigured)
+            {
+                parsed = parsed.WithWarning(ImportWarningCodes.AiFallbackFailed);
+            }
+        }
+
+        if (parsed.Ingredients.Count == 0 || parsed.Steps.Count == 0)
+        {
+            parsed = parsed.WithWarning(ImportWarningCodes.IncompleteRecipe);
         }
 
         var ingredients = parsed.Ingredients.ToList();
@@ -137,4 +159,7 @@ public sealed class RecipeImportService(
             Warnings = parsed.Warnings,
         };
     }
+
+    private Task<ImportRecipeResult> ParseWithoutAiAsync(string text, CancellationToken ct) =>
+        recipeTextParser.ParseAsync(text, new ImportRecipeParseOptions { UseAiFallback = false }, ct);
 }

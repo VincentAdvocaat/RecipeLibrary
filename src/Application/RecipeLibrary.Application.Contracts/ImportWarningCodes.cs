@@ -6,6 +6,7 @@ public static class ImportWarningCodes
     public const string JsonLdParseSkipped = "jsonld_parse_skipped";
     public const string JsonLdEmptyIngredients = "jsonld_empty_ingredients";
     public const string NoContent = "no_content";
+    public const string IncompleteRecipe = "incomplete_recipe";
     public const string HeuristicIngredients = "heuristic_ingredients";
     public const string LowConfidenceAiHint = "low_confidence_ai_hint";
     public const string AiFallbackFailed = "ai_fallback_failed";
