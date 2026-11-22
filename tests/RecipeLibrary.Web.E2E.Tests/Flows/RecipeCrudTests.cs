@@ -168,10 +168,10 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
         await delete.ClickAsync();
         await confirm.ClickAsync();
 
-        await Assertions.Expect(page).ToHaveURLAsync(new Regex("/recipes/?$"));
+        await page.WaitForURLAsync(new Regex("/recipes/?$"));
         await Assertions.Expect(page.GetByText(title)).Not.ToBeVisibleAsync();
         await page.GotoAsync(recipeUrl);
-        await Assertions.Expect(page).ToHaveURLAsync(new Regex("/not-found$"));
+        await page.WaitForURLAsync(new Regex("/not-found$"));
     }
 
     [Fact]
