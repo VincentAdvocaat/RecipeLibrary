@@ -138,11 +138,12 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
     }
 
     [Fact]
-    public async Task DeleteRecipe_ReturnsToOverview()
+    public async Task DeleteRecipe_ShowsConfirmationInViewportAndRemovesRecipe()
     {
         var title = $"Delete Me {Guid.NewGuid():N}";
         await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(390, 640);
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);
 
@@ -151,11 +152,26 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
         await page.GetByTestId(UiTestIds.StepInput(0)).FillBlazorInputAsync("Step.");
         await page.SaveRecipeAndWaitForDetailAsync();
 
-        await page.GetByTestId(UiTestIds.RecipeDelete).ClickAsync();
-        await page.GetByTestId(UiTestIds.DeleteConfirmYes).ClickAsync();
+        var recipeUrl = page.Url;
+        var delete = page.GetByTestId(UiTestIds.RecipeDelete);
+        var confirm = page.GetByTestId(UiTestIds.DeleteConfirmYes);
+        var cancel = page.GetByTestId(UiTestIds.DeleteConfirmNo);
+        await delete.EvaluateAsync("button => window.scrollBy(0, button.getBoundingClientRect().bottom - window.innerHeight + 8)");
+        await delete.ClickAsync();
+        await Assertions.Expect(confirm).ToBeInViewportAsync(new() { Ratio = 1 });
+        await Assertions.Expect(cancel).ToBeFocusedAsync();
+        await cancel.ClickAsync();
+        await Assertions.Expect(delete).ToBeFocusedAsync();
+        await Assertions.Expect(confirm).ToHaveCountAsync(0);
+        await Assertions.Expect(page).ToHaveURLAsync(recipeUrl);
+
+        await delete.ClickAsync();
+        await confirm.ClickAsync();
 
         await Assertions.Expect(page).ToHaveURLAsync(new Regex("/recipes/?$"));
         await Assertions.Expect(page.GetByText(title)).Not.ToBeVisibleAsync();
+        await page.GotoAsync(recipeUrl);
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("/not-found$"));
     }
 
     [Fact]

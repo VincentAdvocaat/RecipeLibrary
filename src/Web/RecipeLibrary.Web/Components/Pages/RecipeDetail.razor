@@ -122,7 +122,10 @@ else if (_recipe is not null)
                         <button type="button"
                                 data-testid="@UiTestIds.RecipeDelete"
                                 class="text-sm font-medium text-red-600 hover:text-red-800"
-                                @onclick="ConfirmDelete">
+                                aria-expanded="@(_showDeleteConfirm ? "true" : "false")"
+                                aria-controls="@(_showDeleteConfirm ? "recipe-delete-confirmation" : null)"
+                                @ref="_deleteButton"
+                                @onclick="() => SetDeleteConfirmation(true)">
                             @L["RecipeDetail.DeleteButton"]
                         </button>
                     </div>
@@ -134,8 +137,9 @@ else if (_recipe is not null)
 
                     @if (_showDeleteConfirm)
                     {
-                        <div class="rounded border border-red-200 bg-red-50 p-4 space-y-3">
-                            <p class="text-sm text-red-800">@L["RecipeDetail.DeleteConfirm.Message"]</p>
+                        <div id="recipe-delete-confirmation" role="group" aria-labelledby="recipe-delete-confirmation-message"
+                             class="rounded border border-red-200 bg-red-50 p-4 space-y-3">
+                            <p id="recipe-delete-confirmation-message" class="text-sm text-red-800">@L["RecipeDetail.DeleteConfirm.Message"]</p>
                             <div class="flex gap-3">
                                 <button type="button"
                                         data-testid="@UiTestIds.DeleteConfirmYes"
@@ -146,7 +150,8 @@ else if (_recipe is not null)
                                 <button type="button"
                                         data-testid="@UiTestIds.DeleteConfirmNo"
                                         class="px-3 py-1.5 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
-                                        @onclick="() => _showDeleteConfirm = false">
+                                        @ref="_cancelDeleteButton"
+                                        @onclick="() => SetDeleteConfirmation(false)">
                                     @L["RecipeDetail.DeleteConfirm.CancelButton"]
                                 </button>
                             </div>
@@ -168,6 +173,9 @@ else if (_recipe is not null)
     private Guid _targetShoppingListId;
     private bool _redirected;
     private bool _showDeleteConfirm;
+    private bool _updateDeleteFocus;
+    private ElementReference _deleteButton;
+    private ElementReference _cancelDeleteButton;
     private string? _addMessage;
     private string? _reportMessage;
     private bool _reportBusy;
@@ -227,7 +235,21 @@ else if (_recipe is not null)
         _ => L["Category.All.Label"],
     };
 
-    private void ConfirmDelete() => _showDeleteConfirm = true;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_updateDeleteFocus)
+        {
+            _updateDeleteFocus = false;
+            var button = _showDeleteConfirm ? _cancelDeleteButton : _deleteButton;
+            await button.FocusAsync();
+        }
+    }
+
+    private void SetDeleteConfirmation(bool show)
+    {
+        _showDeleteConfirm = show;
+        _updateDeleteFocus = true;
+    }
 
     private async Task ReportAsync()
     {
