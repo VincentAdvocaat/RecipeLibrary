@@ -103,19 +103,27 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
     }
 
     [Fact]
-    public async Task Create_EmptyStep_ShowsValidation()
+    public async Task CreateAndEditRecipe_WithoutInstructions()
     {
+        var title = $"E2E Ingredients Only {Guid.NewGuid():N}";
         await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
         page.UseBlazorDefaults();
         await page.GotoCreateRecipeAsync(fixture.BaseUrl);
 
-        await page.GetByTestId(UiTestIds.RecipeTitle).FillBlazorInputAsync($"E2E Empty Step {Guid.NewGuid():N}");
+        await page.GetByTestId(UiTestIds.RecipeTitle).FillBlazorInputAsync(title);
         await page.GetByTestId(UiTestIds.IngredientRowName(0)).FillBlazorInputAsync("Gehakt");
-        await page.GetByTestId(UiTestIds.RecipeSave).ClickAsync();
+        await page.SaveRecipeAndWaitForDetailAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = title })).ToBeVisibleAsync();
+        var instructions = page.GetByRole(AriaRole.Heading, new() { NameRegex = new Regex("^(Bereiding|Instructions)$") });
+        await Assertions.Expect(instructions).ToHaveCountAsync(0);
 
-        await Assertions.Expect(page).ToHaveURLAsync(new Regex("/recipes/create"));
-        await Assertions.Expect(page.GetByText(new Regex("Stap tekst is verplicht\\.|Step text is required\\."))).ToBeVisibleAsync();
+        await page.GetByTestId(UiTestIds.RecipeEdit).ClickAsync();
+        var editedTitle = title + " updated";
+        await page.GetByTestId(UiTestIds.RecipeTitle).FillBlazorInputAsync(editedTitle);
+        await page.SaveRecipeAndWaitForDetailAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = editedTitle })).ToBeVisibleAsync();
+        await Assertions.Expect(instructions).ToHaveCountAsync(0);
     }
 
     [Fact]

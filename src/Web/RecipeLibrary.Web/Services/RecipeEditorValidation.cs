@@ -13,8 +13,7 @@ internal static class RecipeEditorValidation
     public static string? GetRequiredFieldError(
         IStringLocalizer<SharedResources> localizer,
         string? title,
-        IEnumerable<RecipeIngredientEditorItem> ingredients,
-        IEnumerable<string?> stepTexts)
+        IEnumerable<RecipeIngredientEditorItem> ingredients)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -24,11 +23,6 @@ internal static class RecipeEditorValidation
         if (ingredients.All(static i => string.IsNullOrWhiteSpace(i.Name)))
         {
             return localizer["RecipeCreate.Ingredient.Name.Required"];
-        }
-
-        if (stepTexts.All(static s => string.IsNullOrWhiteSpace(s)))
-        {
-            return localizer["RecipeCreate.Step.Text.Required"];
         }
 
         return null;

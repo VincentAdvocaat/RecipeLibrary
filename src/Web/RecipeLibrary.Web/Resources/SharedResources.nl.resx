@@ -159,9 +159,8 @@
   <data name="RecipeCreate.Ingredient.Match.Fuzzy" xml:space="preserve"><value>Mogelijke match: {0} ({1}). Kies een suggestie als dit niet klopt.</value></data>
   <data name="RecipeCreate.Ingredient.Match.None" xml:space="preserve"><value>Geen match gevonden. Je kunt doorgaan met nieuwe invoer.</value></data>
   <data name="RecipeCreate.Instructions.SectionLabel" xml:space="preserve"><value>Instructies</value></data>
-  <data name="RecipeCreate.Instructions.StepsHint" xml:space="preserve"><value>Stappen</value></data>
+  <data name="RecipeCreate.Instructions.StepsHint" xml:space="preserve"><value>Bereidingsstappen zijn optioneel.</value></data>
   <data name="RecipeCreate.Step.Placeholder" xml:space="preserve"><value>Bijvoorbeeld: Snijd de ui. Verhit olie in een pan...</value></data>
-  <data name="RecipeCreate.Step.Text.Required" xml:space="preserve"><value>Stap tekst is verplicht.</value></data>
   <data name="RecipeCreate.Step.AddButton" xml:space="preserve"><value>+ Stap toevoegen</value></data>
   <data name="RecipeCreate.CancelButton" xml:space="preserve"><value>Annuleren</value></data>
   <data name="RecipeCreate.SaveButton" xml:space="preserve"><value>Opslaan Recept</value></data>
