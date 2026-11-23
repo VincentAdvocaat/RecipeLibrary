@@ -14,8 +14,8 @@ public sealed class E2eProcessHost : IAsyncDisposable
 
     public async Task StartAsync(string connectionString, CancellationToken ct = default, IReadOnlyDictionary<string, string>? settings = null)
     {
-        var port = Random.Shared.Next(10000, 60000);
-        BaseUrl = $"http://127.0.0.1:{port}";
+        BaseUrl = string.Empty;
+        var listeningUrl = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var webProject = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
@@ -33,7 +33,7 @@ public sealed class E2eProcessHost : IAsyncDisposable
         var psi = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"run --project \"{webProject}\" -c Release --no-build --no-launch-profile --urls {BaseUrl}",
+            Arguments = $"run --project \"{webProject}\" -c Release --no-build --no-launch-profile --urls http://127.0.0.1:0",
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -47,9 +47,24 @@ public sealed class E2eProcessHost : IAsyncDisposable
         if (settings is not null)
             foreach (var setting in settings) psi.Environment[setting.Key] = setting.Value;
 
+        psi.Environment["Logging__LogLevel__Microsoft.Hosting.Lifetime"] = "Information";
+
         _process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start the web application process.");
 
-        _process.OutputDataReceived += (_, line) => Capture(line.Data);
+        _process.OutputDataReceived += (_, line) =>
+        {
+            Capture(line.Data);
+            const string marker = "Now listening on: ";
+            var markerIndex = line.Data?.IndexOf(marker, StringComparison.Ordinal) ?? -1;
+            if (markerIndex >= 0
+                && Uri.TryCreate(line.Data![(markerIndex + marker.Length)..].Trim(), UriKind.Absolute, out var address)
+                && address.Scheme == Uri.UriSchemeHttp
+                && address.Host == "127.0.0.1"
+                && address.Port > 0)
+            {
+                listeningUrl.TrySetResult(address.GetLeftPart(UriPartial.Authority));
+            }
+        };
         _process.ErrorDataReceived += (_, line) => Capture(line.Data);
         _process.BeginOutputReadLine();
         _process.BeginErrorReadLine();
@@ -62,17 +77,25 @@ public sealed class E2eProcessHost : IAsyncDisposable
         {
             ct.ThrowIfCancellationRequested();
 
-            try
+            if (listeningUrl.Task.IsCompletedSuccessfully)
             {
-                using var response = await client.GetAsync($"{BaseUrl}/health/live", ct);
-                if (response.IsSuccessStatusCode)
+                BaseUrl = await listeningUrl.Task;
+                try
                 {
-                    return;
+                    using var response = await client.GetAsync($"{BaseUrl}/health/live", ct);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        return;
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                lastError = ex;
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex;
+                }
             }
 
             if (_process.HasExited)
