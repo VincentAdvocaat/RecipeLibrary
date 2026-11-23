@@ -19,14 +19,25 @@
         @foreach (var lang in Languages)
         {
             <li>
-                <a href="@GetCultureUrl(lang.Culture)"
-                   data-enhance-nav="false"
-                   data-testid="@(lang.Culture == EnglishCulture ? UiTestIds.LanguageEn : UiTestIds.LanguageNl)"
-                   class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm @(lang.Culture == CurrentCulture ? "bg-gray-100 font-medium text-gray-900" : "text-gray-700 hover:bg-gray-50")"
-                   aria-current="@(lang.Culture == CurrentCulture ? "true" : null)">
-                    <CountryFlag Code="@lang.FlagCode" />
-                    <span lang="@(lang.Culture)">@lang.Name</span>
-                </a>
+                @if (lang.Culture == CurrentCulture)
+                {
+                    <span data-testid="@(lang.Culture == EnglishCulture ? UiTestIds.LanguageEn : UiTestIds.LanguageNl)"
+                          class="flex w-full items-center gap-2 bg-gray-100 px-3 py-2 text-left text-sm font-medium text-gray-900"
+                          aria-current="true">
+                        <CountryFlag Code="@lang.FlagCode" />
+                        <span lang="@(lang.Culture)">@lang.Name</span>
+                    </span>
+                }
+                else
+                {
+                    <a href="@GetCultureUrl(lang.Culture)"
+                       data-enhance-nav="false"
+                       data-testid="@(lang.Culture == EnglishCulture ? UiTestIds.LanguageEn : UiTestIds.LanguageNl)"
+                       class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+                        <CountryFlag Code="@lang.FlagCode" />
+                        <span lang="@(lang.Culture)">@lang.Name</span>
+                    </a>
+                }
             </li>
         }
     </ul>
