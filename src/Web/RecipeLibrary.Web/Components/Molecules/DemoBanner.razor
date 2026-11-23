@@ -18,7 +18,7 @@
         {
             <p>@L["Demo.Banner", Options.Value.LifetimeMinutes]</p>
             <div class="flex flex-wrap gap-4 mt-2">
-                <button type="button" class="underline" @onclick="() => _confirmReset = true" data-testid="@UiTestIds.DemoReset">@L["Demo.Reset"]</button>
+                <button type="button" class="underline disabled:opacity-50 disabled:pointer-events-none" disabled="@(!RendererInfo.IsInteractive)" @onclick="() => _confirmReset = true" data-testid="@UiTestIds.DemoReset">@L["Demo.Reset"]</button>
                 <form method="post" action="/demo/end" data-enhance="false">
                     <AntiforgeryToken />
                     <button type="submit" class="underline" data-testid="@UiTestIds.DemoEnd">@L["Demo.End"]</button>

@@ -26,7 +26,6 @@ public sealed class E2eFixture : IAsyncLifetime
     {
         await _container.StartAsync();
         var connectionString = _container.ConnectionString;
-        Environment.SetEnvironmentVariable("ConnectionStrings__RecipeDb", connectionString);
 
         Seed = await TestDataSeeder.SeedWithConnectionStringAsync(connectionString);
         await using (var db = new RecipeDbContext(new DbContextOptionsBuilder<RecipeDbContext>().UseSqlServer(connectionString).Options))
@@ -61,6 +60,16 @@ public sealed class E2eFixture : IAsyncLifetime
 
     public Task<IBrowserContext> NewAuthenticatedContextAsync() =>
         Browser.NewContextAsync(new() { StorageState = _authenticationState });
+
+    public async Task ResetShoppingStateAsync()
+    {
+        await using var db = CreateDbContext();
+        await db.PantryItems.Where(item => item.OwnerUserId == TestDataSeeder.TestOwnerUserId).ExecuteDeleteAsync();
+        await db.ShoppingListGroups.Where(group => group.OwnerUserId == TestDataSeeder.TestOwnerUserId).ExecuteDeleteAsync();
+    }
+
+    internal RecipeDbContext CreateDbContext() =>
+        new(new DbContextOptionsBuilder<RecipeDbContext>().UseSqlServer(_container.ConnectionString).Options);
 
     public async Task DisposeAsync()
     {

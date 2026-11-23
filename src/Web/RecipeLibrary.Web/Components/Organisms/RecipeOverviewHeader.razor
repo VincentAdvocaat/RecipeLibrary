@@ -74,7 +74,7 @@
             <Heading Level="1" CssClass="m-0 truncate">@Title</Heading>
         </div>
         <div class="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
-            @if (ShowAddRecipeFab)
+            @if (IsAddRecipeFabVisible)
             {
                 <a href="@CreateRecipeHref"
                    data-testid="@UiTestIds.AddRecipeFab"
@@ -101,6 +101,7 @@
     private ElementReference _menuPanel;
 
     [Parameter, EditorRequired] public string Title { get; set; } = null!;
+    [Parameter] public bool ShowAddRecipeFab { get; set; } = true;
     [Parameter] public bool ShowViewToggleInHeader { get; set; }
     [Parameter] public ViewToggle.ViewModeKind ViewMode { get; set; }
     [Parameter] public EventCallback<ViewToggle.ViewModeKind> ViewModeChanged { get; set; }
@@ -111,7 +112,7 @@
     private string CreateRecipeHref => IsHouseholdLibrary ? "/recipes/create?library=household" : "/recipes/create";
     private string ImportRecipeHref => IsHouseholdLibrary ? "/recipes/create?library=household&mode=text" : "/recipes/import";
 
-    private bool ShowAddRecipeFab
+    private bool IsAddRecipeFabVisible
     {
         get
         {
@@ -121,7 +122,7 @@
                 return false;
             }
 
-            return !(path.StartsWith("recipes/", StringComparison.OrdinalIgnoreCase)
+            return ShowAddRecipeFab && !(path.StartsWith("recipes/", StringComparison.OrdinalIgnoreCase)
                      && path.EndsWith("/edit", StringComparison.OrdinalIgnoreCase));
         }
     }

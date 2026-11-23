@@ -536,7 +536,7 @@
 
         if (result.RemainingGroupId is null)
         {
-            ShoppingSession.RedirectToClearSession("/recipes");
+            Navigation.NavigateTo("/recipes");
             return;
         }
 
@@ -554,7 +554,7 @@
         _confirmDeleteGroup = false;
         await CommandBus.SendAsync<DeleteShoppingListGroupCommand, DeleteShoppingListGroupResult>(
             new DeleteShoppingListGroupCommand { GroupId = _group.GroupId });
-        ShoppingSession.RedirectToClearSession("/recipes");
+        Navigation.NavigateTo("/recipes");
     }
 
     private void StartEditName()

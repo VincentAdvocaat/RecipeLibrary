@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Components;
-
 using Microsoft.AspNetCore.Http;
 
 using Microsoft.Extensions.Localization;
@@ -18,16 +16,12 @@ namespace RecipeLibrary.Web.Services;
 
 public sealed class ShoppingListSessionService(
 
-    IHttpContextAccessor httpContextAccessor,
-
     IQueryBus queryBus,
     ICommandBus commandBus,
 
     ICurrentUser userContext,
 
-    IStringLocalizer<SharedResources> localizer,
-
-    NavigationManager navigation)
+    IStringLocalizer<SharedResources> localizer)
 
 {
 
@@ -36,42 +30,6 @@ public sealed class ShoppingListSessionService(
     public const string SetSessionPath = "/shopping-list/session/set";
 
     public const string ClearSessionPath = "/shopping-list/session/clear";
-
-
-
-    public Guid? GetGroupIdFromCookie()
-
-    {
-
-        var context = httpContextAccessor.HttpContext;
-
-        if (context?.Request.Cookies.TryGetValue(GroupIdCookieName, out var value) == true
-
-            && Guid.TryParse(value, out var groupId))
-
-        {
-
-            return groupId;
-
-        }
-
-
-
-        return null;
-
-    }
-
-
-
-    public string BuildSetSessionUrl(Guid groupId, string redirectUri) =>
-
-        $"{SetSessionPath}?groupId={groupId}&redirectUri={Uri.EscapeDataString(NormalizeRedirect(redirectUri))}";
-
-
-
-    public string BuildClearSessionUrl(string redirectUri = "/recipes") =>
-
-        $"{ClearSessionPath}?redirectUri={Uri.EscapeDataString(NormalizeRedirect(redirectUri))}";
 
 
 
@@ -93,55 +51,15 @@ public sealed class ShoppingListSessionService(
 
 
 
-    public bool TrySetGroupIdCookie(Guid groupId)
-
-    {
-
-        var context = httpContextAccessor.HttpContext;
-
-        if (context is null || context.Response.HasStarted)
-
-        {
-
-            return false;
-
-        }
-
-
-
-        context.Response.Cookies.Append(GroupIdCookieName, groupId.ToString(), CreateGroupCookieOptions(context.Request.IsHttps));
-
-        return true;
-
-    }
-
-
-
-    public void RedirectToSetGroupCookie(Guid groupId, string redirectUri) =>
-
-        navigation.NavigateTo(BuildSetSessionUrl(groupId, redirectUri), forceLoad: true);
-
-
-
-    public void RedirectToClearSession(string redirectUri = "/recipes") =>
-
-        navigation.NavigateTo(BuildClearSessionUrl(redirectUri), forceLoad: true);
-
-
-
     public async Task<EnsureShoppingListGroupResult> GetOrCreateGroupAsync(CancellationToken ct = default)
 
     {
 
-        var groupId = GetGroupIdFromCookie();
-
-        var result = await commandBus.SendAsync<EnsureShoppingListGroupCommand, EnsureShoppingListGroupResult>(
+        return await commandBus.SendAsync<EnsureShoppingListGroupCommand, EnsureShoppingListGroupResult>(
 
             new EnsureShoppingListGroupCommand
 
             {
-
-                GroupId = groupId,
 
                 OwnerUserId = userContext.UserId,
 
@@ -150,30 +68,7 @@ public sealed class ShoppingListSessionService(
             },
 
             ct);
-
-
-
-        if (groupId != result.GroupId)
-
-        {
-
-            if (!TrySetGroupIdCookie(result.GroupId))
-
-            {
-
-                RedirectToSetGroupCookie(result.GroupId, navigation.Uri);
-
-            }
-
-        }
-
-
-
-        return result;
-
     }
-
-
 
     public async Task<string> GetNextListNameAsync(Guid? scopeGroupId = null, CancellationToken ct = default)
     {
