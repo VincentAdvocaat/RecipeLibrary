@@ -25,9 +25,12 @@ else
 {
     <PageTitle>@L["RecipeDetail.PageTitle", _recipe.Title]</PageTitle>
     <main class="mx-auto max-w-4xl space-y-4">
-        <header>
-            <p class="text-sm font-medium text-gray-600">@L["RecipeShare.SharedRecipe"]</p>
-            <Heading Level="1" CssClass="m-0">@_recipe.Title</Heading>
+        <header class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <p class="text-sm font-medium text-gray-600">@L["RecipeShare.SharedRecipe"]</p>
+                <Heading Level="1" CssClass="m-0">@_recipe.Title</Heading>
+            </div>
+            <LanguageSwitcher />
         </header>
         <article class="overflow-hidden rounded-lg bg-white shadow">
             @if (_hasStoredImage)

@@ -320,13 +320,14 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapDemo();
-// Public startup/demo assets are available before sign-in; uploaded assets remain protected.
+// Allow startup, demo and language assets before sign-in. Keep uploads protected.
 app.MapStaticAssets().Add(endpoint =>
 {
     if (endpoint is Microsoft.AspNetCore.Routing.RouteEndpointBuilder route && route.RoutePattern.RawText is { } path
         && !path.TrimStart('/').StartsWith("uploads/", StringComparison.OrdinalIgnoreCase)
         && (Path.GetExtension(path) is ".js" or ".css"
-            || path.TrimStart('/').StartsWith("images/demo/", StringComparison.Ordinal)))
+            || path.TrimStart('/').StartsWith("images/demo/", StringComparison.Ordinal)
+            || path.TrimStart('/') is "images/flags/gb.svg" or "images/flags/nl.svg"))
     {
         endpoint.Metadata.Add(new AllowAnonymousAttribute());
     }
