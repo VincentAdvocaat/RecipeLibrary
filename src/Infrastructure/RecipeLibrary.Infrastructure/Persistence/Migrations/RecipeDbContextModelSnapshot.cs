@@ -966,6 +966,11 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.Property<int>("Category")
                         .HasColumnType("int");
 
+                    b.Property<string>("CollectionSeedKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
                     b.Property<int>("CookingMinutes")
                         .HasColumnType("int");
 
@@ -1035,6 +1040,10 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.HasIndex("HouseholdId", "SharedFromRecipeId")
                         .IsUnique()
                         .HasFilter("[HouseholdId] IS NOT NULL AND [SharedFromRecipeId] IS NOT NULL");
+
+                    b.HasIndex("OwnerUserId", "CollectionSeedKey")
+                        .IsUnique()
+                        .HasFilter("[HouseholdId] IS NULL AND [CollectionSeedKey] IS NOT NULL");
 
                     b.ToTable("Recipes");
                 });

@@ -15,8 +15,8 @@ const string usage = """
     SeedRecipeCollection apply <seed-file> <owner-id>
 
     Run apply with ConnectionStrings__RecipeDb set to the target database. Apply
-    the AddRecipeRatings and AddRecipeSourceUrl migrations first and use the ID
-    of an existing account.
+    the AddRecipeRatings, AddRecipeSourceUrl and AddRecipeCollectionSeedKey migrations
+    first and use the ID of an existing account.
     """;
 
 if (args is ["--help"] or ["-h"])
@@ -103,9 +103,11 @@ internal sealed record SeedCollection(int FormatVersion, SeedEntry[] Recipes)
         var ready = new List<ReadySeedEntry>();
         foreach (var entry in Recipes)
         {
-            if (entry is null || string.IsNullOrWhiteSpace(entry.SeedKey) || !keys.Add(entry.SeedKey))
+            if (entry is null || string.IsNullOrWhiteSpace(entry.SeedKey)
+                || entry.SeedKey.Length > 256 || entry.SeedKey != entry.SeedKey.Trim()
+                || !keys.Add(entry.SeedKey))
             {
-                throw new InvalidDataException("Every entry requires a unique seed key.");
+                throw new InvalidDataException("Every entry requires a unique seed key of at most 256 characters without surrounding whitespace.");
             }
 
             if (entry.Source is null || entry.Source.RatingStars is < 1 or > 5)
