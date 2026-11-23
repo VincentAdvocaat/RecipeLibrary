@@ -77,13 +77,38 @@ public sealed class RecipeShareTests(E2eFixture fixture)
         Assert.Equal(200, publicImage.Status);
         Assert.Equal("image/png", publicImage.Headers["content-type"]);
 
+        await Expect(visitor.GetByTestId(UiTestIds.SharedRecipeSignIn)).ToHaveTextAsync("Log in om een kopie op te slaan");
+        var languageSwitcher = visitor.GetByTestId(UiTestIds.LanguageSwitcher);
+        var englishOption = visitor.GetByTestId(UiTestIds.LanguageEn);
+        await languageSwitcher.ClickAsync();
+        await Expect(englishOption).ToBeVisibleAsync();
+        await visitor.Mouse.ClickAsync(4, 4);
+        await Expect(englishOption).ToBeHiddenAsync();
+        await languageSwitcher.PressAsync("Enter");
+        await englishOption.ClickAsync();
+        await Expect(visitor).ToHaveURLAsync(link);
+        await Expect(visitor.Locator("html")).ToHaveAttributeAsync("lang", "en");
+        await Expect(visitor.GetByTestId(UiTestIds.SharedRecipeSignIn)).ToHaveTextAsync("Sign in to save a copy");
+        await Expect(visitor.GetByRole(AriaRole.Heading, new() { Name = "Ingredients", Exact = true })).ToBeVisibleAsync();
+        var flagPath = await languageSwitcher.Locator("img").GetAttributeAsync("src");
+        var publicFlag = await visitorContext.APIRequest.GetAsync(fixture.BaseUrl + flagPath);
+        Assert.Equal(200, publicFlag.Status);
+        Assert.Equal("image/svg+xml", publicFlag.Headers["content-type"]);
+
         await visitor.GetByTestId(UiTestIds.SharedRecipeSignIn).ClickAsync();
+        await Expect(visitor.Locator("html")).ToHaveAttributeAsync("lang", "en");
         await visitor.Locator("#login-email").FillAsync(email);
         await visitor.Locator("#login-password").FillAsync(password);
         await visitor.Locator("button[type=submit]").ClickAsync();
         await Expect(visitor).ToHaveURLAsync(link);
 
         var saveButton = visitor.GetByTestId(UiTestIds.SharedRecipeSave);
+        await Expect(saveButton).ToHaveTextAsync("Save a copy");
+        await languageSwitcher.ClickAsync();
+        await visitor.GetByTestId(UiTestIds.LanguageNl).ClickAsync();
+        await Expect(visitor).ToHaveURLAsync(link);
+        await Expect(visitor.Locator("html")).ToHaveAttributeAsync("lang", "nl");
+        await Expect(saveButton).ToHaveTextAsync("Sla een kopie op");
         var savePath = await visitor.Locator("form").GetAttributeAsync("action");
         var unprotectedPost = await visitorContext.APIRequest.PostAsync(fixture.BaseUrl + savePath);
         Assert.Equal(400, unprotectedPost.Status);

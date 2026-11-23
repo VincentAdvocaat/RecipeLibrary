@@ -1,0 +1,12 @@
+summary::-webkit-details-marker {
+    display: none;
+}
+
+/* Clicking outside the open menu toggles the summary closed. */
+details[open] > summary::before {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    content: "";
+    cursor: default;
+}
