@@ -124,6 +124,9 @@
   <data name="RecipeCreate.Title.Required" xml:space="preserve"><value>Titel is verplicht.</value></data>
   <data name="RecipeCreate.Description.Label" xml:space="preserve"><value>Korte Beschrijving</value></data>
   <data name="RecipeCreate.Description.Placeholder" xml:space="preserve"><value>Geef een korte omschrijving van het recept</value></data>
+  <data name="RecipeCreate.SourceUrl.Label" xml:space="preserve"><value>Bronlink (optioneel)</value></data>
+  <data name="RecipeCreate.SourceUrl.Invalid" xml:space="preserve"><value>Vul een volledige HTTP- of HTTPS-link zonder inloggegevens in.</value></data>
+  <data name="RecipeDetail.SourceLink" xml:space="preserve"><value>Oorspronkelijk recept</value></data>
   <data name="RecipeCreate.TagsCategory.Label" xml:space="preserve"><value>Tags / Categorie</value></data>
   <data name="RecipeCreate.PreparationTime.Label" xml:space="preserve"><value>Voorbereidingstijd (min)</value></data>
   <data name="RecipeCreate.CookingTime.Label" xml:space="preserve"><value>Bereidingstijd (min)</value></data>
@@ -159,9 +162,8 @@
   <data name="RecipeCreate.Ingredient.Match.Fuzzy" xml:space="preserve"><value>Mogelijke match: {0} ({1}). Kies een suggestie als dit niet klopt.</value></data>
   <data name="RecipeCreate.Ingredient.Match.None" xml:space="preserve"><value>Geen match gevonden. Je kunt doorgaan met nieuwe invoer.</value></data>
   <data name="RecipeCreate.Instructions.SectionLabel" xml:space="preserve"><value>Instructies</value></data>
-  <data name="RecipeCreate.Instructions.StepsHint" xml:space="preserve"><value>Stappen</value></data>
+  <data name="RecipeCreate.Instructions.StepsHint" xml:space="preserve"><value>Bereidingsstappen zijn optioneel.</value></data>
   <data name="RecipeCreate.Step.Placeholder" xml:space="preserve"><value>Bijvoorbeeld: Snijd de ui. Verhit olie in een pan...</value></data>
-  <data name="RecipeCreate.Step.Text.Required" xml:space="preserve"><value>Stap tekst is verplicht.</value></data>
   <data name="RecipeCreate.Step.AddButton" xml:space="preserve"><value>+ Stap toevoegen</value></data>
   <data name="RecipeCreate.CancelButton" xml:space="preserve"><value>Annuleren</value></data>
   <data name="RecipeCreate.SaveButton" xml:space="preserve"><value>Opslaan Recept</value></data>

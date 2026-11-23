@@ -20,6 +20,10 @@ public sealed class Recipe
     public RecipeTitle Title { get; set; }
 
     public string? Description { get; set; }
+    public string? SourceUrl { get; set; }
+
+    /// <summary>Seeder identity, independent of user-editable source links.</summary>
+    public string? CollectionSeedKey { get; set; }
 
     /// <summary>
     /// Preparation time in minutes (voorbereiden).

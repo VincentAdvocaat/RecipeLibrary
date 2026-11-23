@@ -37,6 +37,7 @@ public static class CreateRecipeCommandValidator
         }
 
         ValidateImageUrl(command.ImageUrl);
+        RecipeSourceUrl.Normalize(command.SourceUrl);
 
         if (!Enum.IsDefined(typeof(Difficulty), command.Difficulty))
         {
@@ -92,9 +93,9 @@ public static class CreateRecipeCommandValidator
             }
         }
 
-        if (command.InstructionSteps is null || command.InstructionSteps.Count == 0)
+        if (command.InstructionSteps is null)
         {
-            throw new ArgumentException("At least one instruction step is required.", nameof(command));
+            throw new ArgumentException("InstructionSteps cannot be null.", nameof(command));
         }
 
         if (command.InstructionSteps.Any(s => s is null))

@@ -31,6 +31,7 @@ public sealed class GetRecipeByIdQueryHandler(
             HouseholdId = recipe.HouseholdId,
             Title = recipe.Title.Value,
             Description = recipe.Description,
+            SourceUrl = recipe.SourceUrl,
             ImageUrl = recipe.ImageUrl,
             PreparationMinutes = recipe.PreparationMinutes,
             CookingMinutes = recipe.CookingMinutes,

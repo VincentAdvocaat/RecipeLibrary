@@ -10,7 +10,7 @@ namespace RecipeLibrary.Web.IntegrationTests;
 public sealed class RecipePersistenceTests(SqlContainerFixture fixture)
 {
     [Fact]
-    public async Task CreateRecipe_WithPreparation_PersistsAndLoads()
+    public async Task CreateRecipe_WithPreparationAndSourceUrl_PersistsAndLoads()
     {
         using var scope = fixture.Factory.Services.CreateScope();
         var bus = scope.ServiceProvider.GetRequiredService<ICommandBus>();
@@ -20,6 +20,7 @@ public sealed class RecipePersistenceTests(SqlContainerFixture fixture)
             new CreateRecipeCommand
             {
                 Title = "Integration Test Recipe",
+                SourceUrl = " https://example.com/Original?servings=4 ",
                 Category = 2,
                 PreparationTimeMinutes = 10,
                 CookingTimeMinutes = 20,
@@ -44,6 +45,7 @@ public sealed class RecipePersistenceTests(SqlContainerFixture fixture)
 
         Assert.NotNull(loaded);
         Assert.Equal("Integration Test Recipe", loaded.Title);
+        Assert.Equal("https://example.com/Original?servings=4", loaded.SourceUrl);
         Assert.Single(loaded.Ingredients);
         Assert.Equal("ruim", loaded.Ingredients[0].Preparation);
     }

@@ -6,6 +6,7 @@ using RecipeLibrary.Application;
 using RecipeLibrary.Application.Abstractions;
 using RecipeLibrary.Application.Contracts;
 using RecipeLibrary.Application.Validators;
+using RecipeLibrary.Domain.ValueObjects;
 using RecipeLibrary.Infrastructure.ContentModeration;
 using RecipeLibrary.Infrastructure.Persistence;
 
@@ -14,7 +15,8 @@ const string usage = """
     SeedRecipeCollection apply <seed-file> <owner-id>
 
     Run apply with ConnectionStrings__RecipeDb set to the target database. Apply
-    the AddRecipeRatings migration first and use the ID of an existing account.
+    the AddRecipeRatings, AddRecipeSourceUrl and AddRecipeCollectionSeedKey migrations
+    first and use the ID of an existing account.
     """;
 
 if (args is ["--help"] or ["-h"])
@@ -45,7 +47,7 @@ try
         file, new JsonSerializerOptions(JsonSerializerDefaults.Web), ct)
         ?? throw new InvalidDataException("The seed file is empty.");
     var ready = collection.Validate();
-    Console.WriteLine($"Ready: {ready.Length}, with a rating: {ready.Count(entry => entry.Source.RatingStars.HasValue)}, skipped: {collection.Recipes.Length - ready.Length}.");
+    Console.WriteLine($"Ready: {ready.Length}, with a rating: {ready.Count(entry => entry.RatingStars.HasValue)}, skipped: {collection.Recipes.Length - ready.Length}.");
     if (!apply)
     {
         return 0;
@@ -88,7 +90,7 @@ catch (Exception error)
 
 internal sealed record SeedCollection(int FormatVersion, SeedEntry[] Recipes)
 {
-    public SeedEntry[] Validate()
+    public ReadySeedEntry[] Validate()
     {
         if (FormatVersion != 1 || Recipes is not { Length: > 0 })
         {
@@ -97,12 +99,15 @@ internal sealed record SeedCollection(int FormatVersion, SeedEntry[] Recipes)
 
         var keys = new HashSet<string>(StringComparer.Ordinal);
         var descriptions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var ready = new List<SeedEntry>();
+        var sourceUrls = new HashSet<string>(StringComparer.Ordinal);
+        var ready = new List<ReadySeedEntry>();
         foreach (var entry in Recipes)
         {
-            if (entry is null || string.IsNullOrWhiteSpace(entry.SeedKey) || !keys.Add(entry.SeedKey))
+            if (entry is null || string.IsNullOrWhiteSpace(entry.SeedKey)
+                || entry.SeedKey.Length > 256 || entry.SeedKey != entry.SeedKey.Trim()
+                || !keys.Add(entry.SeedKey))
             {
-                throw new InvalidDataException("Every entry requires a unique seed key.");
+                throw new InvalidDataException("Every entry requires a unique seed key of at most 256 characters without surrounding whitespace.");
             }
 
             if (entry.Source is null || entry.Source.RatingStars is < 1 or > 5)
@@ -120,22 +125,41 @@ internal sealed record SeedCollection(int FormatVersion, SeedEntry[] Recipes)
                 throw new InvalidDataException($"{entry.SeedKey}: unknown seed status '{entry.SeedStatus}'.");
             }
 
-            var description = entry.Recipe?.Description?.Trim();
-            if (string.IsNullOrEmpty(description) || !descriptions.Add(description))
-            {
-                throw new InvalidDataException($"{entry.SeedKey}: a ready recipe requires a unique source description.");
-            }
-
+            string? sourceUrl;
             try
             {
                 CreateRecipeCommandValidator.ValidateAndThrow(entry.Recipe!);
+                sourceUrl = RecipeSourceUrl.Normalize(entry.Recipe.SourceUrl);
             }
             catch (ArgumentException error)
             {
                 throw new InvalidDataException($"{entry.SeedKey}: {error.Message}", error);
             }
 
-            ready.Add(entry);
+            const string legacySourcePrefix = "Bron ";
+            var matchDescription = entry.Recipe.Description?.Trim();
+            if (sourceUrl is not null)
+            {
+                matchDescription = legacySourcePrefix + entry.Recipe.SourceUrl!.Trim();
+            }
+            else if (matchDescription?.StartsWith(legacySourcePrefix, StringComparison.Ordinal) == true)
+            {
+                RecipeSourceUrl.TryNormalize(matchDescription[legacySourcePrefix.Length..], out sourceUrl);
+            }
+
+            if (sourceUrl is null && string.IsNullOrEmpty(matchDescription))
+            {
+                throw new InvalidDataException($"{entry.SeedKey}: a ready recipe requires a source URL or description.");
+            }
+
+            if ((sourceUrl is not null && !sourceUrls.Add(sourceUrl))
+                || (!string.IsNullOrEmpty(matchDescription) && !descriptions.Add(matchDescription)))
+            {
+                throw new InvalidDataException($"{entry.SeedKey}: a ready recipe requires a unique source.");
+            }
+
+            ready.Add(new ReadySeedEntry(
+                entry.SeedKey, entry.Recipe, entry.Source.RatingStars, sourceUrl, matchDescription));
         }
 
         return ready.ToArray();
@@ -143,6 +167,9 @@ internal sealed record SeedCollection(int FormatVersion, SeedEntry[] Recipes)
 }
 
 internal sealed record SeedEntry(string SeedKey, string SeedStatus, CreateRecipeCommand Recipe, SeedSource Source);
+
+internal sealed record ReadySeedEntry(
+    string SeedKey, CreateRecipeCommand Recipe, int? RatingStars, string? SourceUrl, string? MatchDescription);
 
 internal sealed class SeedSource
 {

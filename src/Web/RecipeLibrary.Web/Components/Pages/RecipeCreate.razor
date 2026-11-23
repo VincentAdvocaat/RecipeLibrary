@@ -64,6 +64,8 @@
 
         public string? Description { get; set; }
 
+        public string? SourceUrl { get; set; }
+
         [Range(0, 24 * 60)]
         public int PreparationTimeMinutes { get; set; } = 30;
 
@@ -329,6 +331,13 @@
                         </div>
 
                         <div>
+                            <label for="recipe-source-url" class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.SourceUrl.Label"]</label>
+                            <InputText id="recipe-source-url" type="url" maxlength="@RecipeSourceUrl.MaxLength"
+                                       class="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                       @bind-Value="_vm.SourceUrl" />
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">@L["RecipeCreate.TagsCategory.Label"]</label>
                             <CategoryFilter SelectedCategory="_vm.Category" SelectedCategoryChanged="OnCategoryChanged" ShowAllOption="false" />
                         </div>
@@ -429,11 +438,11 @@
                     {
                         var step = _vm.Steps[i];
                         var index = i;
-                        <div class="flex gap-3 items-start">
+                        <div @key="step" class="flex gap-3 items-start">
                             <div class="flex-1">
                                 <InputTextArea class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" rows="2" placeholder="@L["RecipeCreate.Step.Placeholder"]" @bind-Value="step.Text" data-testid="@UiTestIds.StepInput(index)" />
                             </div>
-                            <button type="button" class="p-2 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded mt-6" aria-label="@L["Common.Remove.AriaLabel"]" @onclick="() => RemoveStep(index)" disabled="@(_vm.Steps.Count <= 1)">
+                            <button type="button" class="p-2 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded mt-6" aria-label="@L["Common.Remove.AriaLabel"]" @onclick="() => RemoveStep(step)">
                                 <Icon Name="@Icon.IconName.Trash" CssClass="w-5 h-5" />
                             </button>
                         </div>
@@ -579,7 +588,8 @@
     private async Task ProcessUrlImportAsync()
     {
         _importError = null;
-        if (string.IsNullOrWhiteSpace(_importUrl))
+        var sourceUrl = _importUrl.Trim();
+        if (string.IsNullOrEmpty(sourceUrl))
         {
             _importError = L["RecipeCreate.Url.Error.Empty"];
             return;
@@ -591,11 +601,11 @@
             var result = await QueryBus.QueryAsync<ImportRecipeFromUrlQuery, ImportRecipeResult>(
                 new ImportRecipeFromUrlQuery
                 {
-                    Url = _importUrl.Trim(),
+                    Url = sourceUrl,
                     ParseOptions = BuildParseOptions(),
                 });
 
-            CompleteImport(result);
+            CompleteImport(result, sourceUrl);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
@@ -666,9 +676,10 @@
         return L["RecipeImport.Error.Failed"];
     }
 
-    private void CompleteImport(ImportRecipeResult result)
+    private void CompleteImport(ImportRecipeResult result, string? sourceUrl = null)
     {
         ApplyDraftToVm(result);
+        _vm.SourceUrl = sourceUrl;
         _showImportReviewBanner = true;
         _mode = RecipeCreateMode.Manual;
         _importError = null;
@@ -854,10 +865,9 @@
         StateHasChanged();
     }
 
-    private void RemoveStep(int index)
+    private void RemoveStep(StepVm step)
     {
-        if (_vm.Steps.Count <= 1) return;
-        _vm.Steps.RemoveAt(index);
+        _vm.Steps.Remove(step);
         for (var i = 0; i < _vm.Steps.Count; i++)
             _vm.Steps[i].StepNumber = i + 1;
         StateHasChanged();
@@ -877,7 +887,7 @@
             L,
             _vm.Title,
             _vm.Ingredients,
-            _vm.Steps.Select(static s => s.Text));
+            _vm.SourceUrl);
         if (_statusMessage is not null)
         {
             return;
@@ -902,6 +912,7 @@
                 HouseholdId = _householdId,
                 Title = _vm.Title,
                 Description = string.IsNullOrWhiteSpace(_vm.Description) ? null : _vm.Description.Trim(),
+                SourceUrl = _vm.SourceUrl,
                 ImageUrl = string.IsNullOrWhiteSpace(_imageUrl) ? null : _imageUrl.Trim(),
                 PreparationTimeMinutes = _vm.PreparationTimeMinutes,
                 CookingTimeMinutes = _vm.CookingTimeMinutes,

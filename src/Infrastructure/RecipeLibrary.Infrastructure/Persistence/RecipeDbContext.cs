@@ -128,6 +128,20 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
             b.Property(x => x.Description)
                 .HasMaxLength(4000);
 
+            b.Property(x => x.SourceUrl)
+                .HasMaxLength(RecipeSourceUrl.MaxLength);
+
+            b.Property(x => x.CollectionSeedKey)
+                .HasMaxLength(256);
+            if (Database.IsSqlServer())
+            {
+                b.Property(x => x.CollectionSeedKey)
+                    .UseCollation("Latin1_General_100_BIN2");
+            }
+            b.HasIndex(x => new { x.OwnerUserId, x.CollectionSeedKey })
+                .IsUnique()
+                .HasFilter("[HouseholdId] IS NULL AND [CollectionSeedKey] IS NOT NULL");
+
             b.Property(x => x.PreparationMinutes);
             b.Property(x => x.CookingMinutes);
             b.Property(x => x.Category)

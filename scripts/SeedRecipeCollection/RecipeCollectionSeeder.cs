@@ -11,12 +11,22 @@ internal sealed class RecipeCollectionSeeder(
     ICommandBus commands,
     SeedOwner currentUser)
 {
-    public async Task ApplyAsync(SeedEntry[] entries, string ownerId, string connectionString, CancellationToken ct)
+    public async Task ApplyAsync(ReadySeedEntry[] entries, string ownerId, string connectionString, CancellationToken ct)
     {
         var appliedMigrations = await db.Database.GetAppliedMigrationsAsync(ct);
         if (!appliedMigrations.Any(name => name.EndsWith("_AddRecipeRatings", StringComparison.Ordinal)))
         {
             throw new InvalidOperationException("Apply the AddRecipeRatings migration to the target database first.");
+        }
+
+        if (!appliedMigrations.Any(name => name.EndsWith("_AddRecipeSourceUrl", StringComparison.Ordinal)))
+        {
+            throw new InvalidOperationException("Apply the AddRecipeSourceUrl migration to the target database first.");
+        }
+
+        if (!appliedMigrations.Any(name => name.EndsWith("_AddRecipeCollectionSeedKey", StringComparison.Ordinal)))
+        {
+            throw new InvalidOperationException("Apply the AddRecipeCollectionSeedKey migration to the target database first.");
         }
 
         var owner = await db.Users
@@ -35,29 +45,60 @@ internal sealed class RecipeCollectionSeeder(
         await AcquireOwnerLockAsync(seedLock, owner.Id, ct);
 
         var created = 0;
+        var sourceLinksAdded = 0;
         var ratingsAdded = 0;
         foreach (var entry in entries)
         {
-            var description = entry.Recipe.Description!.Trim();
-            var matchingIds = await db.Recipes
-                .Where(recipe => recipe.OwnerUserId == owner.Id && recipe.Description == description)
+            var sourceUrl = entry.SourceUrl;
+            var description = entry.MatchDescription;
+            var personalRecipes = db.Recipes
+                .Where(recipe => recipe.OwnerUserId == owner.Id && recipe.HouseholdId == null);
+            var recipeId = await personalRecipes
+                .Where(recipe => recipe.CollectionSeedKey == entry.SeedKey)
                 .Select(recipe => recipe.Id)
-                .Take(2)
-                .ToListAsync(ct);
-            if (matchingIds.Count > 1)
+                .SingleOrDefaultAsync(ct);
+
+            if (recipeId == Guid.Empty)
             {
-                throw new InvalidOperationException($"{entry.SeedKey}: multiple recipes with the same source for this owner.");
+                var matchingIds = await personalRecipes
+                    .Where(recipe => recipe.CollectionSeedKey == null
+                        && ((sourceUrl != null && EF.Functions.Collate(recipe.SourceUrl!, "Latin1_General_100_BIN2") == sourceUrl)
+                            || (description != null && EF.Functions.Collate(recipe.Description!, "Latin1_General_100_BIN2") == description)))
+                    .Select(recipe => recipe.Id)
+                    .Take(2)
+                    .ToListAsync(ct);
+                if (matchingIds.Count > 1)
+                {
+                    throw new InvalidOperationException($"{entry.SeedKey}: multiple untracked recipes with the same source for this owner.");
+                }
+
+                recipeId = matchingIds.SingleOrDefault();
+                if (matchingIds.Count == 0)
+                {
+                    var result = await commands.SendAsync<CreateRecipeCommand, CreateRecipeResult>(entry.Recipe, ct);
+                    recipeId = result.RecipeId;
+                    created++;
+                }
+
+                // Track even legacy recipes whose source was manually changed. Once tracked,
+                // future runs must preserve user edits and deliberately cleared source links.
+                sourceLinksAdded += await personalRecipes
+                    .Where(recipe => recipe.Id == recipeId && recipe.CollectionSeedKey == null
+                        && recipe.SourceUrl == null && sourceUrl != null)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(recipe => recipe.CollectionSeedKey, entry.SeedKey)
+                        .SetProperty(recipe => recipe.SourceUrl, sourceUrl)
+                        .SetProperty(recipe => recipe.Description,
+                            recipe => description != null
+                                && EF.Functions.Collate(recipe.Description!, "Latin1_General_100_BIN2") == description
+                                    ? null : recipe.Description), ct);
+                await personalRecipes
+                    .Where(recipe => recipe.Id == recipeId && recipe.CollectionSeedKey == null)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(recipe => recipe.CollectionSeedKey, entry.SeedKey), ct);
             }
 
-            var recipeId = matchingIds.SingleOrDefault();
-            if (matchingIds.Count == 0)
-            {
-                var result = await commands.SendAsync<CreateRecipeCommand, CreateRecipeResult>(entry.Recipe, ct);
-                recipeId = result.RecipeId;
-                created++;
-            }
-
-            if (entry.Source.RatingStars is int stars && await AddRatingIfMissingAsync(recipeId, owner.Id, stars, ct))
+            if (entry.RatingStars is int stars && await AddRatingIfMissingAsync(recipeId, owner.Id, stars, ct))
             {
                 ratingsAdded++;
             }
@@ -65,7 +106,7 @@ internal sealed class RecipeCollectionSeeder(
             db.ChangeTracker.Clear();
         }
 
-        Console.WriteLine($"Recipes created: {created}, existing: {entries.Length - created}, personal ratings added: {ratingsAdded}.");
+        Console.WriteLine($"Recipes created: {created}, existing: {entries.Length - created}, source links added after creation: {sourceLinksAdded}, personal ratings added: {ratingsAdded}.");
     }
 
     private static async Task AcquireOwnerLockAsync(SqlConnection connection, string ownerId, CancellationToken ct)

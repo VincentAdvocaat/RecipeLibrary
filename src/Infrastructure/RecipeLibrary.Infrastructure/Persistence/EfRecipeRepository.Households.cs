@@ -64,6 +64,7 @@ public sealed partial class EfRecipeRepository
             SharedFromRecipeId = source.Id,
             Title = source.Title,
             Description = source.Description,
+            SourceUrl = source.SourceUrl,
             ImageUrl = source.ImageUrl,
             PreparationMinutes = source.PreparationMinutes,
             CookingMinutes = source.CookingMinutes,

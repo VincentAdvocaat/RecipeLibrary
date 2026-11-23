@@ -159,6 +159,7 @@ public sealed partial class EfRecipeRepository(RecipeDbContext dbContext)
                         setters => setters
                             .SetProperty(r => r.Title, recipe.Title)
                             .SetProperty(r => r.Description, recipe.Description)
+                            .SetProperty(r => r.SourceUrl, recipe.SourceUrl)
                             .SetProperty(r => r.ImageUrl, recipe.ImageUrl)
                             .SetProperty(r => r.PreparationMinutes, recipe.PreparationMinutes)
                             .SetProperty(r => r.CookingMinutes, recipe.CookingMinutes)
