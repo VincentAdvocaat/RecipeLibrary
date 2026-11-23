@@ -20,7 +20,8 @@ public static class ImageSourcePolicy
                 && local.Host == "local.invalid"
                 && (local.AbsolutePath.StartsWith("/images/demo/", StringComparison.Ordinal)
                     || local.AbsolutePath.StartsWith("/uploads/recipe-images/", StringComparison.Ordinal)
-                    || local.AbsolutePath.StartsWith("/api/recipe-images/", StringComparison.Ordinal)))
+                    || local.AbsolutePath.StartsWith("/api/recipe-images/", StringComparison.Ordinal)
+                    || local.AbsolutePath.StartsWith("/api/v1/recipe-images/", StringComparison.Ordinal)))
                 return new(source, null);
             return new(null, null);
         }

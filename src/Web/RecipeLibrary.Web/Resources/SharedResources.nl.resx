@@ -424,4 +424,49 @@
   <data name="Household.Share.SubmitOne" xml:space="preserve"><value>Deel 1 recept</value></data>
   <data name="Household.Share.Result" xml:space="preserve"><value>Gedeeld: {0}. Al gedeeld: {1}. Niet beschikbaar: {2}.</value></data>
   <data name="Household.Share.Error" xml:space="preserve"><value>Delen is niet gelukt. Je selectie staat nog klaar. Probeer het opnieuw.</value></data>
+  <data name="RecipeShare.Enable" xml:space="preserve">
+    <value>Delen via link</value>
+  </data>
+  <data name="RecipeShare.EnableError" xml:space="preserve">
+    <value>Voor dit recept is geen deellink beschikbaar.</value>
+  </data>
+  <data name="RecipeShare.LinkLabel" xml:space="preserve">
+    <value>Deellink</value>
+  </data>
+  <data name="RecipeShare.LinkHelp" xml:space="preserve">
+    <value>Iedereen met deze link kan dit recept bekijken.</value>
+  </data>
+  <data name="RecipeShare.CopyLink" xml:space="preserve">
+    <value>Kopieer link</value>
+  </data>
+  <data name="RecipeShare.Copied" xml:space="preserve">
+    <value>Deellink gekopieerd.</value>
+  </data>
+  <data name="RecipeShare.CopyError" xml:space="preserve">
+    <value>Kopiëren is mislukt. Je kunt de link ook selecteren en zelf kopiëren.</value>
+  </data>
+  <data name="RecipeShare.Disable" xml:space="preserve">
+    <value>Trek link in</value>
+  </data>
+  <data name="RecipeShare.Disabled" xml:space="preserve">
+    <value>Deellink ingetrokken.</value>
+  </data>
+  <data name="RecipeShare.Error" xml:space="preserve">
+    <value>De deellink kon niet worden opgehaald of gewijzigd.</value>
+  </data>
+  <data name="RecipeShare.SharedRecipe" xml:space="preserve">
+    <value>Gedeeld recept</value>
+  </data>
+  <data name="RecipeShare.Unavailable" xml:space="preserve">
+    <value>Recept niet beschikbaar</value>
+  </data>
+  <data name="RecipeShare.UnavailableHelp" xml:space="preserve">
+    <value>Controleer de link of vraag de afzender om een nieuwe.</value>
+  </data>
+  <data name="RecipeShare.SaveCopy" xml:space="preserve">
+    <value>Sla een kopie op</value>
+  </data>
+  <data name="RecipeShare.SignInToSave" xml:space="preserve">
+    <value>Log in om een kopie op te slaan</value>
+  </data>
 </root>

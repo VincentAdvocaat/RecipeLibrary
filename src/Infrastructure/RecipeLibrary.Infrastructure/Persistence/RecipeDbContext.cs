@@ -114,6 +114,12 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
                 .IsRequired();
 
             b.HasIndex(x => x.OwnerUserId);
+            b.HasIndex(x => x.PublicShareKey)
+                .IsUnique()
+                .HasFilter("[PublicShareKey] IS NOT NULL");
+            b.HasIndex(x => new { x.OwnerUserId, x.SharedFromRecipeId })
+                .IsUnique()
+                .HasFilter("[HouseholdId] IS NULL AND [SharedFromRecipeId] IS NOT NULL");
             b.HasOne<Household>().WithMany().HasForeignKey(x => x.HouseholdId)
                 .OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(x => new { x.HouseholdId, x.SharedFromRecipeId })

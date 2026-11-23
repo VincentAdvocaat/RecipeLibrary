@@ -39,6 +39,12 @@ public static class UiTestIds
     public const string TagAdd = "tag-add";
 
     public const string RecipeEdit = "recipe-edit";
+    public const string RecipeShareEnable = "recipe-share-enable";
+    public const string RecipeShareLink = "recipe-share-link";
+    public const string RecipeShareCopyLink = "recipe-share-copy-link";
+    public const string RecipeShareRevoke = "recipe-share-revoke";
+    public const string SharedRecipeSignIn = "shared-recipe-sign-in";
+    public const string SharedRecipeSave = "shared-recipe-save";
     public const string RecipeDelete = "recipe-delete";
     public const string RecipeRating = "recipe-rating";
     public static string RecipeRatingOption(int stars) => $"recipe-rating-{stars}";

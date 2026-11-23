@@ -18,7 +18,8 @@ public sealed class DemoMiddleware(RequestDelegate next)
             var publicPath = path.StartsWithSegments("/demo") || path.StartsWithSegments("/Account")
                 || path.StartsWithSegments("/health") || path.StartsWithSegments("/api/system")
                 || path.StartsWithSegments("/starting") || path.StartsWithSegments("/failed")
-                || path.StartsWithSegments("/terms") || path.StartsWithSegments("/_framework")
+                || path.StartsWithSegments("/terms") || path.StartsWithSegments("/shared-recipe")
+                || path.StartsWithSegments("/_framework")
                 || path.StartsWithSegments("/_content") || path.StartsWithSegments("/images")
                 || path.Value?.EndsWith(".js", StringComparison.OrdinalIgnoreCase) == true
                 || path.Value?.EndsWith(".css", StringComparison.OrdinalIgnoreCase) == true;

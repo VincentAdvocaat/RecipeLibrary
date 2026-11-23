@@ -14,7 +14,9 @@ public sealed class Recipe
 
     public Guid? HouseholdId { get; set; }
 
-    /// <summary>Source identity for deduplication, retained if the personal recipe is deleted.</summary>
+    public Guid? PublicShareKey { get; set; }
+
+    /// <summary>Source identity for deduplication, retained if the source recipe is deleted.</summary>
     public Guid? SharedFromRecipeId { get; set; }
 
     public RecipeTitle Title { get; set; }
@@ -60,5 +62,46 @@ public sealed class Recipe
     public ICollection<InstructionStep> InstructionSteps { get; set; } = new List<InstructionStep>();
 
     public ICollection<RecipeRating> Ratings { get; } = new List<RecipeRating>();
-}
 
+    public Recipe CopyFor(string ownerUserId)
+    {
+        var id = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        return new Recipe
+        {
+            Id = id,
+            OwnerUserId = ownerUserId,
+            Title = Title,
+            Description = Description,
+            SourceUrl = SourceUrl,
+            ImageUrl = ImageUrl,
+            PreparationMinutes = PreparationMinutes,
+            CookingMinutes = CookingMinutes,
+            Category = Category,
+            Difficulty = Difficulty,
+            Servings = Servings,
+            CreatedAt = now,
+            UpdatedAt = now,
+            ModerationStatus = ModerationStatus,
+            ModeratedAt = ModeratedAt,
+            ModerationSummary = ModerationSummary,
+            Ingredients = Ingredients.Select(ingredient => new Ingredient
+            {
+                Id = Guid.NewGuid(),
+                RecipeId = id,
+                IngredientId = ingredient.IngredientId,
+                Name = ingredient.Name,
+                Preparation = ingredient.Preparation,
+                Quantity = ingredient.Quantity,
+                Unit = ingredient.Unit,
+            }).ToList(),
+            InstructionSteps = InstructionSteps.Select(step => new InstructionStep
+            {
+                Id = Guid.NewGuid(),
+                RecipeId = id,
+                StepNumber = step.StepNumber,
+                Text = step.Text,
+            }).ToList(),
+        };
+    }
+}

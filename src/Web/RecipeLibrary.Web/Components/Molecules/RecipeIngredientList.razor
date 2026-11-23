@@ -9,7 +9,10 @@
 <div class="@CssClass">
     <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
         <Heading Level="3" CssClass="m-0 text-sm font-medium text-gray-900">@L["Recipe.Ingredients.SectionLabel"]</Heading>
-        <MeasureSystemSwitcher />
+        @if (!ReadOnly)
+        {
+            <MeasureSystemSwitcher />
+        }
     </div>
     <ul class="space-y-1 text-sm text-gray-700">
         @foreach (var item in Items)
@@ -52,11 +55,18 @@
 
     [Parameter] public IReadOnlyList<RecipeDetailIngredientItem> Items { get; set; } = [];
     [Parameter] public string? CssClass { get; set; }
+    [Parameter] public bool ReadOnly { get; set; }
 
     private MeasureSystem MeasureSystem => MeasureSystemService.GetMeasureSystem();
 
     protected override async Task OnParametersSetAsync()
     {
+        if (ReadOnly)
+        {
+            _convertibleKeys.Clear();
+            return;
+        }
+
         var candidates = new List<(string Key, IngredientQuantityConversionRequest Request)>();
         foreach (var item in Items)
         {
