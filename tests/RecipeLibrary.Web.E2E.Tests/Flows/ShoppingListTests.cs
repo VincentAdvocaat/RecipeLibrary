@@ -72,7 +72,9 @@ public sealed class ShoppingListTests(E2eFixture fixture, Xunit.Abstractions.ITe
 
         var newName = $"List {Guid.NewGuid():N}";
         await page.GetByTestId(UiTestIds.ListRename).ClickAsync();
-        await page.Locator("input").First.FillBlazorInputAsync(newName);
+        var renameInput = page.GetByTestId(UiTestIds.ListRenameSave).Locator("..").GetByRole(AriaRole.Textbox);
+        await renameInput.FillBlazorInputAsync(newName);
+        await Assertions.Expect(renameInput).ToHaveValueAsync(newName);
         await page.GetByTestId(UiTestIds.ListRenameSave).ClickAsync();
 
         await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = newName })).ToBeVisibleAsync();

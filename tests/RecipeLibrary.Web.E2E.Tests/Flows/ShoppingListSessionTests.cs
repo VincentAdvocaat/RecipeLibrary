@@ -35,7 +35,9 @@ public sealed class ShoppingListSessionTests(E2eFixture fixture)
 
         var name = $"Cookie-free list {Guid.NewGuid():N}";
         await page.GetByTestId(UiTestIds.ListRename).ClickAsync();
-        await page.Locator("input").First.FillBlazorInputAsync(name);
+        var renameInput = page.GetByTestId(UiTestIds.ListRenameSave).Locator("..").GetByRole(AriaRole.Textbox);
+        await renameInput.FillBlazorInputAsync(name);
+        await Assertions.Expect(renameInput).ToHaveValueAsync(name);
         await page.GetByTestId(UiTestIds.ListRenameSave).ClickAsync();
         await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = name })).ToBeVisibleAsync();
         Assert.DoesNotContain(await context.CookiesAsync(), cookie => cookie.Name == "ShoppingListGroupId");
