@@ -23,7 +23,7 @@ public sealed class GetRecipeByIdQueryHandler(
         return MapToDetailResult(recipe, ownerUserId);
     }
 
-    private static GetRecipeByIdResult MapToDetailResult(Recipe recipe, string userId)
+    internal static GetRecipeByIdResult MapToDetailResult(Recipe recipe, string? userId)
     {
         return new GetRecipeByIdResult
         {

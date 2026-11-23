@@ -7,7 +7,7 @@ using RecipeLibrary.Domain.ValueObjects;
 namespace RecipeLibrary.Infrastructure.Persistence;
 
 public sealed partial class EfRecipeRepository(RecipeDbContext dbContext)
-    : IRecipeRepository, IRecipeRatingRepository, IHouseholdRecipeRepository
+    : IRecipeRepository, IRecipeRatingRepository, IHouseholdRecipeRepository, IRecipeShareRepository
 {
     public async Task AddAsync(Recipe recipe, CancellationToken ct = default)
     {

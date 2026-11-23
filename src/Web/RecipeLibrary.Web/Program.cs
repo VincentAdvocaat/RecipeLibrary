@@ -24,6 +24,7 @@ using RecipeLibrary.Infrastructure.RecipeImport;
 using RecipeLibrary.Application.Abstractions;
 using OpenIddict.Abstractions;
 using RecipeLibrary.Web.Auth;
+using RecipeLibrary.Web.Endpoints;
 using RecipeLibrary.Web.Endpoints.V1;
 using RecipeLibrary.Web.Services;
 using RecipeLibrary.Web.Middleware;
@@ -342,6 +343,7 @@ app.MapRazorComponents<App>()
 app.MapOpenIddictTokenEndpoints();
 app.MapAuthApiV1();
 app.MapRecipesApiV1();
+app.MapSharedRecipes();
 app.MapRecipeImagesApiV1();
 
 // Liveness: process is up (no database dependency). /health is a backward-compatible alias.

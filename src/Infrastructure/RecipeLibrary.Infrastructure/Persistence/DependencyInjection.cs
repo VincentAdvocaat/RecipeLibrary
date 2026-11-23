@@ -30,6 +30,7 @@ public static class PersistenceServiceRegistration
         services.AddScoped<IRecipeRepository>(sp => sp.GetRequiredService<EfRecipeRepository>());
         services.AddScoped<IRecipeRatingRepository>(sp => sp.GetRequiredService<EfRecipeRepository>());
         services.AddScoped<IHouseholdRecipeRepository>(sp => sp.GetRequiredService<EfRecipeRepository>());
+        services.AddScoped<IRecipeShareRepository>(sp => sp.GetRequiredService<EfRecipeRepository>());
         services.AddScoped<IIngredientRepository, EfIngredientRepository>();
         services.AddScoped<IShoppingListRepository, EfShoppingListRepository>();
         services.AddScoped<IShoppingListAccess>(sp => sp.GetRequiredService<IShoppingListRepository>());

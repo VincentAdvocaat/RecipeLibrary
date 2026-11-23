@@ -1,0 +1,95 @@
+@page "/shared-recipe"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout AuthLayout
+
+@using Microsoft.AspNetCore.Components.Endpoints
+@using RecipeLibrary.Application.UseCases.Recipes
+@using RecipeLibrary.Web.Endpoints
+
+@inject SharedRecipeService Recipes
+
+<HeadContent>
+    <meta name="robots" content="noindex, nofollow" />
+</HeadContent>
+
+@if (_recipe is null)
+{
+    <PageTitle>@L["RecipeShare.Unavailable"]</PageTitle>
+    <div class="mx-auto max-w-4xl">
+        <Heading Level="1">@L["RecipeShare.Unavailable"]</Heading>
+        <p class="mt-2 text-gray-700">@L["RecipeShare.UnavailableHelp"]</p>
+    </div>
+}
+else
+{
+    <PageTitle>@L["RecipeDetail.PageTitle", _recipe.Title]</PageTitle>
+    <main class="mx-auto max-w-4xl space-y-4">
+        <header>
+            <p class="text-sm font-medium text-gray-600">@L["RecipeShare.SharedRecipe"]</p>
+            <Heading Level="1" CssClass="m-0">@_recipe.Title</Heading>
+        </header>
+        <article class="overflow-hidden rounded-lg bg-white shadow">
+            @if (_hasStoredImage)
+            {
+                <div class="aspect-video max-h-80 w-full overflow-hidden">
+                    <img src="@($"{SharedRecipeEndpoints.ImageRoute}?key={_key:D}")" alt="@_recipe.Title"
+                         class="h-full w-full object-cover" loading="lazy" />
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(_recipe.ImageUrl))
+            {
+                <div class="aspect-video max-h-80 w-full overflow-hidden">
+                    <Image Src="@_recipe.ImageUrl" Alt="@_recipe.Title" CssClass="h-full w-full object-cover" />
+                </div>
+            }
+
+            <div class="space-y-6 p-6">
+                <RecipeContent Recipe="@_recipe" ReadOnly="true" />
+                <div class="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-4">
+                    @if (Recipes.CanSave)
+                    {
+                        <form method="post" action="@($"{SharedRecipeEndpoints.SaveRoute}?key={_key:D}")" data-disable-on-submit>
+                            <AntiforgeryToken />
+                            <button type="submit" data-testid="@UiTestIds.SharedRecipeSave" class="rounded bg-gray-800 px-3 py-2 text-sm font-medium text-white">
+                                @L["RecipeShare.SaveCopy"]
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <a href="@LoginPath" data-testid="@UiTestIds.SharedRecipeSignIn" class="rounded bg-gray-800 px-3 py-2 text-sm font-medium text-white">
+                            @L["RecipeShare.SignInToSave"]
+                        </a>
+                    }
+                </div>
+            </div>
+        </article>
+    </main>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "key")] private string? Key { get; set; }
+    [CascadingParameter] private HttpContext Http { get; set; } = default!;
+
+    private Guid _key;
+    private GetRecipeByIdResult? _recipe;
+    private bool _hasStoredImage;
+
+    private string LoginPath =>
+        $"/Account/Login?returnUrl={Uri.EscapeDataString(SharedRecipeEndpoints.ViewPath(_key))}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Http.Response.Headers.CacheControl = "no-store";
+        var shared = Guid.TryParseExact(Key, "D", out _key)
+            ? await Recipes.GetAsync(_key, Http.RequestAborted)
+            : null;
+        _recipe = shared?.Recipe;
+        _hasStoredImage = shared?.HasStoredImage == true;
+        if (_recipe is null)
+        {
+            Http.Response.StatusCode = StatusCodes.Status404NotFound;
+        }
+    }
+}

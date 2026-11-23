@@ -424,4 +424,49 @@
   <data name="Household.Share.SubmitOne" xml:space="preserve"><value>Share 1 recipe</value></data>
   <data name="Household.Share.Result" xml:space="preserve"><value>Shared: {0}. Already shared: {1}. Unavailable: {2}.</value></data>
   <data name="Household.Share.Error" xml:space="preserve"><value>Sharing failed. Your selection is still available. Try again.</value></data>
+  <data name="RecipeShare.Enable" xml:space="preserve">
+    <value>Share via link</value>
+  </data>
+  <data name="RecipeShare.EnableError" xml:space="preserve">
+    <value>A share link is unavailable for this recipe.</value>
+  </data>
+  <data name="RecipeShare.LinkLabel" xml:space="preserve">
+    <value>Share link</value>
+  </data>
+  <data name="RecipeShare.LinkHelp" xml:space="preserve">
+    <value>Anyone with this link can view this recipe.</value>
+  </data>
+  <data name="RecipeShare.CopyLink" xml:space="preserve">
+    <value>Copy link</value>
+  </data>
+  <data name="RecipeShare.Copied" xml:space="preserve">
+    <value>Share link copied.</value>
+  </data>
+  <data name="RecipeShare.CopyError" xml:space="preserve">
+    <value>Could not copy the link. You can select and copy it yourself.</value>
+  </data>
+  <data name="RecipeShare.Disable" xml:space="preserve">
+    <value>Revoke link</value>
+  </data>
+  <data name="RecipeShare.Disabled" xml:space="preserve">
+    <value>Share link revoked.</value>
+  </data>
+  <data name="RecipeShare.Error" xml:space="preserve">
+    <value>Could not load or change the share link.</value>
+  </data>
+  <data name="RecipeShare.SharedRecipe" xml:space="preserve">
+    <value>Shared recipe</value>
+  </data>
+  <data name="RecipeShare.Unavailable" xml:space="preserve">
+    <value>Recipe unavailable</value>
+  </data>
+  <data name="RecipeShare.UnavailableHelp" xml:space="preserve">
+    <value>Check the link or ask the sender for a new one.</value>
+  </data>
+  <data name="RecipeShare.SaveCopy" xml:space="preserve">
+    <value>Save a copy</value>
+  </data>
+  <data name="RecipeShare.SignInToSave" xml:space="preserve">
+    <value>Sign in to save a copy</value>
+  </data>
 </root>

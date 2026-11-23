@@ -1,0 +1,105 @@
+@using RecipeLibrary.Web.Endpoints
+
+@inject IQueryBus QueryBus
+@inject ICommandBus CommandBus
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject ILogger<RecipeShareLink> Logger
+
+@if (_link is not null)
+{
+    <div class="w-full space-y-2 rounded border border-gray-200 p-3">
+        <label for="recipe-share-link" class="text-sm font-medium text-gray-900">@L["RecipeShare.LinkLabel"]</label>
+        <input id="recipe-share-link" class="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+               type="url" data-testid="@UiTestIds.RecipeShareLink" value="@_link" readonly />
+        <p class="text-sm text-gray-600">@L["RecipeShare.LinkHelp"]</p>
+        <div class="flex flex-wrap gap-2">
+            <button type="button" class="@ButtonClass" data-testid="@UiTestIds.RecipeShareCopyLink" disabled="@_busy" @onclick="CopyAsync">@L["RecipeShare.CopyLink"]</button>
+            <button type="button" class="@ButtonClass" data-testid="@UiTestIds.RecipeShareRevoke" disabled="@_busy" @onclick="() => SetLinkAsync(false)">
+                @L["RecipeShare.Disable"]
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    <button type="button" class="@ButtonClass" data-testid="@UiTestIds.RecipeShareEnable" disabled="@_busy" @onclick="() => SetLinkAsync(true)">
+        @L["RecipeShare.Enable"]
+    </button>
+}
+
+@if (_message is not null)
+{
+    <p class="w-full text-sm text-green-700" role="status">@_message</p>
+}
+@if (_error is not null)
+{
+    <p class="w-full text-sm text-red-700" role="alert">@_error</p>
+}
+
+@code {
+    private const string ButtonClass = "rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 disabled:opacity-50";
+
+    [Parameter, EditorRequired] public Guid RecipeId { get; set; }
+
+    private string? _link;
+    private string? _message;
+    private string? _error;
+    private bool _busy = true;
+
+    protected override Task OnInitializedAsync() => RunAsync(async () =>
+    {
+        var key = await QueryBus.QueryAsync<GetRecipeShareLinkQuery, Guid?>(new(RecipeId));
+        SetLink(key);
+    });
+
+    private Task SetLinkAsync(bool enabled) => RunAsync(async () =>
+    {
+        var key = await CommandBus.SendAsync<SetRecipeShareLinkCommand, Guid?>(new(RecipeId, enabled));
+        SetLink(key);
+        if (enabled && key is null)
+        {
+            _error = L["RecipeShare.EnableError"];
+        }
+        else if (!enabled)
+        {
+            _message = L["RecipeShare.Disabled"];
+        }
+    });
+
+    private void SetLink(Guid? key) =>
+        _link = key is { } value ? Navigation.ToAbsoluteUri(SharedRecipeEndpoints.ViewPath(value)).ToString() : null;
+
+    private async Task CopyAsync()
+    {
+        _error = _message = null;
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", _link);
+            _message = L["RecipeShare.Copied"];
+        }
+        catch (JSException)
+        {
+            _error = L["RecipeShare.CopyError"];
+        }
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        _busy = true;
+        _error = _message = null;
+        try
+        {
+            await action();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Logger.LogWarning(ex, "Could not manage the share link for recipe {RecipeId}.", RecipeId);
+            _error = L["RecipeShare.Error"];
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

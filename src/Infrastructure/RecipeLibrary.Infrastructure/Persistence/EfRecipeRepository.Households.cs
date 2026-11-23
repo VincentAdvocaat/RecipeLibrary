@@ -37,7 +37,13 @@ public sealed partial class EfRecipeRepository
                     .ToListAsync(ct);
                 var shared = await GetSharedSourceIdsAsync(userId, householdId, ct);
                 var copies = sources.Where(source => !shared.Contains(source.Id))
-                    .Select(source => CopyForHousehold(source, householdId)).ToList();
+                    .Select(source =>
+                    {
+                        var copy = source.CopyFor(source.OwnerUserId);
+                        copy.HouseholdId = householdId;
+                        copy.SharedFromRecipeId = source.Id;
+                        return copy;
+                    }).ToList();
                 dbContext.Recipes.AddRange(copies);
                 await dbContext.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
@@ -51,48 +57,4 @@ public sealed partial class EfRecipeRepository
                 throw;
             }
         });
-
-    private static Recipe CopyForHousehold(Recipe source, Guid householdId)
-    {
-        var id = Guid.NewGuid();
-        var now = DateTimeOffset.UtcNow;
-        return new Recipe
-        {
-            Id = id,
-            OwnerUserId = source.OwnerUserId,
-            HouseholdId = householdId,
-            SharedFromRecipeId = source.Id,
-            Title = source.Title,
-            Description = source.Description,
-            SourceUrl = source.SourceUrl,
-            ImageUrl = source.ImageUrl,
-            PreparationMinutes = source.PreparationMinutes,
-            CookingMinutes = source.CookingMinutes,
-            Category = source.Category,
-            Difficulty = source.Difficulty,
-            Servings = source.Servings,
-            CreatedAt = now,
-            UpdatedAt = now,
-            ModerationStatus = source.ModerationStatus,
-            ModeratedAt = source.ModeratedAt,
-            ModerationSummary = source.ModerationSummary,
-            Ingredients = source.Ingredients.Select(ingredient => new Ingredient
-            {
-                Id = Guid.NewGuid(),
-                RecipeId = id,
-                IngredientId = ingredient.IngredientId,
-                Name = ingredient.Name,
-                Preparation = ingredient.Preparation,
-                Quantity = ingredient.Quantity,
-                Unit = ingredient.Unit,
-            }).ToList(),
-            InstructionSteps = source.InstructionSteps.Select(step => new InstructionStep
-            {
-                Id = Guid.NewGuid(),
-                RecipeId = id,
-                StepNumber = step.StepNumber,
-                Text = step.Text,
-            }).ToList(),
-        };
-    }
 }

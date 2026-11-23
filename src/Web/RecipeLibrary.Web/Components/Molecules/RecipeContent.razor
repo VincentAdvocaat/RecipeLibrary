@@ -1,0 +1,52 @@
+@if (!string.IsNullOrEmpty(Recipe.Description))
+{
+    <p class="text-gray-700">@Recipe.Description</p>
+}
+
+@if (RecipeSourceUrl.TryNormalize(Recipe.SourceUrl, out var sourceUrl) && sourceUrl is not null)
+{
+    <a href="@sourceUrl" class="text-sm font-medium text-gray-800 underline" rel="noreferrer">
+        @L["RecipeDetail.SourceLink"]
+    </a>
+}
+
+<div class="flex flex-wrap items-center gap-4">
+    <span class="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+        @GetCategoryLabel(Recipe.Category)
+    </span>
+    <RecipeMeta PreparationMinutes="@Recipe.PreparationMinutes" CookingMinutes="@Recipe.CookingMinutes" Servings="@Recipe.Servings" DifficultyLevel="@Recipe.Difficulty" />
+</div>
+
+@AfterSummary
+
+@if (Recipe.Ingredients.Count > 0)
+{
+    <RecipeIngredientList Items="@Recipe.Ingredients" ReadOnly="@ReadOnly" />
+}
+
+@if (Recipe.Steps.Count > 0)
+{
+    <div>
+        <Heading Level="3" CssClass="text-sm font-medium text-gray-900 mb-2">@L["RecipeDetail.Instructions.SectionLabel"]</Heading>
+        <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700">
+            @foreach (var step in Recipe.Steps)
+            {
+                <li class="pl-1">@step.Text</li>
+            }
+        </ol>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public GetRecipeByIdResult Recipe { get; set; } = default!;
+    [Parameter] public bool ReadOnly { get; set; }
+    [Parameter] public RenderFragment? AfterSummary { get; set; }
+
+    private string GetCategoryLabel(int category) => category switch
+    {
+        1 => L["Category.Vegetarian.Label"],
+        2 => L["Category.Meat.Label"],
+        3 => L["Category.Vegan.Label"],
+        _ => L["Category.All.Label"],
+    };
+}

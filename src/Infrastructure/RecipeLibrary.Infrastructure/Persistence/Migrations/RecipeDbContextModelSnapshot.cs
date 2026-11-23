@@ -1013,6 +1013,9 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.Property<int>("PreparationMinutes")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("PublicShareKey")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Servings")
                         .HasColumnType("int");
 
@@ -1037,6 +1040,10 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OwnerUserId");
 
+                    b.HasIndex("PublicShareKey")
+                        .IsUnique()
+                        .HasFilter("[PublicShareKey] IS NOT NULL");
+
                     b.HasIndex("HouseholdId", "SharedFromRecipeId")
                         .IsUnique()
                         .HasFilter("[HouseholdId] IS NOT NULL AND [SharedFromRecipeId] IS NOT NULL");
@@ -1044,6 +1051,10 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.HasIndex("OwnerUserId", "CollectionSeedKey")
                         .IsUnique()
                         .HasFilter("[HouseholdId] IS NULL AND [CollectionSeedKey] IS NOT NULL");
+
+                    b.HasIndex("OwnerUserId", "SharedFromRecipeId")
+                        .IsUnique()
+                        .HasFilter("[HouseholdId] IS NULL AND [SharedFromRecipeId] IS NOT NULL");
 
                     b.ToTable("Recipes");
                 });

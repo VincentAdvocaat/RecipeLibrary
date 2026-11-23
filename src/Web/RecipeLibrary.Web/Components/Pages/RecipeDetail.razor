@@ -38,44 +38,11 @@ else if (_recipe is not null)
                 }
 
                 <div class="p-6 space-y-6">
-                    @if (!string.IsNullOrEmpty(_recipe.Description))
-                    {
-                        <p class="text-gray-700">@_recipe.Description</p>
-                    }
-
-                    @if (RecipeSourceUrl.TryNormalize(_recipe.SourceUrl, out var sourceUrl) && sourceUrl is not null)
-                    {
-                        <a href="@sourceUrl" class="text-sm font-medium text-gray-800 underline" rel="noreferrer">
-                            @L["RecipeDetail.SourceLink"]
-                        </a>
-                    }
-
-                    <div class="flex flex-wrap items-center gap-4">
-                        <span class="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                            @GetCategoryLabel(_recipe.Category)
-                        </span>
-                        <RecipeMeta PreparationMinutes="@_recipe.PreparationMinutes" CookingMinutes="@_recipe.CookingMinutes" Servings="@_recipe.Servings" DifficultyLevel="@_recipe.Difficulty" />
-                    </div>
-
-                    <RecipeRatingPicker @key="_recipe.Id" RecipeId="_recipe.Id" InitialRating="_recipe.MyRating" />
-
-                    @if (_recipe.Ingredients.Count > 0)
-                    {
-                        <RecipeIngredientList Items="@_recipe.Ingredients" />
-                    }
-
-                    @if (_recipe.Steps.Count > 0)
-                    {
-                        <div>
-                            <Heading Level="3" CssClass="text-sm font-medium text-gray-900 mb-2">@L["RecipeDetail.Instructions.SectionLabel"]</Heading>
-                            <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700">
-                                @foreach (var step in _recipe.Steps)
-                                {
-                                    <li class="pl-1">@step.Text</li>
-                                }
-                            </ol>
-                        </div>
-                    }
+                    <RecipeContent Recipe="@_recipe">
+                        <AfterSummary>
+                            <RecipeRatingPicker @key="_recipe.Id" RecipeId="_recipe.Id" InitialRating="_recipe.MyRating" />
+                        </AfterSummary>
+                    </RecipeContent>
 
                     @if (_ingredientTags.Count > 0)
                     {
@@ -135,6 +102,10 @@ else if (_recipe is not null)
                                 @onclick="() => SetDeleteConfirmation(true)">
                             @L["RecipeDetail.DeleteButton"]
                         </button>
+                        @if (_recipe.HouseholdId is null && !DemoContext.IsDemo)
+                        {
+                            <RecipeShareLink @key="_recipe.Id" RecipeId="@_recipe.Id" />
+                        }
                     </div>
 
                     @if (!string.IsNullOrWhiteSpace(_reportMessage))
@@ -233,14 +204,6 @@ else if (_recipe is not null)
         _ingredientTags = await QueryBus.QueryAsync<GetRecipeIngredientTagsQuery, IReadOnlyList<string>>(
             new GetRecipeIngredientTagsQuery { RecipeId = RecipeId });
     }
-
-    private string GetCategoryLabel(int category) => category switch
-    {
-        1 => L["Category.Vegetarian.Label"],
-        2 => L["Category.Meat.Label"],
-        3 => L["Category.Vegan.Label"],
-        _ => L["Category.All.Label"],
-    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

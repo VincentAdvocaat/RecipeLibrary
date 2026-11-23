@@ -7,6 +7,7 @@ using RecipeLibrary.Application.Ingredients;
 using RecipeLibrary.Application.Pantry;
 using RecipeLibrary.Application.RecipeImport;
 using RecipeLibrary.Application.ShoppingLists;
+using RecipeLibrary.Application.UseCases.Recipes;
 
 namespace RecipeLibrary.Application;
 
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<RecipeImportService>();
         services.AddScoped<IngredientQuantityConversionService>();
         services.AddScoped<RecipeContentModerationService>();
+        services.AddScoped<SharedRecipeService>();
 
         RegisterHandlers(services, typeof(DependencyInjection).Assembly);
 
