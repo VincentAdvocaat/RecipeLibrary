@@ -29,6 +29,7 @@ public sealed class UpdateRecipeCommandHandler(
         {
             Title = command.Title,
             Description = command.Description,
+            SourceUrl = command.SourceUrl,
             ImageUrl = command.ImageUrl,
             PreparationTimeMinutes = command.PreparationTimeMinutes,
             CookingTimeMinutes = command.CookingTimeMinutes,
@@ -76,6 +77,7 @@ public sealed class UpdateRecipeCommandHandler(
             HouseholdId = existing.HouseholdId,
             Title = new RecipeTitle(title),
             Description = string.IsNullOrEmpty(description) ? null : description,
+            SourceUrl = RecipeSourceUrl.Normalize(command.SourceUrl),
             ImageUrl = string.IsNullOrEmpty(imageUrl) ? null : imageUrl,
             PreparationMinutes = command.PreparationTimeMinutes,
             CookingMinutes = command.CookingTimeMinutes,

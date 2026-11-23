@@ -127,6 +127,33 @@ public sealed class RecipeCrudTests(E2eFixture fixture)
     }
 
     [Fact]
+    public async Task RecipeSourceUrl_CreatesAndUpdatesLinkOnDetail()
+    {
+        const string originalUrl = "https://example.com/original-recipe?a=1&b=2";
+        const string updatedUrl = "https://example.com/updated-recipe";
+        var title = $"E2E Source {Guid.NewGuid():N}";
+        await using var context = await fixture.NewAuthenticatedContextAsync();
+        var page = await context.NewPageAsync();
+        page.UseBlazorDefaults();
+        await page.GotoCreateRecipeAsync(fixture.BaseUrl);
+
+        var sourceField = page.GetByLabel(new Regex("^(Bronlink|Source URL)"));
+        await page.GetByTestId(UiTestIds.RecipeTitle).FillBlazorInputAsync(title);
+        await page.GetByTestId(UiTestIds.IngredientRowName(0)).FillBlazorInputAsync("Gehakt");
+        await sourceField.FillAsync(originalUrl);
+        await page.SaveRecipeAndWaitForDetailAsync();
+
+        var sourceLink = page.GetByRole(AriaRole.Link, new() { NameRegex = new Regex("^(Oorspronkelijk recept|Original recipe)$") });
+        await Assertions.Expect(sourceLink).ToHaveAttributeAsync("href", originalUrl);
+
+        await page.GetByTestId(UiTestIds.RecipeEdit).ClickAsync();
+        await Assertions.Expect(sourceField).ToHaveValueAsync(originalUrl);
+        await sourceField.FillAsync(updatedUrl);
+        await page.SaveRecipeAndWaitForDetailAsync();
+        await Assertions.Expect(sourceLink).ToHaveAttributeAsync("href", updatedUrl);
+    }
+
+    [Fact]
     public async Task EditRecipe_UpdatesTitle()
     {
         await using var context = await fixture.NewAuthenticatedContextAsync();

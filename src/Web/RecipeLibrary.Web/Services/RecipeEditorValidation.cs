@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Localization;
+using RecipeLibrary.Domain.ValueObjects;
 using RecipeLibrary.Resources;
 using RecipeLibrary.Web.Models;
 
@@ -13,7 +14,8 @@ internal static class RecipeEditorValidation
     public static string? GetRequiredFieldError(
         IStringLocalizer<SharedResources> localizer,
         string? title,
-        IEnumerable<RecipeIngredientEditorItem> ingredients)
+        IEnumerable<RecipeIngredientEditorItem> ingredients,
+        string? sourceUrl)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -23,6 +25,11 @@ internal static class RecipeEditorValidation
         if (ingredients.All(static i => string.IsNullOrWhiteSpace(i.Name)))
         {
             return localizer["RecipeCreate.Ingredient.Name.Required"];
+        }
+
+        if (!RecipeSourceUrl.TryNormalize(sourceUrl, out _))
+        {
+            return localizer["RecipeCreate.SourceUrl.Invalid"];
         }
 
         return null;

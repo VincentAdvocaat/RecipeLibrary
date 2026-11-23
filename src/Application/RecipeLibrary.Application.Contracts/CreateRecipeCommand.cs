@@ -20,6 +20,8 @@ public sealed class CreateRecipeCommand : ICommand<CreateRecipeResult>
 
     public string? Description { get; init; }
 
+    public string? SourceUrl { get; init; }
+
     public string? ImageUrl { get; init; }
 
     public List<CreateRecipeIngredientDto> Ingredients { get; init; } = [];
@@ -119,6 +121,7 @@ public sealed class GetRecipeByIdResult
     public Guid? HouseholdId { get; init; }
     public string Title { get; init; } = string.Empty;
     public string? Description { get; init; }
+    public string? SourceUrl { get; init; }
     public string? ImageUrl { get; init; }
     public int PreparationMinutes { get; init; }
     public int CookingMinutes { get; init; }
@@ -159,6 +162,7 @@ public sealed class UpdateRecipeCommand : ICommand<UpdateRecipeResult>
     /// <summary><see cref="Difficulty"/> enum value.</summary>
     public int Difficulty { get; init; }
     public string? Description { get; init; }
+    public string? SourceUrl { get; init; }
     public string? ImageUrl { get; init; }
     public List<CreateRecipeIngredientDto> Ingredients { get; init; } = [];
     public List<CreateRecipeInstructionStepDto> InstructionSteps { get; init; } = [];

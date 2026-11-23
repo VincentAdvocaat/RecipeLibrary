@@ -55,6 +55,7 @@ public sealed class CreateRecipeCommandHandler(
             HouseholdId = command.HouseholdId,
             Title = new RecipeTitle(title),
             Description = string.IsNullOrEmpty(description) ? null : description,
+            SourceUrl = RecipeSourceUrl.Normalize(command.SourceUrl),
             ImageUrl = string.IsNullOrEmpty(imageUrl) ? null : imageUrl,
             PreparationMinutes = command.PreparationTimeMinutes,
             CookingMinutes = command.CookingTimeMinutes,

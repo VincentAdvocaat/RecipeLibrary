@@ -1014,6 +1014,10 @@ namespace RecipeLibrary.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("SharedFromRecipeId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)

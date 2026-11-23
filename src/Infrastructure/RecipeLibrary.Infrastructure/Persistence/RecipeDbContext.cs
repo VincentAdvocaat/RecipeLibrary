@@ -128,6 +128,9 @@ public sealed class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
             b.Property(x => x.Description)
                 .HasMaxLength(4000);
 
+            b.Property(x => x.SourceUrl)
+                .HasMaxLength(RecipeSourceUrl.MaxLength);
+
             b.Property(x => x.PreparationMinutes);
             b.Property(x => x.CookingMinutes);
             b.Property(x => x.Category)

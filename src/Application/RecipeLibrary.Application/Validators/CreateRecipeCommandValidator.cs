@@ -37,6 +37,7 @@ public static class CreateRecipeCommandValidator
         }
 
         ValidateImageUrl(command.ImageUrl);
+        RecipeSourceUrl.Normalize(command.SourceUrl);
 
         if (!Enum.IsDefined(typeof(Difficulty), command.Difficulty))
         {

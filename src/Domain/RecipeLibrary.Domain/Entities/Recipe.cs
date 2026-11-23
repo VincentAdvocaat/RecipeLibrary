@@ -20,6 +20,7 @@ public sealed class Recipe
     public RecipeTitle Title { get; set; }
 
     public string? Description { get; set; }
+    public string? SourceUrl { get; set; }
 
     /// <summary>
     /// Preparation time in minutes (voorbereiden).

@@ -124,6 +124,9 @@
   <data name="RecipeCreate.Title.Required" xml:space="preserve"><value>Titel is verplicht.</value></data>
   <data name="RecipeCreate.Description.Label" xml:space="preserve"><value>Korte Beschrijving</value></data>
   <data name="RecipeCreate.Description.Placeholder" xml:space="preserve"><value>Geef een korte omschrijving van het recept</value></data>
+  <data name="RecipeCreate.SourceUrl.Label" xml:space="preserve"><value>Bronlink (optioneel)</value></data>
+  <data name="RecipeCreate.SourceUrl.Invalid" xml:space="preserve"><value>Vul een volledige HTTP- of HTTPS-link zonder inloggegevens in.</value></data>
+  <data name="RecipeDetail.SourceLink" xml:space="preserve"><value>Oorspronkelijk recept</value></data>
   <data name="RecipeCreate.TagsCategory.Label" xml:space="preserve"><value>Tags / Categorie</value></data>
   <data name="RecipeCreate.PreparationTime.Label" xml:space="preserve"><value>Voorbereidingstijd (min)</value></data>
   <data name="RecipeCreate.CookingTime.Label" xml:space="preserve"><value>Bereidingstijd (min)</value></data>

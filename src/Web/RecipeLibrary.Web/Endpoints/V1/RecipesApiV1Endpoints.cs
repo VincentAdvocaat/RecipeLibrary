@@ -95,6 +95,7 @@ public static class RecipesApiV1Endpoints
             Servings = command.Servings,
             Difficulty = command.Difficulty,
             Description = command.Description,
+            SourceUrl = command.SourceUrl,
             ImageUrl = command.ImageUrl,
             Ingredients = command.Ingredients,
             InstructionSteps = command.InstructionSteps,

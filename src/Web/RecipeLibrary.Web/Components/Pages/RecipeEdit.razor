@@ -43,6 +43,13 @@
                         </div>
 
                         <div>
+                            <label for="recipe-source-url" class="block text-sm font-medium text-gray-700 mb-1">@L["RecipeCreate.SourceUrl.Label"]</label>
+                            <InputText id="recipe-source-url" type="url" maxlength="@RecipeSourceUrl.MaxLength"
+                                       class="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                                       @bind-Value="_vm.SourceUrl" />
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">@L["RecipeCreate.TagsCategory.Label"]</label>
                             <CategoryFilter SelectedCategory="_vm.Category" SelectedCategoryChanged="OnCategoryChanged" ShowAllOption="false" />
                         </div>
@@ -174,6 +181,8 @@
 
         public string? Description { get; set; }
 
+        public string? SourceUrl { get; set; }
+
         [Range(0, 24 * 60)]
         public int PreparationTimeMinutes { get; set; } = 30;
 
@@ -234,6 +243,7 @@
         _householdId = recipe.HouseholdId;
         _vm.Title = recipe.Title;
         _vm.Description = recipe.Description;
+        _vm.SourceUrl = recipe.SourceUrl;
         _vm.PreparationTimeMinutes = recipe.PreparationMinutes;
         _vm.CookingTimeMinutes = recipe.CookingMinutes;
         _vm.Servings = recipe.Servings;
@@ -359,7 +369,8 @@
         _statusMessage = RecipeEditorValidation.GetRequiredFieldError(
             L,
             _vm.Title,
-            _vm.Ingredients);
+            _vm.Ingredients,
+            _vm.SourceUrl);
         if (_statusMessage is not null)
         {
             return;
@@ -384,6 +395,7 @@
                 RecipeId = RecipeId,
                 Title = _vm.Title,
                 Description = string.IsNullOrWhiteSpace(_vm.Description) ? null : _vm.Description.Trim(),
+                SourceUrl = _vm.SourceUrl,
                 ImageUrl = string.IsNullOrWhiteSpace(_imageUrl) ? null : _imageUrl.Trim(),
                 PreparationTimeMinutes = _vm.PreparationTimeMinutes,
                 CookingTimeMinutes = _vm.CookingTimeMinutes,

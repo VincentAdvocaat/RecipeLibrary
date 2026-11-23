@@ -57,16 +57,49 @@ public sealed class CreateRecipeCommandValidatorTests
         Assert.Equal(nameof(CreateRecipeCommand.ImageUrl), ex.ParamName);
     }
 
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("  ", null)]
+    [InlineData(" http://example.com/Recipe?q=1#steps ", "http://example.com/Recipe?q=1#steps")]
+    [InlineData("HTTPS://EXAMPLE.COM/Recipe", "https://example.com/Recipe")]
+    public void Validate_AcceptsOptionalWebSourceUrl(string? input, string? expected)
+    {
+        CreateRecipeCommandValidator.ValidateAndThrow(ValidCommand(sourceUrl: input));
+
+        Assert.Equal(expected, RecipeSourceUrl.Normalize(input));
+    }
+
+    [Theory]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("data:text/html,test")]
+    [InlineData("//example.com/recipe")]
+    [InlineData("https://alice:secret@example.com/recipe")]
+    [InlineData("https://example.com/recipe with spaces")]
+    public void Validate_RejectsInvalidRecipeSourceUrls(string sourceUrl)
+    {
+        Assert.Throws<ArgumentException>(() => CreateRecipeCommandValidator.ValidateAndThrow(ValidCommand(sourceUrl: sourceUrl)));
+    }
+
+    [Fact]
+    public void Validate_RejectsSourceUrlsThatExceedStorageLimit()
+    {
+        var sourceUrl = "https://example.com/" + new string('a', RecipeSourceUrl.MaxLength);
+
+        Assert.Throws<ArgumentException>(() => CreateRecipeCommandValidator.ValidateAndThrow(ValidCommand(sourceUrl: sourceUrl)));
+    }
+
     private static CreateRecipeCommand ValidCommand(
         string title = "Test Recipe",
         string? preparation = null,
-        string? imageUrl = null) => new()
+        string? imageUrl = null,
+        string? sourceUrl = null) => new()
     {
         Title = title,
         Category = 2,
         PreparationTimeMinutes = 10,
         CookingTimeMinutes = 20,
         ImageUrl = imageUrl,
+        SourceUrl = sourceUrl,
         Ingredients =
         [
             new CreateRecipeIngredientDto

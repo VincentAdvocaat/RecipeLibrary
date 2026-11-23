@@ -124,6 +124,9 @@
   <data name="RecipeCreate.Title.Required" xml:space="preserve"><value>Title is required.</value></data>
   <data name="RecipeCreate.Description.Label" xml:space="preserve"><value>Short description</value></data>
   <data name="RecipeCreate.Description.Placeholder" xml:space="preserve"><value>Enter a short description of the recipe</value></data>
+  <data name="RecipeCreate.SourceUrl.Label" xml:space="preserve"><value>Source URL (optional)</value></data>
+  <data name="RecipeCreate.SourceUrl.Invalid" xml:space="preserve"><value>Enter a complete HTTP or HTTPS link without login details.</value></data>
+  <data name="RecipeDetail.SourceLink" xml:space="preserve"><value>Original recipe</value></data>
   <data name="RecipeCreate.TagsCategory.Label" xml:space="preserve"><value>Tags / Category</value></data>
   <data name="RecipeCreate.PreparationTime.Label" xml:space="preserve"><value>Preparation time (min)</value></data>
   <data name="RecipeCreate.CookingTime.Label" xml:space="preserve"><value>Cooking time (min)</value></data>
