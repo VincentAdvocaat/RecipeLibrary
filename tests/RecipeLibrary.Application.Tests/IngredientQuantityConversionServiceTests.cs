@@ -305,6 +305,62 @@ public sealed class IngredientQuantityConversionServiceTests
         Assert.Empty(store.AddedSuggestions);
     }
 
+    [Theory]
+    [InlineData("convert")]
+    [InlineData("keys")]
+    [InlineData("estimate")]
+    [InlineData("preferred")]
+    public async Task NormalAccount_ConversionEntryPointsUseRunnerOnce(string entryPoint)
+    {
+        var id = Guid.NewGuid();
+        var runner = new RecordingRunner();
+        var store = new FakeStore
+        {
+            Conversions = [CreateConversion(id, ConversionSourceNames.Manual, 120, ConversionOrigin.Curated)]
+        };
+        var sut = CreateSut(store, aiEnabled: false, runner: runner);
+        var request = new IngredientQuantityConversionRequest
+        {
+            CanonicalIngredientId = id, IngredientDisplayName = "Flour", FromUnit = Unit.Cup, Quantity = 2
+        };
+
+        switch (entryPoint)
+        {
+            case "convert":
+                Assert.Equal(240, (await sut.ConvertToMassAsync(request)).Quantity);
+                break;
+            case "keys":
+                Assert.Contains("flour", await sut.GetConvertibleKeysAsync([("flour", request)]));
+                break;
+            case "estimate":
+                Assert.True(await sut.HasEstimateSourceAsync(request));
+                break;
+            case "preferred":
+                Assert.NotNull(await sut.GetPreferredConversionAsync(id, Unit.Cup, Unit.Gram));
+                break;
+        }
+
+        Assert.Equal(1, runner.ReadCalls);
+    }
+
+    private sealed class RecordingRunner : IDemoOperationRunner
+    {
+        public int ReadCalls { get; private set; }
+        private bool running;
+
+        public async Task<TResult> RunReadAsync<TResult>(Func<Task<TResult>> action, CancellationToken ct)
+        {
+            Assert.False(running);
+            running = true;
+            ReadCalls++;
+            try { return await action(); }
+            finally { running = false; }
+        }
+
+        public Task<TResult> RunAsync<TResult>(object operation, Func<Task<TResult>> action, CancellationToken ct) =>
+            throw new NotSupportedException();
+    }
+
     private sealed class DemoContext : IDemoContext
     {
         public bool IsDemo => true;
@@ -333,7 +389,7 @@ public sealed class IngredientQuantityConversionServiceTests
     private static IngredientQuantityConversionService CreateSut(
         FakeStore store,
         bool aiEnabled,
-        FakeAi? ai = null, bool isDemo = false) =>
+        FakeAi? ai = null, bool isDemo = false, IDemoOperationRunner? runner = null) =>
         new(
             store,
             ai ?? new FakeAi(),
@@ -346,7 +402,7 @@ public sealed class IngredientQuantityConversionServiceTests
                     Model = "gpt-test",
                 },
             }),
-            NullLogger<IngredientQuantityConversionService>.Instance, isDemo ? new DemoContext() : null);
+            NullLogger<IngredientQuantityConversionService>.Instance, isDemo ? new DemoContext() : null, runner);
 
     private sealed class FakeAi : IIngredientUnitConversionAiProposer
     {

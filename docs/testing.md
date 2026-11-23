@@ -18,6 +18,7 @@ E2E tests start the web app as a `dotnet run` subprocess on a random localhost p
 - .NET 10 SDK
 - **Docker Desktop** running (required for integration and E2E tests — Testcontainers starts a SQL Server container)
 - For E2E: Playwright browsers (installed automatically on first E2E test run, or manually below)
+- For the photo import browser test on Linux: the native OCR libraries installed by the web project's Dockerfile, including Tesseract and Leptonica
 
 ## Run all tests
 
@@ -33,14 +34,14 @@ dotnet test RecipeLibrary.slnx
 dotnet test tests/RecipeLibrary.Application.Tests
 dotnet test tests/RecipeLibrary.Web.IntegrationTests
 dotnet test tests/RecipeLibrary.Web.ComponentTests
-dotnet test tests/RecipeLibrary.Web.E2E.Tests
+dotnet test tests/RecipeLibrary.Web.E2E.Tests -c Release
 ```
 
 ## E2E debugging (headed browser)
 
 ```powershell
 $env:PLAYWRIGHT_HEADED = "1"
-dotnet test tests/RecipeLibrary.Web.E2E.Tests
+dotnet test tests/RecipeLibrary.Web.E2E.Tests -c Release
 ```
 
 ## Install Playwright browsers manually
@@ -48,7 +49,7 @@ dotnet test tests/RecipeLibrary.Web.E2E.Tests
 After building the E2E project:
 
 ```powershell
-powershell tests/RecipeLibrary.Web.E2E.Tests/bin/Debug/net10.0/playwright.ps1 install chromium
+powershell tests/RecipeLibrary.Web.E2E.Tests/bin/Release/net10.0/playwright.ps1 install chromium
 ```
 
 ## UI test selectors

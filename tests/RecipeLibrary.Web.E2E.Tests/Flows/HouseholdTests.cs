@@ -15,6 +15,7 @@ public sealed class HouseholdTests(E2eFixture fixture)
     public async Task MembersCanShareAndEditARecipeAndPantry_UntilMembershipIsRemoved()
     {
         await using var managerContext = await fixture.NewAuthenticatedContextAsync();
+        await managerContext.GrantPermissionsAsync(["clipboard-read", "clipboard-write"], new() { Origin = fixture.BaseUrl });
         var manager = await managerContext.NewPageAsync();
         manager.UseBlazorDefaults();
         await manager.SetViewportSizeAsync(390, 844);
@@ -24,6 +25,9 @@ public sealed class HouseholdTests(E2eFixture fixture)
         await Button(manager, "Maak huishouden aan").ClickAsync();
         await Button(manager, "Maak uitnodigingslink").ClickAsync();
         var invitation = await manager.GetByLabel("Uitnodigingslink", new() { Exact = false }).InputValueAsync();
+        await Button(manager, "Kopieer link").ClickAsync();
+        await Expect(manager.GetByText("Uitnodigingslink gekopieerd.")).ToBeVisibleAsync();
+        Assert.Equal(invitation, await manager.EvaluateAsync<string>("navigator.clipboard.readText()"));
 
         await manager.GotoRecipesAsync(fixture.BaseUrl);
         await Button(manager, "Delen met huishouden").ClickAsync();
@@ -111,11 +115,31 @@ public sealed class HouseholdTests(E2eFixture fixture)
 
         await manager.GotoAsync($"{fixture.BaseUrl}/household");
         await WaitForInteractivityAsync(manager);
+        await Button(manager, "Draag beheer over").ClickAsync();
+        await manager.GetByTestId(UiTestIds.ConfirmYes).ClickAsync();
+        await Expect(Button(manager, "Verlaat huishouden")).ToBeVisibleAsync();
+        await member.GotoAsync($"{fixture.BaseUrl}/household");
+        await WaitForInteractivityAsync(member);
+        await Button(member, "Draag beheer over").ClickAsync();
+        await member.GetByTestId(UiTestIds.ConfirmYes).ClickAsync();
+        await Expect(Button(member, "Verlaat huishouden")).ToBeVisibleAsync();
+        await manager.ReloadAsync();
+        await WaitForInteractivityAsync(manager);
         await Button(manager, "Verwijder lid").ClickAsync();
         await manager.GetByTestId(UiTestIds.ConfirmYes).ClickAsync();
         await Expect(Button(manager, "Verwijder lid")).ToHaveCountAsync(0);
         await member.GotoAsync(sharedRecipeUrl);
         await Expect(member).ToHaveURLAsync(new Regex("/not-found$"));
+
+        await Button(manager, "Maak uitnodigingslink").ClickAsync();
+        var newInvitation = manager.GetByLabel("Uitnodigingslink", new() { Exact = false });
+        await Expect(newInvitation).Not.ToHaveValueAsync(invitation);
+        await outsider.GotoAsync(await newInvitation.InputValueAsync());
+        await WaitForInteractivityAsync(outsider);
+        await Button(outsider, "Accepteer uitnodiging").ClickAsync();
+        await Button(outsider, "Verlaat huishouden").ClickAsync();
+        await outsider.GetByTestId(UiTestIds.ConfirmYes).ClickAsync();
+        await Expect(Button(outsider, "Maak huishouden aan")).ToBeVisibleAsync();
     }
 
     private static ILocator Button(IPage page, string name) =>

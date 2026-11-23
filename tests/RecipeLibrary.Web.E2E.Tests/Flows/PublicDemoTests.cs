@@ -46,9 +46,30 @@ public sealed class PublicDemoTests(DemoFixture fixture, Xunit.Abstractions.ITes
         await page.GetByTestId(UiTestIds.StepInput(0)).FillBlazorInputAsync("Snijd en serveer.");
         await page.SaveRecipeAndWaitForDetailAsync();
         await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Mijn demorecept" })).ToBeVisibleAsync();
-        await page.ReloadAsync();
-        await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Mijn demorecept" })).ToBeVisibleAsync();
+        var negotiate = new Regex("/_blazor/negotiate(?:\\?|$)");
+        var resumeCircuit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await page.RouteAsync(negotiate, async route =>
+        {
+            await resumeCircuit.Task;
+            await route.ContinueAsync();
+        });
+        try
+        {
+            await page.ReloadAsync(new() { WaitUntil = WaitUntilState.DOMContentLoaded });
+            await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Mijn demorecept" })).ToBeVisibleAsync();
+            await Assertions.Expect(page.GetByTestId(UiTestIds.DemoReset)).ToBeDisabledAsync();
+        }
+        finally
+        {
+            resumeCircuit.TrySetResult();
+        }
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
+        await page.UnrouteAsync(negotiate);
 
+        await page.GetByTestId(UiTestIds.DemoReset).ClickAsync();
+        await page.GetByTestId(UiTestIds.ConfirmNo).ClickAsync();
+        await Assertions.Expect(page.GetByTestId(UiTestIds.ConfirmYes)).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Mijn demorecept" })).ToBeVisibleAsync();
         await page.GetByTestId(UiTestIds.DemoReset).ClickAsync();
         await page.GetByTestId(UiTestIds.ConfirmYes).ClickAsync();
         await Assertions.Expect(page.GetByTestId(UiTestIds.OverviewReady)).ToBeVisibleAsync();
@@ -57,6 +78,9 @@ public sealed class PublicDemoTests(DemoFixture fixture, Xunit.Abstractions.ITes
         await Assertions.Expect(page.GetByTestId(UiTestIds.DemoBanner)).ToBeVisibleAsync();
         await page.GotoAsync(fixture.BaseUrl + "/pantry");
         await ExpectVisibleAsync(page, page.GetByText("olijfolie", new() { Exact = true }));
+        await page.GetByTestId(UiTestIds.DemoEnd).ClickAsync();
+        await page.WaitForURLAsync(new Regex("/demo\\?state=ended$"));
+        await Assertions.Expect(page.GetByTestId(UiTestIds.DemoStart)).ToBeVisibleAsync();
     }
 
     [Fact]

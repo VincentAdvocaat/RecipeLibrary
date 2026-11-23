@@ -33,9 +33,7 @@ public static class PlaywrightExtensions
 
     public static async Task FillBlazorInputAsync(this ILocator locator, string value)
     {
-        await locator.ClickAsync();
-        await locator.FillAsync(string.Empty);
-        await locator.TypeAsync(value, new LocatorTypeOptions { Delay = 20 });
+        await locator.FillAsync(value);
         await locator.PressAsync("Tab");
     }
 
@@ -56,6 +54,6 @@ public static class PlaywrightExtensions
     public static async Task SaveRecipeAndWaitForDetailAsync(this IPage page)
     {
         await page.GetByTestId(UiTestIds.RecipeSave).ClickAsync();
-        await page.WaitForURLAsync(new Regex("/recipes/[0-9a-f-]{36}", RegexOptions.IgnoreCase));
+        await page.WaitForURLAsync(new Regex("/recipes/[0-9a-f-]{36}/?$", RegexOptions.IgnoreCase));
     }
 }

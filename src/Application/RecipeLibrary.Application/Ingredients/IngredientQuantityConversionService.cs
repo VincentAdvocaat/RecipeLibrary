@@ -26,7 +26,7 @@ public sealed class IngredientQuantityConversionService(
 
     public Task<IngredientQuantityConversionResult> ConvertToMassAsync(
         IngredientQuantityConversionRequest request, CancellationToken ct = default) =>
-        demoRunner is not null && demo?.IsDemo == true
+        demoRunner is not null
             ? demoRunner.RunReadAsync(() => ConvertToMassCoreAsync(request, ct), ct)
             : ConvertToMassCoreAsync(request, ct);
 
@@ -43,7 +43,7 @@ public sealed class IngredientQuantityConversionService(
 
         if (request.CanonicalIngredientId is Guid ingredientId)
         {
-            var preferred = await GetPreferredConversionAsync(ingredientId, request.FromUnit, Unit.Gram, ct);
+            var preferred = await GetPreferredConversionCoreAsync(ingredientId, request.FromUnit, Unit.Gram, ct);
             if (preferred is not null)
             {
                 return BuildResult(request.Quantity, preferred.AmountFrom, preferred.AmountTo, Unit.Gram, preferred.Origin.ToString());
@@ -123,7 +123,7 @@ public sealed class IngredientQuantityConversionService(
     /// </summary>
     public Task<IReadOnlySet<string>> GetConvertibleKeysAsync(
         IReadOnlyList<(string Key, IngredientQuantityConversionRequest Request)> items, CancellationToken ct = default) =>
-        demoRunner is not null && demo?.IsDemo == true
+        demoRunner is not null
             ? demoRunner.RunReadAsync(() => GetConvertibleKeysCoreAsync(items, ct), ct)
             : GetConvertibleKeysCoreAsync(items, ct);
 
@@ -217,7 +217,7 @@ public sealed class IngredientQuantityConversionService(
     /// </summary>
     public Task<bool> HasEstimateSourceAsync(
         IngredientQuantityConversionRequest request, CancellationToken ct = default) =>
-        demoRunner is not null && demo?.IsDemo == true
+        demoRunner is not null
             ? demoRunner.RunReadAsync(() => HasEstimateSourceCoreAsync(request, ct), ct)
             : HasEstimateSourceCoreAsync(request, ct);
 
@@ -239,7 +239,7 @@ public sealed class IngredientQuantityConversionService(
 
         if (request.CanonicalIngredientId is Guid ingredientId)
         {
-            var preferred = await GetPreferredConversionAsync(ingredientId, request.FromUnit, Unit.Gram, ct);
+            var preferred = await GetPreferredConversionCoreAsync(ingredientId, request.FromUnit, Unit.Gram, ct);
             if (preferred is not null)
             {
                 return true;
@@ -262,7 +262,16 @@ public sealed class IngredientQuantityConversionService(
         && importOptions.Value.Ai.Enabled
         && !string.IsNullOrWhiteSpace(importOptions.Value.Ai.ApiKey);
 
-    public async Task<IngredientUnitConversion?> GetPreferredConversionAsync(
+    public Task<IngredientUnitConversion?> GetPreferredConversionAsync(
+        Guid canonicalIngredientId,
+        Unit fromUnit,
+        Unit toUnit,
+        CancellationToken ct = default) =>
+        demoRunner is not null
+            ? demoRunner.RunReadAsync(() => GetPreferredConversionCoreAsync(canonicalIngredientId, fromUnit, toUnit, ct), ct)
+            : GetPreferredConversionCoreAsync(canonicalIngredientId, fromUnit, toUnit, ct);
+
+    private async Task<IngredientUnitConversion?> GetPreferredConversionCoreAsync(
         Guid canonicalIngredientId,
         Unit fromUnit,
         Unit toUnit,

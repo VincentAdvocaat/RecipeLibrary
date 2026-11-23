@@ -69,6 +69,13 @@ public sealed class AnalyticsDashboardTests : IAsyncLifetime
         await Expect(page.GetByRole(AriaRole.Columnheader, new() { Name = "Pseudoniem" })).ToHaveCountAsync(0);
         Assert.Equal(0, dialogs);
         await page.ScreenshotAsync(new() { Path = Path.Combine(Path.GetTempPath(), $"RecipeLibrary-analytics-{width}.png"), FullPage = true });
+        var response = await page.RunAndWaitForResponseAsync(
+            () => page.GetByRole(AriaRole.Button, new() { Name = "Vernieuwen" }).ClickAsync(),
+            result => result.Url.Contains("/api/analytics/report", StringComparison.Ordinal));
+        Assert.True(response.Ok);
+        var download = await page.RunAndWaitForDownloadAsync(
+            () => page.GetByRole(AriaRole.Button, new() { Name = "Download JSON" }).ClickAsync());
+        Assert.EndsWith(".json", download.SuggestedFilename);
         await page.GetByRole(AriaRole.Button, new() { Name = "Afmelden" }).ClickAsync();
         await Expect(page.Locator("#access")).ToBeVisibleAsync();
         Assert.Null(await page.EvaluateAsync<string?>("sessionStorage.getItem('recipelibrary-analytics-key')"));

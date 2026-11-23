@@ -6,8 +6,12 @@ using RecipeLibrary.Web.Testing;
 using Xunit;
 
 [Collection(nameof(ShoppingListE2eCollection))]
-public sealed class ShoppingListTests(E2eFixture fixture, Xunit.Abstractions.ITestOutputHelper output)
+public sealed class ShoppingListTests(E2eFixture fixture, Xunit.Abstractions.ITestOutputHelper output) : IAsyncLifetime
 {
+    public Task InitializeAsync() => fixture.ResetShoppingStateAsync();
+
+    public Task DisposeAsync() => Task.CompletedTask;
+
     [Fact]
     public async Task Detail_AddToShoppingList_ShowsItemOnListPage()
     {
@@ -75,7 +79,7 @@ public sealed class ShoppingListTests(E2eFixture fixture, Xunit.Abstractions.ITe
     }
 
     [Fact]
-    public async Task SplitList_CreatesSecondTab()
+    public async Task SplitList_MoveItemsAndDeleteAllLists()
     {
         await using var context = await fixture.NewAuthenticatedContextAsync();
         var page = await context.NewPageAsync();
@@ -87,15 +91,41 @@ public sealed class ShoppingListTests(E2eFixture fixture, Xunit.Abstractions.ITe
         await page.GotoShoppingListAsync(fixture.BaseUrl);
 
         await page.GetByTestId(UiTestIds.SplitStart).ClickAsync();
-        await page.Locator("input[type=checkbox]").First.CheckAsync();
-        await page.GetByTestId(UiTestIds.SplitCreateFromSelection).ClickAsync();
+        var splitButton = page.GetByTestId(UiTestIds.SplitCreateFromSelection);
+        await page.GetByRole(AriaRole.Button, new() { Name = "Alles selecteren" }).ClickAsync();
+        await Assertions.Expect(splitButton).ToBeEnabledAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Selectie wissen" }).ClickAsync();
+        await Assertions.Expect(splitButton).ToBeDisabledAsync();
+        var meat = page.GetByRole(AriaRole.Listitem).Filter(new() { HasText = "Gehakt" });
+        await meat.GetByRole(AriaRole.Checkbox).CheckAsync();
+        await splitButton.ClickAsync();
 
         var newListName = $"Store {Guid.NewGuid():N}";
         await page.Locator(".fixed input").FillBlazorInputAsync(newListName);
         await page.GetByTestId(UiTestIds.SplitConfirm).ClickAsync();
 
         await page.GetByRole(AriaRole.Button, new() { Name = newListName }).WaitForAsync();
-        await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = newListName })).ToBeVisibleAsync();
+        await meat.Locator("[data-testid$='-move']").ClickAsync();
+        await Assertions.Expect(meat).ToHaveCountAsync(0);
+        await page.Locator("[data-testid^='list-tab-']").First.ClickAsync();
+        await meat.Locator("[data-testid$='-move-to-pantry']").ClickAsync();
+        await Assertions.Expect(meat).ToHaveCountAsync(0);
+
+        await page.GetByTestId(UiTestIds.AddItemName).FillAsync("Gehakt");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Gehakt", Exact = true }).ClickAsync();
+        await page.GetByTestId(UiTestIds.AddItemSubmit).ClickAsync();
+        await Assertions.Expect(meat).ToBeVisibleAsync();
+        await page.GetByTestId(UiTestIds.ApplyPantry).ClickAsync();
+        await Assertions.Expect(meat).ToHaveCountAsync(0);
+
+        await page.GetByRole(AriaRole.Button, new() { Name = "Alle lijsten verwijderen" }).ClickAsync();
+        await page.GetByTestId(UiTestIds.ConfirmYes).ClickAsync();
+        await page.WaitForURLAsync(new Regex("/recipes/?$"));
+        await page.GotoAsync(fixture.BaseUrl + "/pantry");
+        await page.GetByTestId(UiTestIds.AppInteractiveReady).WaitForAsync(new() { State = WaitForSelectorState.Attached });
+        var pantryRemoval = meat.Locator("[data-testid$='-remove']");
+        await pantryRemoval.ClickAsync();
+        await Assertions.Expect(meat).ToHaveCountAsync(0);
     }
 
     [Fact]

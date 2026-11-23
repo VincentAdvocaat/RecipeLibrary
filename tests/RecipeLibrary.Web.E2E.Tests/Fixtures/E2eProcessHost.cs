@@ -64,7 +64,7 @@ public sealed class E2eProcessHost : IAsyncDisposable
 
             try
             {
-                var response = await client.GetAsync($"{BaseUrl}/recipes", ct);
+                using var response = await client.GetAsync($"{BaseUrl}/health/live", ct);
                 if (response.IsSuccessStatusCode)
                 {
                     return;
@@ -86,7 +86,7 @@ public sealed class E2eProcessHost : IAsyncDisposable
             await Task.Delay(500, ct);
         }
 
-        throw new InvalidOperationException("Web application did not become reachable in time.", lastError);
+        throw new InvalidOperationException($"Web application did not become reachable in time. {Diagnostics}", lastError);
     }
 
     private void Capture(string? line)
